@@ -168,18 +168,49 @@ function normalize_time($time) {
     return null;
 }
 
+/**
+ * Self-heal for a database that never had database/supabase_class_schedules.sql
+ * run on it (Supabase doesn't update from git pushes): runs that idempotent
+ * migration once, under an advisory lock so concurrent requests don't race.
+ * Returns true if it ran.
+ */
+function ensure_class_schedules_table(PDO $pdo) {
+    $file = __DIR__ . '/../database/supabase_class_schedules.sql';
+    if (!is_readable($file) || $pdo->inTransaction()) return false;
+    $pdo->beginTransaction();
+    try {
+        $pdo->query('SELECT pg_advisory_xact_lock(7423001)');
+        $pdo->exec(file_get_contents($file));
+        $pdo->commit();
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        error_log('class_schedules migration failed: ' . $e->getMessage());
+        return false;
+    }
+    error_log('class_schedules table was missing; ran database/supabase_class_schedules.sql');
+    return true;
+}
+
 /** Weekly slots for many classes in one query: [teacher_subject_id => [slot, ...]] sorted by day/time. */
 function load_class_schedules(PDO $pdo, array $classIds) {
     $classIds = array_values(array_unique(array_filter(array_map('intval', $classIds))));
     $map = array_fill_keys($classIds, []);
     if (!$classIds) return $map;
     $in = implode(',', array_fill(0, count($classIds), '?'));
-    $stmt = $pdo->prepare("
+    $sql = "
         SELECT schedule_id, teacher_subject_id, day_of_week, start_time, end_time
         FROM class_schedules WHERE teacher_subject_id IN ($in)
         ORDER BY day_of_week, start_time
-    ");
-    $stmt->execute($classIds);
+    ";
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($classIds);
+    } catch (PDOException $e) {
+        // 42P01 = undefined table: the class_schedules migration hasn't been run on this database yet.
+        if ($e->getCode() !== '42P01' || !ensure_class_schedules_table($pdo)) throw $e;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($classIds);
+    }
     foreach ($stmt->fetchAll() as $row) {
         $row['day_of_week'] = (int) $row['day_of_week'];
         $map[(int) $row['teacher_subject_id']][] = $row;

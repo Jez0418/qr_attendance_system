@@ -1,2 +1,4 @@
 database/*.sql
 README.md
+# Needed at runtime: includes/functions.php self-applies it if the table is missing
+!database/supabase_class_schedules.sql
