@@ -56,10 +56,10 @@ $myClasses = $pdo->prepare('
     FROM teacher_subjects ts
     JOIN subjects sub ON sub.subject_id = ts.subject_id
     JOIN laboratories lab ON lab.lab_id = ts.lab_id
-    WHERE ts.teacher_id = ? ORDER BY ts.schedule_day, ts.start_time
+    WHERE ts.teacher_id = ? ORDER BY sub.subject_code, ts.section
 ');
 $myClasses->execute([$teacherId]);
-$myClasses = $myClasses->fetchAll();
+$myClasses = attach_class_schedules($pdo, $myClasses->fetchAll());
 
 // Fetch department for the greeting subtitle
 $deptStmt = $pdo->prepare('SELECT department FROM teachers WHERE teacher_id = ?');
@@ -108,7 +108,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <td><?php echo e($c['subject_code'] . ' - ' . $c['subject_name']); ?></td>
                     <td><?php echo e($c['section']); ?></td>
                     <td><?php echo e($c['lab_name']); ?></td>
-                    <td><?php echo e($c['schedule_day']); ?> · <?php echo format_time($c['start_time']); ?>–<?php echo format_time($c['end_time']); ?></td>
+                    <td><?php echo e(format_class_schedule($c['schedules'])); ?></td>
                     <td><?php echo (int) $c['enrolled_count']; ?></td>
                     <td><span class="badge badge-<?php echo $c['status'] === 'active' ? 'active' : 'inactive'; ?>"><?php echo ucfirst($c['status']); ?></span></td>
                 </tr>

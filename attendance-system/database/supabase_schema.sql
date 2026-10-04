@@ -9,7 +9,7 @@
 -- ============================================================
 
 DROP TABLE IF EXISTS php_sessions, activity_logs, notifications, attendance_records,
-    attendance_sessions, enrollment_requests, enrollments, teacher_subjects, subjects,
+    attendance_sessions, enrollment_requests, enrollments, class_schedules, teacher_subjects, subjects,
     laboratories, teachers, students, programs, departments, institutions, settings, users CASCADE;
 
 CREATE TABLE users (
@@ -117,10 +117,10 @@ CREATE TABLE teacher_subjects (
     lab_id INT NOT NULL REFERENCES laboratories(lab_id) ON DELETE CASCADE,
     section VARCHAR(50) NOT NULL,
     max_students INT NOT NULL DEFAULT 40,
-    schedule_day VARCHAR(30) NOT NULL,
-    meeting_date DATE NULL,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
+    schedule_day VARCHAR(30) NULL,   -- display summary only; see class_schedules
+    meeting_date DATE NULL,          -- deprecated (replaced by class_schedules)
+    start_time TIME NULL,            -- display summary only (first slot)
+    end_time TIME NULL,              -- display summary only (first slot)
     school_year VARCHAR(20) DEFAULT '2025-2026',
     semester VARCHAR(10) DEFAULT '1st' CHECK (semester IN ('1st','2nd','Summer')),
     status VARCHAR(10) DEFAULT 'active' CHECK (status IN ('active','inactive')),
@@ -128,6 +128,19 @@ CREATE TABLE teacher_subjects (
 );
 CREATE INDEX idx_ts_teacher ON teacher_subjects (teacher_id);
 CREATE INDEX idx_ts_subject ON teacher_subjects (subject_id);
+
+-- Recurring weekly meetings of a class assignment. day_of_week: 1 = Monday ... 7 = Sunday (ISO).
+CREATE TABLE class_schedules (
+    schedule_id SERIAL PRIMARY KEY,
+    teacher_subject_id INT NOT NULL REFERENCES teacher_subjects(teacher_subject_id) ON DELETE CASCADE,
+    day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 1 AND 7),
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    CHECK (end_time > start_time),
+    UNIQUE (teacher_subject_id, day_of_week, start_time)
+);
+CREATE INDEX idx_cs_class ON class_schedules (teacher_subject_id);
+CREATE INDEX idx_cs_day ON class_schedules (day_of_week);
 
 CREATE TABLE enrollments (
     enrollment_id SERIAL PRIMARY KEY,
@@ -317,6 +330,11 @@ INSERT INTO teacher_subjects (teacher_id, subject_id, program_id, year_level, la
 (1, 3, (SELECT program_id FROM programs WHERE program_code='BSCS'), 3, 1, 'BSCS-3A', 40, 'Monday', '08:00:00', '11:00:00'),
 (1, 4, (SELECT program_id FROM programs WHERE program_code='BSCS'), 3, 2, 'BSCS-3A', 40, 'Wednesday', '13:00:00', '16:00:00'),
 (2, 1, (SELECT program_id FROM programs WHERE program_code='BSIT'), 1, 3, 'BSIT-1A', 35, 'Tuesday', '09:00:00', '12:00:00');
+
+INSERT INTO class_schedules (teacher_subject_id, day_of_week, start_time, end_time) VALUES
+(1, 1, '08:00:00', '11:00:00'),
+(2, 3, '13:00:00', '16:00:00'),
+(3, 2, '09:00:00', '12:00:00');
 
 INSERT INTO enrollments (student_id, teacher_subject_id) VALUES (1,1),(1,2),(2,1),(2,2),(3,3);
 

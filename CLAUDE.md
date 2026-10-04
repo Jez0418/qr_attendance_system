@@ -31,6 +31,11 @@ don't break the Vercel + Supabase connection. (No secrets belong in this file.)
 ## Database changes (Supabase does NOT update from git pushes)
 - Full schema + seed: `attendance-system/database/supabase_schema.sql` (final state; v1-v5 merged).
 - ISAP/MCNP departments + programs: `attendance-system/database/supabase_departments_programs.sql`.
+- Recurring class schedules: `attendance-system/database/supabase_class_schedules.sql` (adds `class_schedules`,
+  backfills it from old `meeting_date`/`schedule_day`). A class assignment (`teacher_subjects`) = who/what/which class/where;
+  its weekly meetings live in `class_schedules` (day_of_week 1=Mon..7=Sun). `meeting_date` is deprecated, and
+  `schedule_day`/`start_time`/`end_time` on `teacher_subjects` are only a display summary. Use the helpers in
+  `includes/functions.php` (`load_class_schedules`, `class_schedule_status`, `format_class_schedule`).
 - Any new table/column: write the SQL as a new file in `database/` AND run it in Supabase
   (SQL Editor: click in editor, Ctrl+A, Run so the whole script runs). Run SQL before pushing code that needs it.
 - Old MySQL files (`schema.sql`, `migration_v*.sql`, `database/*.php` helpers) are legacy and don't work on Postgres.

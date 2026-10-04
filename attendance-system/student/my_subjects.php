@@ -24,7 +24,7 @@ $stmt = $pdo->prepare('
     ORDER BY sub.subject_code
 ');
 $stmt->execute([$studentId]);
-$subjects = $stmt->fetchAll();
+$subjects = attach_class_schedules($pdo, $stmt->fetchAll());
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -39,8 +39,7 @@ require_once __DIR__ . '/../includes/header.php';
             <div style="font-size:13.5px;color:var(--slate-700);line-height:1.9">
                 <div><i class="fa-solid fa-chalkboard-user" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($s['teacher_name']); ?></div>
                 <div><i class="fa-solid fa-flask" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($s['lab_name']); ?></div>
-                <div><i class="fa-solid fa-calendar-days" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($s['schedule_day']); ?></div>
-                <div><i class="fa-solid fa-clock" style="width:18px;color:var(--indigo-600)"></i> <?php echo format_time($s['start_time']); ?> – <?php echo format_time($s['end_time']); ?></div>
+                <div><i class="fa-solid fa-calendar-week" style="width:18px;color:var(--indigo-600)"></i> <?php echo e(format_class_schedule($s['schedules'])); ?></div>
                 <div><i class="fa-solid fa-calendar-check" style="width:18px;color:var(--indigo-600)"></i> Enrolled <?php echo format_date($s['enrolled_at']); ?></div>
                 <div><i class="fa-solid fa-list-check" style="width:18px;color:var(--indigo-600)"></i> Attended <?php echo (int) $s['times_attended']; ?> time(s)</div>
             </div>

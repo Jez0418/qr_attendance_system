@@ -6,8 +6,9 @@
  * system, choosing date/start/end/radius, without being able to
  * create an invalid teacher-subject combination (the class picker
  * only ever lists real, existing assignments) and without being
- * able to activate a class whose meeting_date isn't today
- * (qr/session_manager.php enforces this server-side either way).
+ * able to activate a class that doesn't meet today per its recurring
+ * weekly schedule (qr/session_manager.php enforces this server-side
+ * either way).
  *
  * QR codes are temporary and session-scoped — a fresh, random token
  * is minted at every activation (qr/qr_helper.php, qr/session_manager.php),
@@ -27,7 +28,7 @@ auto_expire_sessions($pdo);
 
 // All active class assignments, each with their current session status (if any)
 $classes = $pdo->query('
-    SELECT ts.teacher_subject_id, ts.section, ts.schedule_day, ts.start_time, ts.end_time, ts.meeting_date,
+    SELECT ts.teacher_subject_id, ts.section,
         sub.subject_code, sub.subject_name, t.full_name AS teacher_name, lab.lab_name, lab.allowed_radius_meters,
         lab.latitude, lab.longitude,
         s.session_id, s.is_active, s.created_by_role, s.session_end
@@ -38,8 +39,15 @@ $classes = $pdo->query('
     LEFT JOIN attendance_sessions s ON s.teacher_subject_id = ts.teacher_subject_id
         AND s.session_date = CURDATE() AND s.is_active = 1
     WHERE ts.status = "active"
-    ORDER BY ts.meeting_date IS NULL, ts.meeting_date DESC, sub.subject_code
+    ORDER BY sub.subject_code, ts.section
 ')->fetchAll();
+$classes = attach_class_schedules($pdo, $classes);
+
+// Classes meeting today first (in class now, later today, ended), then the rest
+$rank = ['active' => 0, 'upcoming' => 1, 'ended' => 2, 'not_today' => 3, 'no_schedule' => 4];
+foreach ($classes as &$c) $c['today_state'] = class_schedule_status($c['schedules']);
+unset($c);
+usort($classes, fn($a, $b) => $rank[$a['today_state']['status']] <=> $rank[$b['today_state']['status']]);
 
 $activeSessions = $pdo->query('
     SELECT s.*, t.full_name AS teacher_name, sub.subject_name, sub.subject_code, lab.lab_name
@@ -71,30 +79,34 @@ require_once __DIR__ . '/../includes/header.php';
     <i class="fa-solid fa-shield-halved"></i>
     QR codes are temporary — a brand-new code is generated every time attendance
     is opened and stops working the moment it closes. A class can only be
-    activated on its own scheduled meeting date.
+    activated on one of its scheduled weekly meeting days, before or during
+    that day's class time.
 </div>
 
 <div class="card">
     <div class="card-header"><h3>All Classes — Attendance Status</h3></div>
     <div class="table-wrapper">
         <table class="data-table">
-            <thead><tr><th>Subject</th><th>Teacher</th><th>Laboratory</th><th>Meeting Date</th><th>Class Status</th><th>QR Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Subject</th><th>Teacher</th><th>Laboratory</th><th>Schedule</th><th>Today</th><th>QR Status</th><th>Actions</th></tr></thead>
             <tbody>
             <?php if (empty($classes)): ?>
                 <tr><td colspan="7" class="text-center text-muted">No active class assignments yet.</td></tr>
             <?php else: foreach ($classes as $c):
                 $hasCoords = $c['latitude'] !== null && $c['longitude'] !== null;
-                $classStatus = compute_class_status($c['meeting_date'], $c['start_time'], $c['end_time']);
-                $isToday = is_meeting_today($c['meeting_date']);
-                $canActivate = $hasCoords && (!$c['meeting_date'] || ($isToday && $classStatus !== 'expired'));
-                $statusMeta = class_status_badge($classStatus);
+                $blockReason = class_activation_block_reason($c['schedules']);
+                $canActivate = $hasCoords && $blockReason === '';
+                $statusMeta = class_status_badge($c['today_state']['status']);
+                $todaySlot = $c['today_state']['slot'];
             ?>
                 <tr>
                     <td><?php echo e($c['subject_code'] . ' - ' . $c['subject_name']); ?><div class="text-muted" style="font-size:11.5px"><?php echo e($c['section']); ?></div></td>
                     <td><?php echo e($c['teacher_name']); ?></td>
                     <td><?php echo e($c['lab_name']); ?><?php if (!$hasCoords): ?><div style="font-size:11px;color:var(--red-600)"><i class="fa-solid fa-triangle-exclamation"></i> No GPS set</div><?php endif; ?></td>
-                    <td><?php echo $c['meeting_date'] ? format_date($c['meeting_date']) . '<div class="text-muted" style="font-size:11px">' . e($c['schedule_day']) . ' · ' . format_time($c['start_time']) . '–' . format_time($c['end_time']) . '</div>' : '<span class="text-muted">Not set</span>'; ?></td>
-                    <td><span class="badge <?php echo $statusMeta['class']; ?>"><?php echo $statusMeta['label']; ?></span></td>
+                    <td style="font-size:12.5px"><?php echo e(format_class_schedule($c['schedules'])); ?></td>
+                    <td>
+                        <span class="badge <?php echo $statusMeta['class']; ?>"><?php echo $statusMeta['label']; ?></span>
+                        <?php if ($todaySlot): ?><div class="text-muted" style="font-size:11px"><?php echo format_time($todaySlot['start_time']); ?>–<?php echo format_time($todaySlot['end_time']); ?></div><?php endif; ?>
+                    </td>
                     <td>
                         <?php if ($c['session_id']): ?>
                             <span class="badge badge-active"><span class="dot dot-green" style="width:6px;height:6px;border-radius:50%"></span> ACTIVE<?php echo $c['created_by_role'] === 'admin' ? ' (Admin)' : ''; ?></span>
@@ -106,7 +118,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <?php if ($c['session_id']): ?>
                             <button class="btn btn-danger btn-sm" onclick="deactivateClass(<?php echo $c['teacher_subject_id']; ?>)"><i class="fa-solid fa-stop"></i> Deactivate</button>
                         <?php else: ?>
-                            <button class="btn btn-primary btn-sm" <?php echo $canActivate ? '' : 'disabled title="' . ($hasCoords ? 'This class is not scheduled for today' : 'Set GPS coordinates for this laboratory first') . '"'; ?> onclick='openActivateModal(<?php echo json_encode($c); ?>)'><i class="fa-solid fa-play"></i> Activate</button>
+                            <button class="btn btn-primary btn-sm" <?php echo $canActivate ? '' : 'disabled title="' . e($hasCoords ? $blockReason : 'Set GPS coordinates for this laboratory first') . '"'; ?> onclick='openActivateModal(<?php echo json_encode($c); ?>)'><i class="fa-solid fa-play"></i> Activate</button>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -183,7 +195,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <div class="form-group"><label>Start Time</label><input type="time" name="start_time" id="act_start" class="form-control" required></div>
                     <div class="form-group"><label>End Time (session expires)</label><input type="time" name="end_time" id="act_end" class="form-control" required></div>
                 </div>
-                <div class="alert alert-info" style="margin-bottom:0"><i class="fa-solid fa-circle-info"></i> If this class has a fixed meeting date, the date field is locked to it — a class can only be activated on its own scheduled day.</div>
+                <div class="alert alert-info" style="margin-bottom:0"><i class="fa-solid fa-circle-info"></i> Attendance is opened for today's scheduled meeting. Start/end default to today's class time and can be adjusted.</div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline" onclick="closeModal('activateModal')">Cancel</button>
@@ -207,15 +219,11 @@ function openActivateModal(c) {
     document.getElementById('act_class_id').value = c.teacher_subject_id;
     document.getElementById('act_class_label').textContent = c.subject_code + ' - ' + c.subject_name + ' | ' + c.teacher_name + ' | ' + c.lab_name;
     const dateField = document.getElementById('act_date');
-    if (c.meeting_date) {
-        dateField.value = c.meeting_date;
-        dateField.readOnly = true;
-    } else {
-        dateField.value = new Date().toISOString().slice(0, 10);
-        dateField.readOnly = false;
-    }
-    document.getElementById('act_start').value = c.start_time.substring(0, 5);
-    document.getElementById('act_end').value = c.end_time.substring(0, 5);
+    dateField.value = <?php echo json_encode(date('Y-m-d')); ?>;
+    dateField.readOnly = true;
+    const slot = c.today_state.slot || {};
+    document.getElementById('act_start').value = (slot.start_time || '').substring(0, 5);
+    document.getElementById('act_end').value = (slot.end_time || '').substring(0, 5);
     document.getElementById('act_radius').value = c.allowed_radius_meters;
     openModal('activateModal');
 }

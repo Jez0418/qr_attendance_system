@@ -2,19 +2,20 @@
 /**
  * teacher/session.php
  * The core teacher workflow:
- *   1. Pick one of your assigned classes (each has an explicit
- *      meeting_date — the single source of truth for "is this
- *      today's class?", never day-of-week alone)
+ *   1. Pick one of your assigned classes (each has a recurring weekly
+ *      schedule in class_schedules — the single source of truth for
+ *      "does this class meet today?")
  *   2. Flip the switch to open attendance — this mints a brand-new,
  *      random, one-time QR token (never reused across sessions)
  *   3. Watch students appear in the live "Scanned" list (AJAX polling)
  *   4. Flip it off to close the window
  *
- * A class whose meeting_date isn't today cannot be activated at all
- * (qr/session_manager.php enforces this server-side) — this page
- * reflects that by disabling the toggle and explaining why.
+ * A class with no slot today (or whose slots today are already over)
+ * cannot be activated (qr/session_manager.php enforces this
+ * server-side) — this page reflects that by disabling the toggle and
+ * explaining why.
  *
- * Late logic: scheduled_start = the class's meeting_date + start_time.
+ * Late logic: scheduled_start = today + today's slot start_time.
  * A scan more than LATE_THRESHOLD_MINUTES after that is marked "Late".
  */
 require_once __DIR__ . '/../includes/auth.php';
@@ -27,17 +28,22 @@ auto_expire_sessions($pdo);
 $teacherId = $_SESSION['profile_id'];
 
 $classes = $pdo->prepare('
-    SELECT ts.teacher_subject_id, sub.subject_code, sub.subject_name, ts.section, ts.start_time, ts.end_time,
-        ts.schedule_day, ts.meeting_date, ts.max_students,
+    SELECT ts.teacher_subject_id, sub.subject_code, sub.subject_name, ts.section, ts.max_students,
         lab.lab_id, lab.lab_name
     FROM teacher_subjects ts
     JOIN subjects sub ON sub.subject_id = ts.subject_id
     JOIN laboratories lab ON lab.lab_id = ts.lab_id
     WHERE ts.teacher_id = ? AND ts.status = "active"
-    ORDER BY ts.meeting_date IS NULL, ts.meeting_date DESC, sub.subject_code
+    ORDER BY sub.subject_code, ts.section
 ');
 $classes->execute([$teacherId]);
-$classes = $classes->fetchAll();
+$classes = attach_class_schedules($pdo, $classes->fetchAll());
+
+// Put classes that meet today first, so the default selection is today's class
+$rank = ['active' => 0, 'upcoming' => 1, 'ended' => 2, 'not_today' => 3, 'no_schedule' => 4];
+foreach ($classes as &$c) $c['today_state'] = class_schedule_status($c['schedules']);
+unset($c);
+usort($classes, fn($a, $b) => $rank[$a['today_state']['status']] <=> $rank[$b['today_state']['status']]);
 
 $selectedClass = (int) ($_GET['class'] ?? ($classes[0]['teacher_subject_id'] ?? 0));
 $belongsToTeacher = false;
@@ -47,9 +53,10 @@ foreach ($classes as $c) {
 }
 if (!$belongsToTeacher) { $selectedClass = 0; $classInfo = null; }
 
-$classStatus = $classInfo ? compute_class_status($classInfo['meeting_date'], $classInfo['start_time'], $classInfo['end_time']) : 'no_date';
-$isTodaysMeeting = $classInfo ? is_meeting_today($classInfo['meeting_date']) : false;
-$canActivate = $classInfo && (!$classInfo['meeting_date'] || ($isTodaysMeeting && $classStatus !== 'expired'));
+$classStatus = $classInfo ? $classInfo['today_state']['status'] : 'no_schedule';
+$blockReason = $classInfo ? class_activation_block_reason($classInfo['schedules']) : '';
+$canActivate = $classInfo && $blockReason === '';
+$todaySlot = $classInfo ? $classInfo['today_state']['slot'] : null;
 
 // Check for an existing active session today for this class
 $activeSession = null;
@@ -73,7 +80,7 @@ $statusMeta = class_status_badge($classStatus);
             <select name="class" class="form-control" style="max-width:420px" onchange="this.form.submit()">
                 <?php foreach ($classes as $c): ?>
                     <option value="<?php echo $c['teacher_subject_id']; ?>" <?php echo $selectedClass == $c['teacher_subject_id'] ? 'selected' : ''; ?>>
-                        <?php echo e($c['subject_code'] . ' - ' . $c['subject_name'] . ' (' . $c['section'] . ')' . ($c['meeting_date'] ? ' — ' . format_date($c['meeting_date']) : '')); ?>
+                        <?php echo e($c['subject_code'] . ' - ' . $c['subject_name'] . ' (' . $c['section'] . ') — ' . format_class_schedule($c['schedules'])); ?>
                     </option>
                 <?php endforeach; ?>
             </select>
@@ -90,11 +97,10 @@ $statusMeta = class_status_badge($classStatus);
                 <div style="font-size:12.5px;color:var(--slate-500);font-weight:600;margin-bottom:3px">Assigned Lab</div>
                 <div style="font-size:16px;font-weight:700;color:var(--slate-900)"><?php echo e($classInfo['lab_name']); ?> — <?php echo e($classInfo['subject_code']); ?></div>
                 <div style="font-size:12.5px;color:var(--slate-500);margin-top:2px">
-                    <?php if ($classInfo['meeting_date']): ?>
-                        <?php echo e($classInfo['schedule_day']); ?>, <?php echo format_date($classInfo['meeting_date']); ?> · <?php echo format_time($classInfo['start_time']); ?>–<?php echo format_time($classInfo['end_time']); ?>
-                        <span class="badge <?php echo $statusMeta['class']; ?>" style="margin-left:6px"><?php echo $statusMeta['label']; ?></span>
-                    <?php else: ?>
-                        <?php echo e($classInfo['schedule_day']); ?> · <?php echo format_time($classInfo['start_time']); ?>–<?php echo format_time($classInfo['end_time']); ?>
+                    <?php echo e(format_class_schedule($classInfo['schedules'])); ?>
+                    <span class="badge <?php echo $statusMeta['class']; ?>" style="margin-left:6px"><?php echo $statusMeta['label']; ?></span>
+                    <?php if ($todaySlot && $classStatus !== 'ended'): ?>
+                        <div>Today: <?php echo date('l, M d'); ?> · <?php echo format_time($todaySlot['start_time']); ?>–<?php echo format_time($todaySlot['end_time']); ?></div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -109,7 +115,7 @@ $statusMeta = class_status_badge($classStatus);
         <?php if (!$canActivate && !$activeSession): ?>
             <div class="alert alert-error" style="margin-top:14px;margin-bottom:0">
                 <i class="fa-solid fa-circle-exclamation"></i>
-                <?php echo $isTodaysMeeting ? 'Today\'s scheduled time window for this class has already ended.' : 'This class is not scheduled for today (meeting date: ' . format_date($classInfo['meeting_date']) . ').'; ?>
+                <?php echo e($blockReason); ?>
             </div>
         <?php endif; ?>
     </div>

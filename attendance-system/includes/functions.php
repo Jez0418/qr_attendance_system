@@ -148,44 +148,139 @@ function auto_expire_sessions(PDO $pdo) {
 }
 
 /* ------------------------------------------------------------
- * CLASS MEETING STATUS (UPCOMING / ACTIVE / EXPIRED / NO_DATE)
- * A class assignment (teacher_subjects row) now carries an explicit
- * meeting_date. Status is always derived by comparing that date +
- * its start/end time against "now" — never by day-of-week alone,
- * and never trusted from anything the client sends. Everything
- * here runs in the app's configured timezone (Asia/Manila, set in
- * includes/config.php), so PHP's own clock is the single source of
- * truth for "today."
- *
- * Returns one of: 'no_date', 'upcoming', 'active', 'expired'
+ * RECURRING CLASS SCHEDULES
+ * A class assignment (teacher_subjects row) says who teaches what,
+ * to which class, and where. WHEN it meets lives in class_schedules:
+ * one row per weekly slot (day_of_week 1 = Monday ... 7 = Sunday,
+ * ISO, same as date('N')). Whether a class meets "today" is always
+ * derived from those slots and PHP's own clock (Asia/Manila, set in
+ * includes/config.php) — never from anything the client sends.
  * ------------------------------------------------------------ */
-function compute_class_status($meetingDate, $startTime, $endTime) {
-    if (!$meetingDate) return 'no_date';
+const SCHEDULE_DAYS = [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday', 7 => 'Sunday'];
 
-    $now = new DateTime();
-    $start = DateTime::createFromFormat('Y-m-d H:i:s', $meetingDate . ' ' . $startTime);
-    $end = DateTime::createFromFormat('Y-m-d H:i:s', $meetingDate . ' ' . $endTime);
-    if (!$start || !$end) return 'no_date';
-
-    if ($now < $start) return 'upcoming';
-    if ($now >= $start && $now <= $end) return 'active';
-    return 'expired';
+/** Normalise 'H:i' / 'H:i:s' to 'H:i:s' (so times compare correctly as strings); null if invalid. */
+function normalize_time($time) {
+    $time = trim((string) $time);
+    foreach (['H:i:s', 'H:i'] as $fmt) {
+        $dt = DateTime::createFromFormat('!' . $fmt, $time);
+        if ($dt && $dt->format($fmt) === $time) return $dt->format('H:i:s');
+    }
+    return null;
 }
 
-/** True only if $meetingDate is literally today, in the app's timezone. */
-function is_meeting_today($meetingDate) {
-    if (!$meetingDate) return false;
-    return $meetingDate === date('Y-m-d');
+/** Weekly slots for many classes in one query: [teacher_subject_id => [slot, ...]] sorted by day/time. */
+function load_class_schedules(PDO $pdo, array $classIds) {
+    $classIds = array_values(array_unique(array_filter(array_map('intval', $classIds))));
+    $map = array_fill_keys($classIds, []);
+    if (!$classIds) return $map;
+    $in = implode(',', array_fill(0, count($classIds), '?'));
+    $stmt = $pdo->prepare("
+        SELECT schedule_id, teacher_subject_id, day_of_week, start_time, end_time
+        FROM class_schedules WHERE teacher_subject_id IN ($in)
+        ORDER BY day_of_week, start_time
+    ");
+    $stmt->execute($classIds);
+    foreach ($stmt->fetchAll() as $row) {
+        $row['day_of_week'] = (int) $row['day_of_week'];
+        $map[(int) $row['teacher_subject_id']][] = $row;
+    }
+    return $map;
 }
 
-/** Small badge-ready label + CSS class for a computed class status. */
+/** Adds a 'schedules' key (list of weekly slots) to every class row. */
+function attach_class_schedules(PDO $pdo, array $rows, $idKey = 'teacher_subject_id') {
+    $map = load_class_schedules($pdo, array_column($rows, $idKey));
+    foreach ($rows as &$row) $row['schedules'] = $map[(int) $row[$idKey]] ?? [];
+    unset($row);
+    return $rows;
+}
+
+/** "Mon/Wed 08:00 AM–11:00 AM, Fri 01:00 PM–03:00 PM" — days sharing a time range are grouped. */
+function format_class_schedule(array $slots) {
+    if (!$slots) return 'No schedule set';
+    $groups = [];
+    foreach ($slots as $s) $groups[$s['start_time'] . '|' . $s['end_time']][] = (int) $s['day_of_week'];
+    $parts = [];
+    foreach ($groups as $range => $days) {
+        [$start, $end] = explode('|', $range);
+        $parts[] = implode('/', array_map(fn($d) => substr(SCHEDULE_DAYS[$d], 0, 3), $days))
+            . ' ' . format_time($start) . '–' . format_time($end);
+    }
+    return implode(', ', $parts);
+}
+
+/**
+ * Where a class stands today, based on its weekly slots.
+ * Returns ['status' => ..., 'slot' => today's relevant slot or null] with status one of:
+ *   'no_schedule' — no weekly slots at all
+ *   'not_today'   — no slot falls on today's weekday
+ *   'upcoming'    — a slot later today hasn't started yet
+ *   'active'      — now is within one of today's slots
+ *   'ended'       — every slot today is already over
+ */
+function class_schedule_status(array $slots, ?DateTime $now = null) {
+    $now = $now ?: new DateTime();
+    if (!$slots) return ['status' => 'no_schedule', 'slot' => null];
+    $today = (int) $now->format('N');
+    $date = $now->format('Y-m-d');
+    $todays = array_values(array_filter($slots, fn($s) => (int) $s['day_of_week'] === $today));
+    if (!$todays) return ['status' => 'not_today', 'slot' => null];
+    usort($todays, fn($a, $b) => strcmp($a['start_time'], $b['start_time']));
+    $ended = null;
+    foreach ($todays as $s) {
+        if ($now < new DateTime("$date {$s['start_time']}")) return ['status' => 'upcoming', 'slot' => $s];
+        if ($now <= new DateTime("$date {$s['end_time']}")) return ['status' => 'active', 'slot' => $s];
+        $ended = $s;
+    }
+    return ['status' => 'ended', 'slot' => $ended];
+}
+
+/** Start of the next meeting after $now (looks up to a week ahead), or null if there are no slots. */
+function next_class_meeting(array $slots, ?DateTime $now = null) {
+    $now = $now ?: new DateTime();
+    for ($offset = 0; $offset <= 7; $offset++) {
+        $day = (clone $now)->modify("+$offset day");
+        $daySlots = array_filter($slots, fn($s) => (int) $s['day_of_week'] === (int) $day->format('N'));
+        usort($daySlots, fn($a, $b) => strcmp($a['start_time'], $b['start_time']));
+        foreach ($daySlots as $s) {
+            $start = new DateTime($day->format('Y-m-d') . ' ' . $s['start_time']);
+            if ($start > $now) return $start;
+        }
+    }
+    return null;
+}
+
+/** True if two weekly slots fall on the same day and their times overlap. */
+function schedule_slots_overlap(array $a, array $b) {
+    return (int) $a['day_of_week'] === (int) $b['day_of_week']
+        && $a['start_time'] < $b['end_time'] && $a['end_time'] > $b['start_time'];
+}
+
+/** Small badge-ready label + CSS class for a class_schedule_status() status. */
 function class_status_badge($status) {
     return match ($status) {
-        'upcoming' => ['label' => 'Upcoming', 'class' => 'badge-late'],
-        'active'   => ['label' => 'Active',   'class' => 'badge-active'],
-        'expired'  => ['label' => 'Expired',  'class' => 'badge-inactive'],
-        default    => ['label' => 'No Date Set', 'class' => 'badge-inactive'],
+        'upcoming'  => ['label' => 'Later Today',  'class' => 'badge-late'],
+        'active'    => ['label' => 'In Class Now', 'class' => 'badge-active'],
+        'ended'     => ['label' => 'Ended Today',  'class' => 'badge-inactive'],
+        'not_today' => ['label' => 'Not Today',    'class' => 'badge-inactive'],
+        default     => ['label' => 'No Schedule',  'class' => 'badge-inactive'],
     };
+}
+
+/** Why a class can't be activated for attendance right now, or '' if it can (upcoming/active today). */
+function class_activation_block_reason(array $slots, ?DateTime $now = null) {
+    $state = class_schedule_status($slots, $now);
+    switch ($state['status']) {
+        case 'no_schedule':
+            return 'This class has no recurring schedule yet. An administrator must add its meeting days in Class Assignments.';
+        case 'not_today':
+            $next = next_class_meeting($slots, $now);
+            return 'This class does not meet today.' . ($next ? ' Next meeting: ' . $next->format('l, M d · h:i A') . '.' : '');
+        case 'ended':
+            return "Today's scheduled time for this class (" . format_time($state['slot']['start_time']) . '–' . format_time($state['slot']['end_time']) . ') has already ended.';
+        default:
+            return '';
+    }
 }
 
 /* ------------------------------------------------------------

@@ -36,6 +36,7 @@ if (!$class) {
 }
 
 $pageTitle = $class['subject_code'];
+$classSlots = load_class_schedules($pdo, [$classId])[$classId] ?? [];
 
 // Pending requests for THIS class only
 $requests = $pdo->prepare('
@@ -80,8 +81,11 @@ require_once __DIR__ . '/../includes/header.php';
             <div><div class="text-muted" style="font-size:12px">Year Level</div><div style="font-weight:700"><?php echo $class['year_level'] ? 'Year ' . e($class['year_level']) : 'Any'; ?></div></div>
             <div><div class="text-muted" style="font-size:12px">Section</div><div style="font-weight:700"><?php echo e($class['section']); ?></div></div>
             <div><div class="text-muted" style="font-size:12px">Laboratory Room</div><div style="font-weight:700"><?php echo e($class['lab_name']); ?></div></div>
-            <div><div class="text-muted" style="font-size:12px">Day(s)</div><div style="font-weight:700"><?php echo e($class['schedule_day']); ?></div></div>
-            <div><div class="text-muted" style="font-size:12px">Start – End Time</div><div style="font-weight:700"><?php echo format_time($class['start_time']); ?> – <?php echo format_time($class['end_time']); ?></div></div>
+            <div><div class="text-muted" style="font-size:12px">Weekly Schedule</div><div style="font-weight:700">
+                <?php if ($classSlots): foreach ($classSlots as $slot): ?>
+                    <div><?php echo SCHEDULE_DAYS[$slot['day_of_week']]; ?> · <?php echo format_time($slot['start_time']); ?> – <?php echo format_time($slot['end_time']); ?></div>
+                <?php endforeach; else: ?>No schedule set<?php endif; ?>
+            </div></div>
             <div><div class="text-muted" style="font-size:12px">Enrollment</div><div style="font-weight:700"><?php echo $enrolledCount; ?>/<?php echo (int) $class['max_students']; ?> students</div></div>
         </div>
         <span class="badge badge-<?php echo $class['status'] === 'active' ? 'active' : 'inactive'; ?>" style="margin-top:14px;display:inline-block"><?php echo ucfirst($class['status']); ?></span>

@@ -12,7 +12,7 @@ $pageTitle = 'My Enrollment Requests';
 $studentId = $_SESSION['profile_id'];
 
 $stmt = $pdo->prepare('
-    SELECT r.*, sub.subject_code, sub.subject_name, t.full_name AS teacher_name, lab.lab_name, ts.schedule_day, ts.start_time, ts.end_time
+    SELECT r.*, sub.subject_code, sub.subject_name, t.full_name AS teacher_name, lab.lab_name
     FROM enrollment_requests r
     JOIN teacher_subjects ts ON ts.teacher_subject_id = r.teacher_subject_id
     JOIN subjects sub ON sub.subject_id = ts.subject_id
@@ -22,7 +22,7 @@ $stmt = $pdo->prepare('
     ORDER BY r.requested_at DESC
 ');
 $stmt->execute([$studentId]);
-$requests = $stmt->fetchAll();
+$requests = attach_class_schedules($pdo, $stmt->fetchAll());
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -39,7 +39,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <td><?php echo e($r['subject_code'] . ' - ' . $r['subject_name']); ?></td>
                     <td><?php echo e($r['teacher_name']); ?></td>
                     <td><?php echo e($r['lab_name']); ?></td>
-                    <td><?php echo e($r['schedule_day']); ?> · <?php echo format_time($r['start_time']); ?>–<?php echo format_time($r['end_time']); ?></td>
+                    <td><?php echo e(format_class_schedule($r['schedules'])); ?></td>
                     <td><?php echo format_datetime($r['requested_at']); ?></td>
                     <td>
                         <?php if ($r['status'] === 'pending'): ?>

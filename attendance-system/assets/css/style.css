@@ -181,6 +181,10 @@ img{max-width:100%}
 textarea.form-control{resize:vertical}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:700px){.form-row{grid-template-columns:1fr}}
+.schedule-row{display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:10px}
+.schedule-row label{display:block;font-size:12px;font-weight:600;color:var(--slate-700);margin-bottom:4px}
+.schedule-row .btn{height:38px}
+@media(max-width:700px){.schedule-row{grid-template-columns:1fr 1fr}.schedule-row>div:first-child{grid-column:1/-1}}
 .input-icon{position:relative}
 .input-icon i:first-child{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--slate-400)}
 .input-icon input{padding-left:38px}

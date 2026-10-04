@@ -48,7 +48,7 @@ try {
     if (!$parsed) throw new Exception('This QR code is invalid or has expired.');
 
     $stmt = $pdo->prepare('
-        SELECT s.*, ts.teacher_subject_id, ts.max_students, ts.meeting_date,
+        SELECT s.*, ts.teacher_subject_id, ts.max_students,
             sub.subject_name, sub.subject_code,
             t.full_name AS teacher_name,
             lab.lab_name, lab.latitude AS lab_lat, lab.longitude AS lab_lon
@@ -88,8 +88,9 @@ try {
         throw new Exception('You are not enrolled in this subject.');
     }
 
-    // ---- Step 8: Today's date matches the class's meeting date? ----
-    if (!empty($session['meeting_date']) && !is_meeting_today($session['meeting_date'])) {
+    // ---- Step 8: Session is for today's meeting? (sessions are only ever
+    // opened on a scheduled weekday — qr/session_manager.php) ----
+    if ($session['session_date'] !== date('Y-m-d')) {
         throw new Exception('This class is not scheduled for today.');
     }
 
