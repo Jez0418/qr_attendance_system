@@ -1,9 +1,12 @@
 <?php
 /**
  * admin/dashboard.php
- * Overview stats + attendance analytics charts for the administrator.
+ * Overview stats + attendance analytics charts for the administrator,
+ * plus a live "Today's Classes" card (refreshed every 30 seconds from
+ * admin/ajax_todays_classes.php; both read includes/schedule.php).
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/schedule.php';
 require_role('admin');
 
 $pageTitle = 'Dashboard';
@@ -68,6 +71,9 @@ $labUsage = $pdo->query('
     GROUP BY l.lab_id ORDER BY l.lab_name
 ')->fetchAll();
 
+// ---- Today's classes (initial data; the card then polls ajax_todays_classes.php) ----
+$todaysClasses = todays_classes_payload($pdo);
+
 // ---- Recent activity ----
 $recent = $pdo->query('
     SELECT ar.time_in, ar.status, st.full_name, sub.subject_name, lab.lab_name
@@ -128,6 +134,25 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
+<div class="card" id="todaysClassesCard" style="margin-bottom:20px">
+    <div class="card-header">
+        <div>
+            <h3>Today's Classes</h3>
+            <div class="text-muted" style="font-size:12px;margin-top:2px"><span id="tcDate"></span> · <span id="tcSummary"></span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+            <span class="text-muted" id="tcUpdated" style="font-size:11.5px" aria-live="polite"></span>
+            <a href="schedule.php?view=day" class="btn btn-outline btn-sm"><i class="fa-solid fa-calendar-day"></i> Schedule</a>
+        </div>
+    </div>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>Time</th><th>Subject</th><th>Teacher</th><th>Section</th><th>Laboratory</th><th>Status</th></tr></thead>
+            <tbody id="tcBody"></tbody>
+        </table>
+    </div>
+</div>
+
 <div class="grid-2">
     <div class="card">
         <div class="card-header"><h3>Attendance Graph</h3></div>
@@ -180,6 +205,91 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card-body"><canvas id="labChart" height="140"></canvas></div>
     </div>
 </div>
+
+<script>
+// ---- Today's Classes: render, then re-fetch every 30 s so statuses update without a reload ----
+(function () {
+    const REFRESH_MS = 30000;
+    const BADGES = {
+        UPCOMING:  ['Upcoming',  'badge-upcoming'],
+        ACTIVE:    ['Active',    'badge-active'],
+        EXPIRED:   ['Expired',   'badge-inactive'],
+        CANCELLED: ['Cancelled', 'badge-absent'],
+    };
+    const body = document.getElementById('tcBody');
+
+    function cell(text, sub) {
+        const td = document.createElement('td');
+        td.textContent = text;
+        if (sub) {
+            const small = document.createElement('div');
+            small.className = 'text-muted'; small.style.fontSize = '11px'; small.textContent = sub;
+            td.appendChild(small);
+        }
+        return td;
+    }
+    function badge(label, cls) {
+        const b = document.createElement('span');
+        b.className = 'badge ' + cls; b.textContent = label; b.style.marginRight = '4px';
+        return b;
+    }
+
+    function render(data) {
+        document.getElementById('tcDate').textContent = data.date_label;
+        const c = data.counts, total = data.classes.length;
+        document.getElementById('tcSummary').textContent = total === 0 ? 'no classes scheduled'
+            : total + (total === 1 ? ' class' : ' classes') + ' · ' + c.ACTIVE + ' active · ' + c.UPCOMING + ' upcoming'
+              + (c.CANCELLED ? ' · ' + c.CANCELLED + ' cancelled' : '');
+
+        body.replaceChildren();
+        if (total === 0) {
+            const tr = document.createElement('tr'), td = document.createElement('td');
+            td.colSpan = 6; td.className = 'text-center text-muted'; td.textContent = 'No classes scheduled today.';
+            tr.appendChild(td); body.appendChild(tr);
+            return;
+        }
+        for (const o of data.classes) {
+            const tr = document.createElement('tr');
+            if (o.status === 'CANCELLED') tr.className = 'tc-cancelled';
+            if (o.status === 'ACTIVE') tr.className = 'tc-active';
+            tr.append(
+                cell(o.time),
+                cell(o.subject_code, o.subject_name),
+                cell(o.teacher, o.substitute ? 'Substitute' : ''),
+                cell(o.section),
+                cell(o.lab)
+            );
+            const st = document.createElement('td');
+            st.appendChild(badge(...BADGES[o.status]));
+            if (o.rescheduled) st.appendChild(badge('Rescheduled', 'badge-rescheduled'));
+            if (o.reason && (o.status === 'CANCELLED' || o.rescheduled)) st.title = o.reason;
+            tr.appendChild(st);
+            body.appendChild(tr);
+        }
+    }
+
+    function stamp(ok) {
+        const t = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+        document.getElementById('tcUpdated').textContent = ok ? 'Updated ' + t : 'Could not refresh (' + t + ') — retrying';
+    }
+
+    async function refresh() {
+        try {
+            const res = await fetch('ajax_todays_classes.php', { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+            const data = await res.json();          // throws if the session expired (login page HTML)
+            if (!data.success) throw new Error(data.message);
+            render(data); stamp(true);
+        } catch (err) {
+            stamp(false);                            // keep showing the last good data
+        }
+    }
+
+    render(<?php echo json_encode($todaysClasses); ?>);
+    stamp(true);
+    setInterval(() => { if (!document.hidden) refresh(); }, REFRESH_MS);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+})();
+</script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>

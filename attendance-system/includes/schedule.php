@@ -391,3 +391,37 @@ function find_schedule_conflict(PDO $pdo, string $date, $start, $end, int $teach
     }
     return null;
 }
+
+/**
+ * Today's meetings as plain data for the admin dashboard (page + JSON endpoint).
+ * "Today" and every status come from the server's Asia/Manila clock at call time.
+ */
+function todays_classes_payload(PDO $pdo, $now = null): array {
+    $now = schedule_now($now);
+    $classes = [];
+    $counts = array_fill_keys([OCCURRENCE_UPCOMING, OCCURRENCE_ACTIVE, OCCURRENCE_EXPIRED, OCCURRENCE_CANCELLED], 0);
+    foreach (get_todays_occurrences($pdo, [], $now) as $o) {
+        $status = get_occurrence_status($o, $now);
+        $counts[$status]++;
+        $classes[] = [
+            'key'          => $o['occurrence_key'],
+            'time'         => format_time_range($o['start_time'], $o['end_time']),
+            'subject_code' => $o['subject_code'],
+            'subject_name' => $o['subject_name'],
+            'teacher'      => $o['teacher_name'],
+            'substitute'   => $o['teacher_id'] !== $o['original_teacher_id'],
+            'section'      => $o['section'],
+            'lab'          => $o['lab_name'],
+            'status'       => $status,
+            'rescheduled'  => $o['is_rescheduled'],
+            'reason'       => $o['exception_reason'],
+        ];
+    }
+    return [
+        'date'         => $now->format('Y-m-d'),
+        'date_label'   => $now->format('l, F j, Y'),
+        'generated_at' => $now->format(DATE_ATOM),
+        'counts'       => $counts,
+        'classes'      => $classes,
+    ];
+}

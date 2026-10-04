@@ -468,3 +468,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
     .meeting-details{grid-template-columns:1fr}
     .meeting-details dt{margin-top:6px}
 }
+
+/* ================= TODAY'S CLASSES (admin/dashboard.php) ================= */
+#tcBody tr.tc-active td{background:var(--green-100)}
+#tcBody tr.tc-cancelled td:not(:last-child){color:var(--slate-500);text-decoration:line-through}
