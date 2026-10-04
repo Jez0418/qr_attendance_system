@@ -266,6 +266,7 @@ END $$;
 INSERT INTO settings (setting_key, setting_value) VALUES
     ('max_gps_accuracy_meters', '100'),
     ('default_allowed_radius_meters', '50'),
+    ('late_grace_minutes', '15'),
     ('qr_mode', 'session');
 
 INSERT INTO institutions (institution_code, institution_name) VALUES

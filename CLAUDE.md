@@ -41,6 +41,10 @@ don't break the Vercel + Supabase connection. (No secrets belong in this file.)
   stored; `includes/schedule.php` generates them (`get_occurrences`, `get_occurrence_status`, `get_todays_occurrences`,
   Asia/Manila) and is meant to be the single source of truth for "when does a class meet". Test:
   `php attendance-system/tests/schedule_test.php` (add `--db` with DB_* env vars; it rolls back). `tests/` is not deployed.
+- Attendance sessions are automatic: `qr/session_manager.php` `ensure_session_for_occurrence()` opens one session per
+  ACTIVE meeting (session_date = occurrence date, scheduled_start = its start, session_end = its end, fresh qr_token),
+  called from teacher/session.php, admin/qr_management.php and student/ajax_scan.php. No manual activate; manual close
+  only, and a closed session is never reopened. Late = scan after start + settings `late_grace_minutes` (default 15).
 - Any new table/column: write the SQL as a new file in `database/` AND run it in Supabase
   (SQL Editor: click in editor, Ctrl+A, Run so the whole script runs). Run SQL before pushing code that needs it.
 - Old MySQL files (`schema.sql`, `migration_v*.sql`, `database/*.php` helpers) are legacy and don't work on Postgres.

@@ -2,131 +2,154 @@
 /**
  * ------------------------------------------------------------
  * qr/session_manager.php
- * Single source of truth for creating/closing an attendance
- * session, since BOTH a teacher (their own class) and an admin
- * (any class) can activate/deactivate attendance for a class.
- * Keeping this logic in one place means the two entry points can
- * never drift out of sync or apply different validation rules.
+ * Attendance sessions follow the class schedule automatically.
  *
- * Note: activating a session no longer generates a QR code — the
- * QR code is now a single fixed code per LABORATORY (see
- * qr/qr_helper.php). Activating a session just opens a time window
- * during which scans of that laboratory's QR code will be recorded
- * against this specific class.
+ * A session belongs to ONE meeting ("occurrence", from
+ * includes/schedule.php): same class, session_date = the occurrence's
+ * date, scheduled_start = its start. ensure_session_for_occurrence()
+ * opens it the first time anyone (teacher page, admin page, a scan)
+ * looks while the meeting is ACTIVE, with a fresh random QR token and
+ * session_end (the session's "expires at") = the meeting's end time.
+ * Nobody opens attendance by hand any more; a teacher or admin can
+ * still close it early, and a closed session is never re-opened for
+ * that meeting.
+ *
+ * Automatically created sessions have created_by_user_id = NULL and
+ * activated_by = the teacher of that meeting (a substitute if one was
+ * set by a schedule exception).
  * ------------------------------------------------------------
  */
 require_once __DIR__ . '/qr_helper.php';
+require_once __DIR__ . '/../includes/schedule.php';
 
-/**
- * Activate an attendance session for a class (teacher_subjects row).
- *
- * @param PDO    $pdo
- * @param int    $classId          teacher_subject_id
- * @param string $role             'teacher' or 'admin' — who is activating
- * @param int    $activatorUserId  users.user_id of whoever clicked Activate
- * @param string|null $sessionDate  'Y-m-d'; must be today (kept for the admin form), defaults to today
- * @param string|null $startTime    'H:i' or 'H:i:s', defaults to today's scheduled slot start
- * @param string|null $endTime      'H:i' or 'H:i:s', defaults to today's scheduled slot end
- * @param int|null    $radiusMeters overrides the laboratory's configured geofence radius
- * @return array ['success' => bool, 'message' => string, 'session' => array|null]
- */
-function activate_attendance_session(PDO $pdo, $classId, $role, $activatorUserId, $sessionDate = null, $startTime = null, $endTime = null, $radiusMeters = null) {
-    $classStmt = $pdo->prepare('
-        SELECT ts.*, lab.allowed_radius_meters AS lab_radius, lab.latitude, lab.longitude
-        FROM teacher_subjects ts
-        JOIN laboratories lab ON lab.lab_id = ts.lab_id
-        WHERE ts.teacher_subject_id = ?
+/** Minutes after the start time before a scan counts as Late (settings.late_grace_minutes, default 15). */
+function get_late_grace_minutes(PDO $pdo): int {
+    return max(0, min(180, get_setting_int($pdo, 'late_grace_minutes', 15)));
+}
+
+/** The session (open or closed) for this meeting, or null. */
+function find_session_for_occurrence(PDO $pdo, array $occ): ?array {
+    $stmt = $pdo->prepare('
+        SELECT * FROM attendance_sessions
+        WHERE teacher_subject_id = ? AND session_date = ? AND scheduled_start = ?
+        ORDER BY session_id LIMIT 1
     ');
-    $classStmt->execute([$classId]);
-    $class = $classStmt->fetch();
-
-    if (!$class) {
-        return ['success' => false, 'message' => 'Class not found.', 'session' => null];
-    }
-    if ($class['latitude'] === null || $class['longitude'] === null) {
-        return ['success' => false, 'message' => 'This laboratory has no GPS coordinates configured yet. An administrator must set them (Admin > Laboratories) before attendance can be geofenced.', 'session' => null];
-    }
-
-    // CRITICAL: the class's recurring weekly schedule (class_schedules) is
-    // the single source of truth for "does this class meet today?" — never
-    // anything the client claims. Attendance can only be opened on a
-    // scheduled weekday, before or during that day's slot, and only for today.
-    $slots = load_class_schedules($pdo, [$classId])[(int) $classId] ?? [];
-    $blockReason = class_activation_block_reason($slots);
-    if ($blockReason !== '') {
-        return ['success' => false, 'message' => $blockReason, 'session' => null];
-    }
-    $todaySlot = class_schedule_status($slots)['slot'];
-
-    $today = date('Y-m-d');
-    if ($sessionDate && $sessionDate !== $today) {
-        return ['success' => false, 'message' => 'Attendance can only be opened for today\'s meeting.', 'session' => null];
-    }
-    $sessionDate = $today;
-
-    // Only one active session per class per day, regardless of who activates it
-    $existing = $pdo->prepare('SELECT session_id FROM attendance_sessions WHERE teacher_subject_id = ? AND session_date = ? AND is_active = 1');
-    $existing->execute([$classId, $sessionDate]);
-    if ($existing->fetch()) {
-        return ['success' => false, 'message' => 'A session is already active for this class today.', 'session' => null];
-    }
-
-    $startTime = $startTime ?: $todaySlot['start_time'];
-    $endTime = $endTime ?: $todaySlot['end_time'];
-    $scheduledStart = $sessionDate . ' ' . $startTime;
-    $sessionEnd = $sessionDate . ' ' . $endTime;
-
-    // Guard against an end time that's before/equal to the start (e.g. bad manual input)
-    if (strtotime($sessionEnd) <= strtotime($scheduledStart)) {
-        $sessionEnd = date('Y-m-d H:i:s', strtotime($scheduledStart) + 3 * 3600); // fall back to +3h
-    }
-
-    $radius = $radiusMeters !== null && $radiusMeters !== '' ? (int) $radiusMeters : (int) $class['lab_radius'];
-
-    // A brand-new, cryptographically random token every activation — never
-    // reused across sessions, so an old screenshot can never match a new one.
-    $qrToken = bin2hex(random_bytes(24));
-
-    $ins = $pdo->prepare('
-        INSERT INTO attendance_sessions
-            (teacher_subject_id, session_date, qr_token, scheduled_start, session_end,
-             late_threshold_minutes, allowed_radius_meters, is_active, activated_by, created_by_role, created_by_user_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
-    ');
-    $ins->execute([
-        $classId, $sessionDate, $qrToken, $scheduledStart, $sessionEnd,
-        LATE_THRESHOLD_MINUTES, $radius, $class['teacher_id'], $role, $activatorUserId,
-    ]);
-    $sessionId = $pdo->lastInsertId();
-
-    // Notify enrolled students
-    $students = $pdo->prepare('
-        SELECT s.user_id FROM enrollments e JOIN students s ON s.student_id = e.student_id
-        WHERE e.teacher_subject_id = ? AND e.status = "enrolled"
-    ');
-    $students->execute([$classId]);
-    foreach ($students->fetchAll() as $s) {
-        create_notification($pdo, $s['user_id'], 'Attendance Session Started', 'Attendance is now open — scan the QR code posted in the laboratory to be marked present!');
-    }
-
-    return ['success' => true, 'message' => 'Attendance session activated.', 'session' => ['session_id' => $sessionId, 'qr_token' => $qrToken]];
+    $stmt->execute([$occ['teacher_subject_id'], $occ['date'], $occ['starts_at']]);
+    return $stmt->fetch() ?: null;
 }
 
 /**
- * Deactivate whatever active session exists today for a class.
- * Works regardless of whether a teacher or an admin originally
- * activated it — either party may close it.
+ * If the meeting is ACTIVE and has no session yet, create one; return the
+ * meeting's session (open or closed) or null. Nothing is created when the
+ * meeting isn't ACTIVE (upcoming, over or cancelled) or its laboratory has
+ * no GPS coordinates (attendance couldn't be geofenced).
  */
-function deactivate_attendance_session(PDO $pdo, $classId, $sessionDate = null) {
-    $sessionDate = $sessionDate ?: date('Y-m-d');
-    $upd = $pdo->prepare('UPDATE attendance_sessions SET is_active = 0, deactivated_at = NOW() WHERE teacher_subject_id = ? AND session_date = ? AND is_active = 1');
-    $upd->execute([$classId, $sessionDate]);
-    return $upd->rowCount() > 0;
+function ensure_session_for_occurrence(PDO $pdo, array $occ, $now = null): ?array {
+    if (get_occurrence_status($occ, $now) !== OCCURRENCE_ACTIVE) {
+        return find_session_for_occurrence($pdo, $occ);
+    }
+    if ($existing = find_session_for_occurrence($pdo, $occ)) return $existing;
+
+    $lab = $pdo->prepare('SELECT latitude, longitude, allowed_radius_meters FROM laboratories WHERE lab_id = ?');
+    $lab->execute([$occ['lab_id']]);
+    $lab = $lab->fetch();
+    if (!$lab || $lab['latitude'] === null || $lab['longitude'] === null) return null;
+
+    // Serialise creation per meeting so two simultaneous requests can't both insert.
+    $ownTransaction = !$pdo->inTransaction();
+    if ($ownTransaction) $pdo->beginTransaction();
+    try {
+        $pdo->prepare('SELECT pg_advisory_xact_lock(hashtext(?))')->execute(['attendance-session:' . $occ['occurrence_key']]);
+        $session = find_session_for_occurrence($pdo, $occ);
+        $created = false;
+        if (!$session) {
+            $ins = $pdo->prepare("
+                INSERT INTO attendance_sessions
+                    (teacher_subject_id, session_date, qr_token, scheduled_start, session_end,
+                     late_threshold_minutes, allowed_radius_meters, is_active, activated_by, created_by_role, created_by_user_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 'teacher', NULL)
+                RETURNING *
+            ");
+            $ins->execute([
+                $occ['teacher_subject_id'], $occ['date'], bin2hex(random_bytes(24)),
+                $occ['starts_at'], $occ['ends_at'],
+                get_late_grace_minutes($pdo), (int) $lab['allowed_radius_meters'], $occ['teacher_id'],
+            ]);
+            $session = $ins->fetch();
+            $created = true;
+        }
+        if ($ownTransaction) $pdo->commit();
+    } catch (Throwable $e) {
+        if ($ownTransaction && $pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+
+    if ($created) {
+        $students = $pdo->prepare("
+            SELECT s.user_id FROM enrollments e JOIN students s ON s.student_id = e.student_id
+            WHERE e.teacher_subject_id = ? AND e.status = 'enrolled'
+        ");
+        $students->execute([$occ['teacher_subject_id']]);
+        foreach ($students->fetchAll(PDO::FETCH_COLUMN) as $uid) {
+            create_notification($pdo, $uid, 'Attendance Open',
+                "Attendance is open for {$occ['subject_code']} in {$occ['lab_name']} until " . (new DateTimeImmutable($occ['ends_at']))->format('g:i A') . ' — scan the QR code to check in.');
+        }
+    }
+    return $session;
 }
 
-/** Deactivate a specific session by its own ID (used by admin force-stop from the live list). */
+/**
+ * Today's meetings (same filters as get_occurrences()), ensuring a session for
+ * every ACTIVE one. Returns a list of ['occurrence', 'status', 'session'].
+ */
+function ensure_sessions_for_today(PDO $pdo, array $filters = [], $now = null): array {
+    $now = schedule_now($now);
+    $out = [];
+    foreach (get_todays_occurrences($pdo, $filters, $now) as $occ) {
+        $out[] = [
+            'occurrence' => $occ,
+            'status'     => get_occurrence_status($occ, $now),
+            'session'    => ensure_session_for_occurrence($pdo, $occ, $now),
+        ];
+    }
+    return $out;
+}
+
+/** Seconds until the next start or end among these meetings (for auto-refreshing pages), or null. */
+function seconds_until_next_change(array $occurrences, $now = null): ?int {
+    $now = schedule_now($now);
+    $next = null;
+    foreach ($occurrences as $occ) {
+        foreach (['starts_at', 'ends_at'] as $edge) {
+            $t = new DateTimeImmutable($occ[$edge], schedule_tz());
+            if ($t > $now && ($next === null || $t < $next)) $next = $t;
+        }
+    }
+    return $next ? $next->getTimestamp() - $now->getTimestamp() : null;
+}
+
+/** Close a session early (teacher or admin). A closed session is never re-opened. */
 function deactivate_attendance_session_by_id(PDO $pdo, $sessionId) {
     $upd = $pdo->prepare('UPDATE attendance_sessions SET is_active = 0, deactivated_at = NOW() WHERE session_id = ? AND is_active = 1');
     $upd->execute([$sessionId]);
     return $upd->rowCount() > 0;
+}
+
+/** Badge label + CSS class for each occurrence status. */
+const OCCURRENCE_BADGES = [
+    OCCURRENCE_UPCOMING  => ['Upcoming',  'badge-upcoming'],
+    OCCURRENCE_ACTIVE    => ['Active',    'badge-active'],
+    OCCURRENCE_EXPIRED   => ['Expired',   'badge-inactive'],
+    OCCURRENCE_CANCELLED => ['Cancelled', 'badge-absent'],
+];
+
+/** One-line attendance state for an entry from ensure_sessions_for_today(). */
+function attendance_state_label(array $m) {
+    $o = $m['occurrence'];
+    if ($m['status'] === OCCURRENCE_CANCELLED) return 'Cancelled' . ($o['exception_reason'] ? ': ' . $o['exception_reason'] : '');
+    if ($m['session'] && (int) $m['session']['is_active'] === 1) return 'Attendance open until ' . date('g:i A', strtotime($m['session']['session_end']));
+    if ($m['session']) return 'Attendance closed' . ($m['session']['deactivated_at'] ? ' at ' . date('g:i A', strtotime($m['session']['deactivated_at'])) : '');
+    if ($m['status'] === OCCURRENCE_UPCOMING) return 'Opens automatically at ' . date('g:i A', strtotime($o['starts_at']));
+    if ($m['status'] === OCCURRENCE_ACTIVE) return 'Cannot open: this laboratory has no GPS coordinates';
+    return 'No attendance was taken';
 }

@@ -235,20 +235,6 @@ function class_schedule_status(array $slots, ?DateTime $now = null) {
     return ['status' => 'ended', 'slot' => $ended];
 }
 
-/** Start of the next meeting after $now (looks up to a week ahead), or null if there are no slots. */
-function next_class_meeting(array $slots, ?DateTime $now = null) {
-    $now = $now ?: new DateTime();
-    for ($offset = 0; $offset <= 7; $offset++) {
-        $day = (clone $now)->modify("+$offset day");
-        $daySlots = array_filter($slots, fn($s) => (int) $s['day_of_week'] === (int) $day->format('N'));
-        usort($daySlots, fn($a, $b) => strcmp($a['start_time'], $b['start_time']));
-        foreach ($daySlots as $s) {
-            $start = new DateTime($day->format('Y-m-d') . ' ' . $s['start_time']);
-            if ($start > $now) return $start;
-        }
-    }
-    return null;
-}
 
 /** True if two weekly slots fall on the same day and their times overlap. */
 function schedule_slots_overlap(array $a, array $b) {
@@ -267,21 +253,6 @@ function class_status_badge($status) {
     };
 }
 
-/** Why a class can't be activated for attendance right now, or '' if it can (upcoming/active today). */
-function class_activation_block_reason(array $slots, ?DateTime $now = null) {
-    $state = class_schedule_status($slots, $now);
-    switch ($state['status']) {
-        case 'no_schedule':
-            return 'This class has no recurring schedule yet. An administrator must add its meeting days in Class Assignments.';
-        case 'not_today':
-            $next = next_class_meeting($slots, $now);
-            return 'This class does not meet today.' . ($next ? ' Next meeting: ' . $next->format('l, M d · h:i A') . '.' : '');
-        case 'ended':
-            return "Today's scheduled time for this class (" . format_time($state['slot']['start_time']) . '–' . format_time($state['slot']['end_time']) . ') has already ended.';
-        default:
-            return '';
-    }
-}
 
 /* ------------------------------------------------------------
  * STUDENT ELIGIBILITY FOR A CLASS (server-side, never client-trusted)

@@ -18,9 +18,9 @@ try {
     $own = $pdo->prepare('
         SELECT ts.teacher_subject_id FROM attendance_sessions s
         JOIN teacher_subjects ts ON ts.teacher_subject_id = s.teacher_subject_id
-        WHERE s.session_id = ? AND ts.teacher_id = ?
+        WHERE s.session_id = ? AND (ts.teacher_id = ? OR s.activated_by = ?)
     ');
-    $own->execute([$sessionId, $teacherId]);
+    $own->execute([$sessionId, $teacherId, $teacherId]);
     $classId = $own->fetchColumn();
     if (!$classId) throw new Exception('Access denied.');
 

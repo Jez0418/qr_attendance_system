@@ -34,10 +34,7 @@ define('DB_SSL',  getenv('DB_SSL') !== false ? (bool) getenv('DB_SSL') : (bool) 
 define('APP_NAME', 'MCNP QR Laboratory Attendance System');
 // BASE_URL: change this if you rename the project folder in htdocs
 define('BASE_URL', getenv('VERCEL') ? '/' : '/attendance-system/');
-define('LATE_THRESHOLD_MINUTES', 15);
-// Students may scan up to this many minutes BEFORE a class's start time
-// (teachers often open attendance a little early).
-define('ATTENDANCE_EARLY_GRACE_MINUTES', 30);
+// Late grace period: Admin > Settings (settings.late_grace_minutes, default 15).
 define('UPLOAD_DIR', __DIR__ . '/../uploads/photos/');
 define('UPLOAD_URL', BASE_URL . 'uploads/photos/');
 
