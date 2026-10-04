@@ -14,6 +14,14 @@ current time is within the attendance window, their location is inside the
 laboratory's configured radius, and they haven't already recorded
 attendance for that session.
 
+
+> **Database: PostgreSQL / Supabase.** The app now runs on PostgreSQL (e.g. Supabase) instead of MySQL.
+> Run `database/supabase_schema.sql` once (Supabase → SQL Editor) — it already contains every
+> migration (v2–v5), so the old `schema.sql` / `migration_v*.sql` files are MySQL-only history.
+> Configure the connection with the `DB_*` environment variables (see `.env.example`).
+> The helper scripts in `database/*.php` still target MySQL and are not needed for a fresh install.
+> Vercel deployment: see `vercel.json` + `api/index.php`; sessions are stored in the `php_sessions` table.
+
 ---
 
 ## ✨ What's in this version (v5)

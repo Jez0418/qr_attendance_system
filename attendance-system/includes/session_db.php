@@ -1,21 +1,11 @@
 <?php
 /**
  * Database-backed PHP sessions for serverless hosting (Vercel).
- * The `php_sessions` table is created automatically on first use.
+ * Uses the `php_sessions` table created by database/supabase_schema.sql.
  */
 function register_db_session_handler() {
-    $dsn = 'mysql:host=' . DB_HOST . ';port=' . DB_PORT . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET;
-    $opts = [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION];
-    if (DB_SSL) {
-        $opts[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
-        $opts[PDO::MYSQL_ATTR_SSL_CA] = '/etc/ssl/certs/ca-certificates.crt';
-    }
-    $pdo = new PDO($dsn, DB_USER, DB_PASS, $opts);
-    $pdo->exec('CREATE TABLE IF NOT EXISTS php_sessions (
-        id VARCHAR(128) PRIMARY KEY,
-        data MEDIUMTEXT NOT NULL,
-        updated_at INT NOT NULL
-    )');
+    require_once __DIR__ . '/db_connect.php';
+    $GLOBALS['pdo'] = $pdo = app_connect(); // reused by includes/db.php
 
     session_set_save_handler(new class($pdo) implements SessionHandlerInterface {
         private $pdo;
@@ -29,7 +19,8 @@ function register_db_session_handler() {
             return $d === false ? '' : $d;
         }
         function write($id, $data): bool {
-            $s = $this->pdo->prepare('REPLACE INTO php_sessions (id, data, updated_at) VALUES (?, ?, ?)');
+            $s = $this->pdo->prepare('INSERT INTO php_sessions (id, data, updated_at) VALUES (?, ?, ?)
+                ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = EXCLUDED.updated_at');
             return $s->execute([$id, $data, time()]);
         }
         function destroy($id): bool {
