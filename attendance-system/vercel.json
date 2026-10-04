@@ -1,11 +1,26 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/index.php", "use": "vercel-php@0.7.3" },
-    { "src": "assets/**", "use": "@vercel/static" }
+    {
+      "src": "api/index.php",
+      "use": "vercel-php@0.7.3"
+    },
+    {
+      "src": "assets/**",
+      "use": "@vercel/static"
+    }
   ],
   "routes": [
-    { "src": "/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/(.*)", "dest": "/api/index.php" }
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.php"
+    }
+  ],
+  "regions": [
+    "syd1"
   ]
 }

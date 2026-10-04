@@ -9,16 +9,25 @@ function register_db_session_handler() {
 
     session_set_save_handler(new class($pdo) implements SessionHandlerInterface {
         private $pdo;
+        private $readData = null;
+        private $readAt = 0;
         function __construct($pdo) { $this->pdo = $pdo; }
         function open($p, $n): bool { return true; }
         function close(): bool { return true; }
         function read($id): string|false {
-            $s = $this->pdo->prepare('SELECT data FROM php_sessions WHERE id = ?');
+            $s = $this->pdo->prepare('SELECT data, updated_at FROM php_sessions WHERE id = ?');
             $s->execute([$id]);
-            $d = $s->fetchColumn();
-            return $d === false ? '' : $d;
+            $row = $s->fetch();
+            $this->readData = $row ? $row['data'] : null;
+            $this->readAt = $row ? (int) $row['updated_at'] : 0;
+            return $row ? $row['data'] : '';
         }
         function write($id, $data): bool {
+            // Skip the database round trip when nothing changed (refresh the
+            // timestamp only every 5 minutes so the session doesn't expire).
+            if ($this->readData !== null && $data === $this->readData && time() - $this->readAt < 300) {
+                return true;
+            }
             $s = $this->pdo->prepare('INSERT INTO php_sessions (id, data, updated_at) VALUES (?, ?, ?)
                 ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = EXCLUDED.updated_at');
             return $s->execute([$id, $data, time()]);
