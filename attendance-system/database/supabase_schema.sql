@@ -9,7 +9,7 @@
 -- ============================================================
 
 DROP TABLE IF EXISTS php_sessions, activity_logs, notifications, attendance_records,
-    attendance_sessions, enrollment_requests, enrollments, class_schedules, teacher_subjects, subjects,
+    attendance_sessions, enrollment_requests, enrollments, schedule_exceptions, class_schedules, teacher_subjects, subjects,
     laboratories, teachers, students, programs, departments, institutions, settings, users CASCADE;
 
 CREATE TABLE users (
@@ -129,18 +129,45 @@ CREATE TABLE teacher_subjects (
 CREATE INDEX idx_ts_teacher ON teacher_subjects (teacher_id);
 CREATE INDEX idx_ts_subject ON teacher_subjects (subject_id);
 
--- Recurring weekly meetings of a class assignment. day_of_week: 1 = Monday ... 7 = Sunday (ISO).
+-- Weekly rules of a class assignment. day_of_week: 1 = Monday ... 7 = Sunday (ISO).
+-- Meetings are generated from these + schedule_exceptions by includes/schedule.php.
 CREATE TABLE class_schedules (
     schedule_id SERIAL PRIMARY KEY,
     teacher_subject_id INT NOT NULL REFERENCES teacher_subjects(teacher_subject_id) ON DELETE CASCADE,
     day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 1 AND 7),
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
+    effective_start_date DATE NULL,
+    effective_end_date DATE NULL,
     CHECK (end_time > start_time),
-    UNIQUE (teacher_subject_id, day_of_week, start_time)
+    CONSTRAINT class_schedules_effective_range_chk
+        CHECK (effective_start_date IS NULL OR effective_end_date IS NULL OR effective_end_date >= effective_start_date)
 );
 CREATE INDEX idx_cs_class ON class_schedules (teacher_subject_id);
 CREATE INDEX idx_cs_day ON class_schedules (day_of_week);
+CREATE INDEX idx_cs_effective ON class_schedules (effective_start_date, effective_end_date);
+
+-- Changes to one meeting date of a class: CANCELLED, or RESCHEDULED (NULL new_* = unchanged).
+CREATE TABLE schedule_exceptions (
+    exception_id SERIAL PRIMARY KEY,
+    teacher_subject_id INT NOT NULL REFERENCES teacher_subjects(teacher_subject_id) ON DELETE CASCADE,
+    original_date DATE NOT NULL,
+    exception_type VARCHAR(12) NOT NULL CHECK (exception_type IN ('CANCELLED','RESCHEDULED')),
+    new_date DATE NULL,
+    new_start_time TIME NULL,
+    new_end_time TIME NULL,
+    new_lab_id INT NULL REFERENCES laboratories(lab_id) ON DELETE SET NULL,
+    new_teacher_id INT NULL REFERENCES teachers(teacher_id) ON DELETE SET NULL,
+    reason VARCHAR(500) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT schedule_exceptions_class_date_key UNIQUE (teacher_subject_id, original_date),
+    CONSTRAINT schedule_exceptions_times_chk CHECK ((new_start_time IS NULL) = (new_end_time IS NULL)
+        AND (new_start_time IS NULL OR new_end_time > new_start_time))
+);
+CREATE INDEX idx_se_original_date ON schedule_exceptions (original_date);
+CREATE INDEX idx_se_new_date ON schedule_exceptions (new_date);
+CREATE INDEX idx_se_new_teacher ON schedule_exceptions (new_teacher_id);
+CREATE INDEX idx_se_new_lab ON schedule_exceptions (new_lab_id);
 
 CREATE TABLE enrollments (
     enrollment_id SERIAL PRIMARY KEY,
