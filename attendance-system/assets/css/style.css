@@ -181,10 +181,13 @@ img{max-width:100%}
 textarea.form-control{resize:vertical}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:700px){.form-row{grid-template-columns:1fr}}
-.schedule-row{display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:10px}
-.schedule-row label{display:block;font-size:12px;font-weight:600;color:var(--slate-700);margin-bottom:4px}
-.schedule-row .btn{height:38px}
-@media(max-width:700px){.schedule-row{grid-template-columns:1fr 1fr}.schedule-row>div:first-child{grid-column:1/-1}}
+.form-section-title{margin:18px 0 10px;font-size:12px;color:var(--slate-500);text-transform:uppercase;letter-spacing:.03em}
+.day-picker{display:flex;flex-wrap:wrap;gap:8px}
+.day-picker label{margin:0;cursor:pointer}
+.day-picker input{position:absolute;opacity:0;pointer-events:none}
+.day-picker span{display:inline-block;min-width:52px;padding:8px 10px;text-align:center;border:1px solid var(--slate-300);border-radius:8px;font-size:13px;font-weight:600;color:var(--slate-700);background:#fff;transition:.15s}
+.day-picker input:checked + span{background:var(--indigo-600);border-color:var(--indigo-600);color:#fff}
+.day-picker input:focus-visible + span{outline:2px solid var(--indigo-500);outline-offset:2px}
 .input-icon{position:relative}
 .input-icon i:first-child{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--slate-400)}
 .input-icon input{padding-left:38px}

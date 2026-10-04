@@ -79,6 +79,28 @@ $termRules[1]['effective_start_date'] = '2026-10-08';   // Wednesday rule starts
 check('effective dates', array_column(expand_occurrences([$class], $termRules, [], '2026-10-05', '2026-10-21'), 'date'), ['2026-10-05', '2026-10-14', '2026-10-21']);
 check('Tuesday has no meetings', expand_occurrences([$class], $rules, $exceptions, '2026-10-06', '2026-10-06'), []);
 
+echo "
+== Labels and class summary
+";
+check('label M/W 3-5 PM', format_schedule_label($rules, $now), 'M/W 3:00-5:00 PM');
+check('label across noon + two ranges', format_schedule_label([
+    ['day_of_week' => 5, 'start_time' => '11:00:00', 'end_time' => '13:00:00'],
+    ['day_of_week' => 2, 'start_time' => '08:00:00', 'end_time' => '10:00:00'],
+    ['day_of_week' => 4, 'start_time' => '08:00:00', 'end_time' => '10:00:00'],
+    ['day_of_week' => 1, 'start_time' => '08:00:00', 'end_time' => '10:00:00', 'effective_end_date' => '2026-09-30'],
+], $now), 'T/Th 8:00-10:00 AM, F 11:00 AM-1:00 PM');
+$window = expand_occurrences([$class], $rules, $exceptions, '2026-10-05', '2026-10-21');
+$sum = summarize_class_occurrences($window, '2026-10-05 15:30:00');
+check('summary during Mon class', [$sum['status'], $sum['next']['date']], ['ACTIVE', '2026-10-05']);
+$sum = summarize_class_occurrences($window, '2026-10-05 17:30:00');
+check('summary after Mon class', [$sum['status'], $sum['next']['date']], ['UPCOMING', '2026-10-07']);
+$sum = summarize_class_occurrences($window, '2026-10-13 12:00:00');
+check('summary when next meeting is cancelled', [$sum['status'], $sum['next']['date']], ['CANCELLED', '2026-10-20']);
+$sum = summarize_class_occurrences($window, '2026-10-14 18:00:00');
+check('summary skips a cancelled meeting already over', [$sum['status'], $sum['next']['date']], ['UPCOMING', '2026-10-20']);
+$sum = summarize_class_occurrences($window, '2026-10-22 08:00:00');
+check('summary with nothing left', [$sum['status'], $sum['next']], ['EXPIRED', null]);
+
 // ------------------------------------------------------------------ database
 if ($useDb) {
     echo "\n== Database (DB_HOST=" . getenv('DB_HOST') . ", port " . getenv('DB_PORT') . "), rolled back afterwards\n";

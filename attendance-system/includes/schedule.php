@@ -292,3 +292,71 @@ function get_todays_occurrences(PDO $pdo, array $filters = [], $now = null): arr
     $today = schedule_now($now)->format('Y-m-d');
     return get_occurrences($pdo, $today, $today, $filters);
 }
+
+/** Weekly rules (incl. effective dates) for many classes: [teacher_subject_id => [rule, ...]] by day/time. */
+function get_schedule_rules(PDO $pdo, array $classIds): array {
+    $classIds = array_values(array_unique(array_filter(array_map('intval', $classIds))));
+    $map = array_fill_keys($classIds, []);
+    if (!$classIds) return $map;
+    $in = implode(',', array_fill(0, count($classIds), '?'));
+    $stmt = $pdo->prepare("SELECT * FROM class_schedules WHERE teacher_subject_id IN ($in) ORDER BY day_of_week, start_time");
+    $stmt->execute($classIds);
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $r['day_of_week'] = (int) $r['day_of_week'];
+        $map[(int) $r['teacher_subject_id']][] = $r;
+    }
+    return $map;
+}
+
+/** "3:00-5:00 PM", or "11:00 AM-1:00 PM" when the range crosses noon. */
+function format_time_range($start, $end): string {
+    $s = DateTimeImmutable::createFromFormat('H:i:s', schedule_time($start));
+    $e = DateTimeImmutable::createFromFormat('H:i:s', schedule_time($end));
+    return $s->format('A') === $e->format('A')
+        ? $s->format('g:i') . '-' . $e->format('g:i A')
+        : $s->format('g:i A') . '-' . $e->format('g:i A');
+}
+
+/**
+ * Compact weekly label, e.g. "M/W 3:00-5:00 PM" or "M/W 3:00-5:00 PM, F 8:00-10:00 AM".
+ * Rules whose effective range has already ended are left out.
+ */
+function format_schedule_label(array $rules, $now = null): string {
+    static $abbr = [1 => 'M', 2 => 'T', 3 => 'W', 4 => 'Th', 5 => 'F', 6 => 'Sa', 7 => 'Su'];
+    $today = schedule_now($now)->format('Y-m-d');
+    $groups = [];
+    foreach ($rules as $r) {
+        if (!empty($r['effective_end_date']) && $r['effective_end_date'] < $today) continue;
+        $groups[schedule_time($r['start_time']) . '|' . schedule_time($r['end_time'])][(int) $r['day_of_week']] = true;
+    }
+    if (!$groups) return '';
+    ksort($groups);
+    $parts = [];
+    foreach ($groups as $range => $days) {
+        ksort($days);
+        [$start, $end] = explode('|', $range);
+        $parts[] = implode('/', array_map(fn($d) => $abbr[$d], array_keys($days))) . ' ' . format_time_range($start, $end);
+    }
+    return implode(', ', $parts);
+}
+
+/**
+ * Status of a class as a whole, from its occurrences (sorted, as returned by get_occurrences()
+ * for a window starting today). Returns ['status' => ..., 'next' => occurrence|null]:
+ *   status = the status of the earliest meeting that isn't over yet: ACTIVE, UPCOMING or CANCELLED;
+ *            EXPIRED when no meeting remains in the window.
+ *   next   = the meeting in progress now, or else the next one that isn't cancelled.
+ */
+function summarize_class_occurrences(array $occurrences, $now = null): array {
+    $now = schedule_now($now);
+    $status = OCCURRENCE_EXPIRED;
+    $next = null;
+    foreach ($occurrences as $o) {
+        $s = get_occurrence_status($o, $now);
+        $over = $now >= new DateTimeImmutable($o['ends_at'], schedule_tz());
+        if ($s === OCCURRENCE_EXPIRED || ($s === OCCURRENCE_CANCELLED && $over)) continue;
+        if ($status === OCCURRENCE_EXPIRED) $status = $s;
+        if ($s !== OCCURRENCE_CANCELLED) { $next = $o; break; }
+    }
+    return ['status' => $status, 'next' => $next];
+}

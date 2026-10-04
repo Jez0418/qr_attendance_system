@@ -13,41 +13,35 @@
  * slots, so the admin never creates an assignment per meeting.
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/schedule.php';
 require_role('admin');
 header('Content-Type: application/json');
 
 $action = $_POST['action'] ?? '';
 
-/** Parse + validate the JSON list of weekly slots sent by the form. */
+/**
+ * Parse + validate the recurring schedule: the checked weekdays ("days" =
+ * comma-separated ISO numbers, 1 = Monday ... 7 = Sunday) sharing one start
+ * and end time. Returns one weekly slot per checked day.
+ */
 function validate_schedule_input() {
-    $raw = json_decode($_POST['schedules'] ?? '[]', true);
-    if (!is_array($raw) || !$raw) {
-        throw new Exception('Add at least one meeting day to the recurring schedule.');
+    $days = array_values(array_unique(array_map('intval', array_filter(explode(',', (string) ($_POST['days'] ?? ''))))));
+    sort($days);
+    if (!$days) {
+        throw new Exception('Select at least one day for the recurring schedule.');
     }
-    if (count($raw) > 14) {
-        throw new Exception('A class can have at most 14 weekly meetings.');
+    foreach ($days as $d) {
+        if (!isset(SCHEDULE_DAYS[$d])) throw new Exception('Invalid schedule day.');
     }
-    $slots = [];
-    foreach ($raw as $r) {
-        $day = (int) ($r['day_of_week'] ?? 0);
-        $start = normalize_time($r['start_time'] ?? '');
-        $end = normalize_time($r['end_time'] ?? '');
-        if (!isset(SCHEDULE_DAYS[$day]) || !$start || !$end) {
-            throw new Exception('Every schedule row needs a day, a start time and an end time.');
-        }
-        if ($end <= $start) {
-            throw new Exception('End time must be after start time (' . SCHEDULE_DAYS[$day] . ').');
-        }
-        $slot = ['day_of_week' => $day, 'start_time' => $start, 'end_time' => $end];
-        foreach ($slots as $other) {
-            if (schedule_slots_overlap($slot, $other)) {
-                throw new Exception('Two schedule rows overlap on ' . SCHEDULE_DAYS[$day] . '.');
-            }
-        }
-        $slots[] = $slot;
+    $start = normalize_time($_POST['start_time'] ?? '');
+    $end = normalize_time($_POST['end_time'] ?? '');
+    if (!$start || !$end) {
+        throw new Exception('Enter the class start time and end time.');
     }
-    usort($slots, fn($a, $b) => [$a['day_of_week'], $a['start_time']] <=> [$b['day_of_week'], $b['start_time']]);
-    return $slots;
+    if ($end <= $start) {
+        throw new Exception('End time must be after start time.');
+    }
+    return array_map(fn($d) => ['day_of_week' => $d, 'start_time' => $start, 'end_time' => $end], $days);
 }
 
 function validate_assignment_input($pdo) {
@@ -55,7 +49,9 @@ function validate_assignment_input($pdo) {
     $subjectId = (int) ($_POST['subject_id'] ?? 0);
     $labId     = (int) ($_POST['lab_id'] ?? 0);
     $section   = clean($_POST['section'] ?? '');
-    $status    = in_array($_POST['status'] ?? '', ['active','inactive']) ? $_POST['status'] : 'active';
+    // Enabled/Disabled switch for the assignment itself (stored as teacher_subjects.status).
+    // Whether a class is in session is never set here; it is computed from the schedule.
+    $status    = ($_POST['enabled'] ?? '1') === '1' ? 'active' : 'inactive';
     $institutionId = (int) ($_POST['institution_id'] ?? 0);
     $departmentId  = (int) ($_POST['department_id'] ?? 0);
     $programId = (int) ($_POST['program_id'] ?? 0);
@@ -130,13 +126,16 @@ function check_assignment_conflicts(PDO $pdo, array $a, $excludeId = 0) {
         WHERE ts.status = "active" AND ts.teacher_subject_id <> ? AND (ts.teacher_id = ? OR ts.lab_id = ?)
     ');
     $others->execute([$excludeId, $a['teacher_id'], $a['lab_id']]);
-    $others = attach_class_schedules($pdo, $others->fetchAll());
+    $others = $others->fetchAll();
+    $rules = get_schedule_rules($pdo, array_column($others, 'teacher_subject_id'));
+    $today = schedule_now()->format('Y-m-d');
 
     foreach ($others as $o) {
-        foreach ($o['schedules'] as $theirs) {
+        foreach ($rules[(int) $o['teacher_subject_id']] as $theirs) {
+            if (!empty($theirs['effective_end_date']) && $theirs['effective_end_date'] < $today) continue;
             foreach ($a['schedules'] as $mine) {
                 if (!schedule_slots_overlap($mine, $theirs)) continue;
-                $when = SCHEDULE_DAYS[$mine['day_of_week']] . ' ' . format_time($theirs['start_time']) . '–' . format_time($theirs['end_time']);
+                $when = SCHEDULE_DAYS[$mine['day_of_week']] . ' ' . format_time_range($theirs['start_time'], $theirs['end_time']);
                 $what = $o['subject_code'] . ' (' . $o['section'] . ')';
                 if ((int) $o['teacher_id'] === $a['teacher_id']) {
                     throw new Exception("Schedule conflict: {$o['teacher_name']} already teaches $what on $when.");
@@ -147,12 +146,21 @@ function check_assignment_conflicts(PDO $pdo, array $a, $excludeId = 0) {
     }
 }
 
-/** Replace a class's weekly slots and refresh the summary columns on teacher_subjects. */
+/**
+ * Replace a class's weekly rules (call inside the save transaction) and refresh the
+ * summary columns on teacher_subjects. If all of the old rules shared one effective
+ * date range (e.g. a semester), the new rules keep it.
+ */
 function save_schedules(PDO $pdo, $classId, array $slots) {
+    $old = get_schedule_rules($pdo, [$classId])[(int) $classId] ?? [];
+    $ranges = array_unique(array_map(fn($r) => ($r['effective_start_date'] ?? '') . '|' . ($r['effective_end_date'] ?? ''), $old));
+    [$effStart, $effEnd] = count($ranges) === 1 ? explode('|', reset($ranges)) : ['', ''];
+
     $pdo->prepare('DELETE FROM class_schedules WHERE teacher_subject_id = ?')->execute([$classId]);
-    $ins = $pdo->prepare('INSERT INTO class_schedules (teacher_subject_id, day_of_week, start_time, end_time) VALUES (?, ?, ?, ?)');
+    $ins = $pdo->prepare('INSERT INTO class_schedules (teacher_subject_id, day_of_week, start_time, end_time, effective_start_date, effective_end_date)
+                          VALUES (?, ?, ?, ?, ?, ?)');
     foreach ($slots as $s) {
-        $ins->execute([$classId, $s['day_of_week'], $s['start_time'], $s['end_time']]);
+        $ins->execute([$classId, $s['day_of_week'], $s['start_time'], $s['end_time'], $effStart ?: null, $effEnd ?: null]);
     }
     // Summary only (kept for older screens/exports); class_schedules is the source of truth.
     $days = implode('/', array_unique(array_map(fn($s) => substr(SCHEDULE_DAYS[$s['day_of_week']], 0, 3), $slots)));
@@ -178,7 +186,7 @@ try {
         save_schedules($pdo, $id, $a['schedules']);
         $pdo->commit();
 
-        log_activity($pdo, $_SESSION['user_id'], "Created class assignment ID $id (section {$a['section']}, " . format_class_schedule($a['schedules']) . ')');
+        log_activity($pdo, $_SESSION['user_id'], "Created class assignment ID $id (section {$a['section']}, " . format_schedule_label($a['schedules']) . ')');
         echo json_encode(['success' => true, 'message' => 'Class assignment created successfully.']);
 
     } elseif ($action === 'update') {
