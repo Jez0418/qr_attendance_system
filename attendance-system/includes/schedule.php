@@ -75,6 +75,9 @@ function schedule_time($time): string {
  *   teacher_id          int        meetings taught by this teacher (incl. as a substitute)
  *   lab_id              int        meetings held in this lab (after any lab change)
  *   student_id          int        classes this student is enrolled in
+ *   program_id          int        classes for this program
+ *   subject_id          int        classes for this subject
+ *   section             string     classes for this section (case-insensitive)
  *   include_cancelled   bool       default true
  *   include_inactive    bool       include inactive assignments, default false
  *
@@ -96,6 +99,16 @@ function get_occurrences(PDO $pdo, $from, $to, array $filters = []): array {
         $ids = array_map('intval', (array) $filters['teacher_subject_id']);
         $where[] = 'ts.teacher_subject_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
         array_push($params, ...$ids);
+    }
+    foreach (['program_id', 'subject_id'] as $col) {
+        if (!empty($filters[$col])) {
+            $where[] = "ts.$col = ?";
+            $params[] = (int) $filters[$col];
+        }
+    }
+    if (isset($filters['section']) && trim((string) $filters['section']) !== '') {
+        $where[] = 'LOWER(ts.section) = LOWER(?)';
+        $params[] = trim((string) $filters['section']);
     }
     if (!empty($filters['student_id'])) {
         $where[] = "EXISTS (SELECT 1 FROM enrollments e WHERE e.teacher_subject_id = ts.teacher_subject_id
@@ -359,4 +372,22 @@ function summarize_class_occurrences(array $occurrences, $now = null): array {
         if ($s !== OCCURRENCE_CANCELLED) { $next = $o; break; }
     }
     return ['status' => $status, 'next' => $next];
+}
+
+/**
+ * First meeting on $date that overlaps $start-$end and uses the same teacher or
+ * lab, or null. Cancelled meetings don't count. The meeting being moved (class
+ * $excludeClassId, original date $excludeOriginalDate) is ignored.
+ * Returns the occurrence plus 'conflict' => 'teacher' | 'lab'.
+ */
+function find_schedule_conflict(PDO $pdo, string $date, $start, $end, int $teacherId, int $labId, int $excludeClassId = 0, ?string $excludeOriginalDate = null): ?array {
+    $start = schedule_time($start);
+    $end = schedule_time($end);
+    foreach (get_occurrences($pdo, $date, $date, ['include_cancelled' => false]) as $o) {
+        if ($o['teacher_subject_id'] === $excludeClassId && $o['original_date'] === $excludeOriginalDate) continue;
+        if (!($o['start_time'] < $end && $o['end_time'] > $start)) continue;
+        if ($o['teacher_id'] === $teacherId) return $o + ['conflict' => 'teacher'];
+        if ($o['lab_id'] === $labId) return $o + ['conflict' => 'lab'];
+    }
+    return null;
 }
