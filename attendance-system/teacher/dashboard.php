@@ -5,6 +5,7 @@
  * and recent attendance activity.
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/schedule.php';
 require_role('teacher');
 $pageTitle = 'Dashboard';
 
@@ -59,7 +60,10 @@ $myClasses = $pdo->prepare('
     WHERE ts.teacher_id = ? ORDER BY sub.subject_code, ts.section
 ');
 $myClasses->execute([$teacherId]);
-$myClasses = attach_class_schedules($pdo, $myClasses->fetchAll());
+$myClasses = $myClasses->fetchAll();
+// Recurring schedule, computed status and next meeting (includes/schedule.php)
+$summaries = get_class_schedule_summaries($pdo, array_column($myClasses, 'teacher_subject_id'),
+    array_column(array_map(fn($c) => [(int) $c['teacher_subject_id'], $c['status'] === 'active'], $myClasses), 1, 0));
 
 // Fetch department for the greeting subtitle
 $deptStmt = $pdo->prepare('SELECT department FROM teachers WHERE teacher_id = ?');
@@ -99,18 +103,19 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
     <div class="table-wrapper">
         <table class="data-table">
-            <thead><tr><th>Subject</th><th>Section</th><th>Laboratory</th><th>Schedule</th><th>Enrolled</th><th>Status</th></tr></thead>
+            <thead><tr><th>Subject</th><th>Section</th><th>Laboratory</th><th>Schedule</th><th>Next Class</th><th>Enrolled</th><th>Status</th></tr></thead>
             <tbody>
             <?php if (empty($myClasses)): ?>
-                <tr><td colspan="6" class="text-center text-muted">No classes assigned yet. Contact the administrator.</td></tr>
-            <?php else: foreach ($myClasses as $c): ?>
+                <tr><td colspan="7" class="text-center text-muted">No classes assigned yet. Contact the administrator.</td></tr>
+            <?php else: foreach ($myClasses as $c): $sum = $summaries[(int) $c['teacher_subject_id']]; ?>
                 <tr>
                     <td><?php echo e($c['subject_code'] . ' - ' . $c['subject_name']); ?></td>
                     <td><?php echo e($c['section']); ?></td>
                     <td><?php echo e($c['lab_name']); ?></td>
-                    <td><?php echo e(format_class_schedule($c['schedules'])); ?></td>
+                    <td style="white-space:nowrap"><?php echo $sum['label'] !== '' ? e($sum['label']) : '<span class="text-muted">Not set</span>'; ?></td>
+                    <td style="white-space:nowrap"><?php echo e($sum['next_label']); ?><?php if ($sum['next'] && $sum['next']['is_rescheduled']): ?><div class="text-muted" style="font-size:11px">Rescheduled</div><?php endif; ?></td>
                     <td><?php echo (int) $c['enrolled_count']; ?></td>
-                    <td><span class="badge badge-<?php echo $c['status'] === 'active' ? 'active' : 'inactive'; ?>"><?php echo ucfirst($c['status']); ?></span></td>
+                    <td><span class="badge <?php echo $sum['badge'][1]; ?>"><?php echo $sum['badge'][0]; ?></span></td>
                 </tr>
             <?php endforeach; endif; ?>
             </tbody>

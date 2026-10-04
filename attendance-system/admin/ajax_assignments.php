@@ -134,7 +134,7 @@ function check_assignment_conflicts(PDO $pdo, array $a, $excludeId = 0) {
         foreach ($rules[(int) $o['teacher_subject_id']] as $theirs) {
             if (!empty($theirs['effective_end_date']) && $theirs['effective_end_date'] < $today) continue;
             foreach ($a['schedules'] as $mine) {
-                if (!schedule_slots_overlap($mine, $theirs)) continue;
+                if (!schedule_rules_conflict($mine, $theirs)) continue;
                 $when = SCHEDULE_DAYS[$mine['day_of_week']] . ' ' . format_time_range($theirs['start_time'], $theirs['end_time']);
                 $what = $o['subject_code'] . ' (' . $o['section'] . ')';
                 if ((int) $o['teacher_id'] === $a['teacher_id']) {
@@ -147,8 +147,8 @@ function check_assignment_conflicts(PDO $pdo, array $a, $excludeId = 0) {
 }
 
 /**
- * Replace a class's weekly rules (call inside the save transaction) and refresh the
- * summary columns on teacher_subjects. If all of the old rules shared one effective
+ * Replace a class's weekly rules (call inside the save transaction).
+ * If all of the old rules shared one effective
  * date range (e.g. a semester), the new rules keep it.
  */
 function save_schedules(PDO $pdo, $classId, array $slots) {
@@ -162,10 +162,6 @@ function save_schedules(PDO $pdo, $classId, array $slots) {
     foreach ($slots as $s) {
         $ins->execute([$classId, $s['day_of_week'], $s['start_time'], $s['end_time'], $effStart ?: null, $effEnd ?: null]);
     }
-    // Summary only (kept for older screens/exports); class_schedules is the source of truth.
-    $days = implode('/', array_unique(array_map(fn($s) => substr(SCHEDULE_DAYS[$s['day_of_week']], 0, 3), $slots)));
-    $pdo->prepare('UPDATE teacher_subjects SET schedule_day = ?, start_time = ?, end_time = ?, meeting_date = NULL WHERE teacher_subject_id = ?')
-        ->execute([$days, $slots[0]['start_time'], $slots[0]['end_time'], $classId]);
 }
 
 try {

@@ -6,6 +6,7 @@
  * + pending enrollment requests for that specific class.
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/schedule.php';
 require_role('teacher');
 $pageTitle = 'My Assigned Subjects';
 
@@ -22,7 +23,10 @@ $stmt = $pdo->prepare('
     ORDER BY sub.subject_code, ts.section
 ');
 $stmt->execute([$teacherId]);
-$classes = attach_class_schedules($pdo, $stmt->fetchAll());
+$classes = $stmt->fetchAll();
+// Recurring schedule, computed status and next meeting (includes/schedule.php)
+$summaries = get_class_schedule_summaries($pdo, array_column($classes, 'teacher_subject_id'),
+    array_column(array_map(fn($c) => [(int) $c['teacher_subject_id'], $c['status'] === 'active'], $classes), 1, 0));
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -30,7 +34,7 @@ require_once __DIR__ . '/../includes/header.php';
 <?php if (empty($classes)): ?>
     <div class="empty-state" style="grid-column:1/-1"><i class="fa-solid fa-book"></i><p>You have no assigned subjects yet. Please contact the administrator.</p></div>
 <?php else: foreach ($classes as $c): ?>
-    <?php $cState = class_schedule_status($c['schedules']); $cMeta = class_status_badge($cState['status']); ?>
+    <?php $sum = $summaries[(int) $c['teacher_subject_id']]; ?>
     <a href="class_view.php?id=<?php echo $c['teacher_subject_id']; ?>" class="card" style="display:block;color:inherit;transition:box-shadow .15s,transform .15s" onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow='var(--shadow-sm)'">
         <div class="card-body">
             <div class="flex-between" style="align-items:flex-start">
@@ -41,12 +45,12 @@ require_once __DIR__ . '/../includes/header.php';
             <div style="font-size:13.5px;color:var(--slate-700);line-height:1.9">
                 <div><i class="fa-solid fa-flask" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['lab_name']); ?></div>
                 <div><i class="fa-solid fa-location-dot" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['location']); ?></div>
-                <div><i class="fa-solid fa-calendar-week" style="width:18px;color:var(--indigo-600)"></i> <?php echo e(format_class_schedule($c['schedules'])); ?></div>
+                <div><i class="fa-solid fa-calendar-week" style="width:18px;color:var(--indigo-600)"></i> <?php echo $sum['label'] !== '' ? e($sum['label']) : 'No schedule set'; ?></div>
+                <div><i class="fa-solid fa-clock" style="width:18px;color:var(--indigo-600)"></i> Next: <?php echo e($sum['next_label']); ?><?php echo $sum['next'] && $sum['next']['is_rescheduled'] ? ' (rescheduled)' : ''; ?></div>
                 <div><i class="fa-solid fa-users" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['section']); ?> (<?php echo (int) $c['enrolled_count']; ?>/<?php echo (int) $c['max_students']; ?> enrolled)</div>
             </div>
             <div class="flex-between" style="margin-top:12px">
-                <span class="badge badge-<?php echo $c['status'] === 'active' ? 'active' : 'inactive'; ?>"><?php echo ucfirst($c['status']); ?></span>
-                <?php if (in_array($cState['status'], ['upcoming', 'active'], true)): ?><span class="badge <?php echo $cMeta['class']; ?>"><?php echo $cMeta['label']; ?></span><?php endif; ?>
+                <span class="badge <?php echo $sum['badge'][1]; ?>"><?php echo $sum['badge'][0]; ?></span>
                 <span class="text-muted" style="font-size:12.5px">View details <i class="fa-solid fa-arrow-right"></i></span>
             </div>
         </div>

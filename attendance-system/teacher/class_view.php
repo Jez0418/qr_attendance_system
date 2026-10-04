@@ -1,15 +1,17 @@
 <?php
 /**
  * teacher/class_view.php
- * The per-class hub: subject information, pending enrollment
- * requests for THIS class, the enrolled student roster, and a
- * search box to enroll a student directly. Reached by clicking a
- * subject in "My Assigned Subjects".
+ * The per-class hub: subject information with the recurring schedule,
+ * computed status and upcoming meetings (includes/schedule.php),
+ * pending enrollment requests for THIS class and the enrolled roster.
+ * Reached by clicking a subject in "My Assigned Subjects". (Teachers
+ * enroll students from Student Enrollment, not here.)
  *
  * Ownership is re-verified server-side — a teacher cannot view
  * another teacher's class by changing ?id= in the URL.
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/schedule.php';
 require_role('teacher');
 
 $teacherId = $_SESSION['profile_id'];
@@ -36,7 +38,13 @@ if (!$class) {
 }
 
 $pageTitle = $class['subject_code'];
-$classSlots = load_class_schedules($pdo, [$classId])[$classId] ?? [];
+$now = schedule_now();
+$sum = get_class_schedule_summaries($pdo, [$classId], [$classId => $class['status'] === 'active'], $now)[$classId];
+// Upcoming meetings (next 4 weeks), including cancelled and rescheduled ones
+$upcoming = array_values(array_filter(
+    get_occurrences($pdo, $now->format('Y-m-d'), $now->modify('+28 days')->format('Y-m-d'), ['teacher_subject_id' => $classId]),
+    fn($o) => get_occurrence_status($o, $now) !== OCCURRENCE_EXPIRED
+));
 
 // Pending requests for THIS class only
 $requests = $pdo->prepare('
@@ -82,13 +90,41 @@ require_once __DIR__ . '/../includes/header.php';
             <div><div class="text-muted" style="font-size:12px">Section</div><div style="font-weight:700"><?php echo e($class['section']); ?></div></div>
             <div><div class="text-muted" style="font-size:12px">Laboratory Room</div><div style="font-weight:700"><?php echo e($class['lab_name']); ?></div></div>
             <div><div class="text-muted" style="font-size:12px">Weekly Schedule</div><div style="font-weight:700">
-                <?php if ($classSlots): foreach ($classSlots as $slot): ?>
-                    <div><?php echo SCHEDULE_DAYS[$slot['day_of_week']]; ?> · <?php echo format_time($slot['start_time']); ?> – <?php echo format_time($slot['end_time']); ?></div>
-                <?php endforeach; else: ?>No schedule set<?php endif; ?>
+                <?php echo $sum['label'] !== '' ? e($sum['label']) : 'No schedule set'; ?>
+                <?php foreach ($sum['rules'] as $r): if ($r['effective_start_date'] || $r['effective_end_date']): ?>
+                    <div class="text-muted" style="font-size:11.5px;font-weight:500"><?php echo SCHEDULE_DAYS[$r['day_of_week']]; ?>: <?php echo $r['effective_start_date'] ? format_date($r['effective_start_date']) : '…'; ?> – <?php echo $r['effective_end_date'] ? format_date($r['effective_end_date']) : '…'; ?></div>
+                <?php endif; endforeach; ?>
             </div></div>
+            <div><div class="text-muted" style="font-size:12px">Next Class</div><div style="font-weight:700"><?php echo e($sum['next_label']); ?><?php if ($sum['next']): ?><div class="text-muted" style="font-size:11.5px;font-weight:500"><?php echo e($sum['next']['lab_name']); ?><?php echo $sum['next']['is_rescheduled'] ? ' · Rescheduled' : ''; ?></div><?php endif; ?></div></div>
             <div><div class="text-muted" style="font-size:12px">Enrollment</div><div style="font-weight:700"><?php echo $enrolledCount; ?>/<?php echo (int) $class['max_students']; ?> students</div></div>
         </div>
-        <span class="badge badge-<?php echo $class['status'] === 'active' ? 'active' : 'inactive'; ?>" style="margin-top:14px;display:inline-block"><?php echo ucfirst($class['status']); ?></span>
+        <span class="badge <?php echo $sum['badge'][1]; ?>" style="margin-top:14px;display:inline-block"><?php echo $sum['badge'][0]; ?></span>
+    </div>
+</div>
+
+<div class="card" style="margin-top:20px">
+    <div class="card-header"><h3>Upcoming Meetings</h3><span class="text-muted" style="font-size:12px">Next 4 weeks</span></div>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>Date</th><th>Time</th><th>Laboratory</th><th>Teacher</th><th>Status</th></tr></thead>
+            <tbody>
+            <?php if (!$upcoming): ?>
+                <tr><td colspan="5" class="text-center text-muted">No upcoming meetings.</td></tr>
+            <?php else: foreach ($upcoming as $o): $st = get_occurrence_status($o, $now); [$bl, $bc] = class_status_meta(true, [1], ['status' => $st]); ?>
+                <tr>
+                    <td style="white-space:nowrap"><?php echo e((new DateTimeImmutable($o['date']))->format('D, M d')); ?></td>
+                    <td style="white-space:nowrap"><?php echo e(format_time_range($o['start_time'], $o['end_time'])); ?></td>
+                    <td><?php echo e($o['lab_name']); ?></td>
+                    <td><?php echo e($o['teacher_name']); ?><?php echo $o['teacher_id'] !== $o['original_teacher_id'] ? ' <span class="text-muted">(substitute)</span>' : ''; ?></td>
+                    <td>
+                        <span class="badge <?php echo $bc; ?>"><?php echo $bl; ?></span>
+                        <?php if ($o['is_rescheduled']): ?><span class="badge badge-rescheduled">Rescheduled</span><div class="text-muted" style="font-size:11px">from <?php echo e((new DateTimeImmutable($o['original_date']))->format('D, M d') . ' ' . format_time_range($o['original_start_time'], $o['original_end_time'])); ?></div><?php endif; ?>
+                        <?php if ($o['exception_reason']): ?><div class="text-muted" style="font-size:11px"><?php echo e($o['exception_reason']); ?></div><?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; endif; ?>
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -121,7 +157,6 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="card" style="margin-top:20px">
     <div class="card-header">
         <h3>Enrolled Students (<?php echo $enrolledCount; ?>)</h3>
-        <button class="btn btn-primary btn-sm" onclick="openEnrollModal()"><i class="fa-solid fa-user-plus"></i> Enroll Student</button>
     </div>
     <div class="table-wrapper">
         <table class="data-table">
@@ -147,21 +182,6 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
-<!-- ===================== ENROLL STUDENT MODAL ===================== -->
-<div class="modal-backdrop" id="enrollModal">
-    <div class="modal">
-        <div class="modal-header"><h3>Enroll Student</h3><button class="modal-close" onclick="closeModal('enrollModal')">&times;</button></div>
-        <div class="modal-body">
-            <div class="search-box" style="max-width:100%;margin-bottom:12px">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="enrollSearchInput" class="form-control" placeholder="Search by student ID or name...">
-            </div>
-            <div id="enrollSearchResults"></div>
-        </div>
-        <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal('enrollModal')">Close</button></div>
-    </div>
-</div>
-
 <!-- ===================== REJECT REASON MODAL ===================== -->
 <div class="modal-backdrop" id="rejectModal">
     <div class="modal">
@@ -180,38 +200,6 @@ require_once __DIR__ . '/../includes/header.php';
 <script>
 const CLASS_ID = <?php echo (int) $classId; ?>;
 let rejectingRequestId = null;
-
-function openEnrollModal() {
-    document.getElementById('enrollSearchInput').value = '';
-    document.getElementById('enrollSearchResults').innerHTML = '<p class="text-muted" style="font-size:13px">Type at least 2 characters to search.</p>';
-    openModal('enrollModal');
-    document.getElementById('enrollSearchInput').focus();
-}
-
-document.getElementById('enrollSearchInput').addEventListener('input', debounce(async (e) => {
-    const q = e.target.value.trim();
-    const resultsEl = document.getElementById('enrollSearchResults');
-    if (q.length < 2) { resultsEl.innerHTML = '<p class="text-muted" style="font-size:13px">Type at least 2 characters to search.</p>'; return; }
-    const res = await ajaxGet(`ajax_search_students.php?class_id=${CLASS_ID}&q=${encodeURIComponent(q)}`);
-    if (!res.success) { resultsEl.innerHTML = '<p class="text-muted">Search failed.</p>'; return; }
-    if (res.students.length === 0) { resultsEl.innerHTML = '<p class="text-muted" style="font-size:13px">No students found.</p>'; return; }
-    resultsEl.innerHTML = res.students.map(s => {
-        const already = s.enrollment_status === 'enrolled';
-        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--slate-100)">
-            <div><strong>${s.full_name}</strong><div class="text-muted" style="font-size:12px">${s.student_number} · ${s.program_code || '—'} · Yr ${s.year_level}</div></div>
-            ${already
-                ? '<span class="badge badge-active">Enrolled</span>'
-                : `<button class="btn btn-primary btn-sm" onclick="enrollStudent(${s.student_id}, '${s.full_name.replace(/'/g, "\\'")}')">Enroll</button>`}
-        </div>`;
-    }).join('');
-}, 300));
-
-async function enrollStudent(studentId, name) {
-    if (!confirm(`Enroll ${name} in this class?`)) return;
-    const res = await ajaxPost('ajax_enrollment.php', { action: 'enroll', student_id: studentId, teacher_subject_id: CLASS_ID });
-    if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 600); }
-    else showToast('error', res.message);
-}
 
 async function unenroll(studentId, name) {
     if (!confirmDelete(`Remove ${name} from this class?`)) return;

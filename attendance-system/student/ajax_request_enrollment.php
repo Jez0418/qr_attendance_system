@@ -10,6 +10,7 @@
  *      they're already enrolled in
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/schedule.php';
 require_role('student');
 header('Content-Type: application/json');
 
@@ -59,12 +60,14 @@ try {
     // Rule 4: does any weekly meeting overlap a class they're already enrolled in?
     $enrolledIds = $pdo->prepare("SELECT teacher_subject_id FROM enrollments WHERE student_id = ? AND status = 'enrolled'");
     $enrolledIds->execute([$studentId]);
-    $schedules = load_class_schedules($pdo, array_merge([$classId], $enrolledIds->fetchAll(PDO::FETCH_COLUMN)));
+    $schedules = get_schedule_rules($pdo, array_merge([$classId], $enrolledIds->fetchAll(PDO::FETCH_COLUMN)));
+    $today = schedule_now()->format('Y-m-d');
+    $current = fn($r) => empty($r['effective_end_date']) || $r['effective_end_date'] >= $today;   // ignore rules that already ended
     foreach ($schedules as $otherId => $otherSlots) {
         if ($otherId === $classId) continue;
-        foreach ($otherSlots as $theirs) {
-            foreach ($schedules[$classId] as $mine) {
-                if (schedule_slots_overlap($mine, $theirs)) {
+        foreach (array_filter($otherSlots, $current) as $theirs) {
+            foreach (array_filter($schedules[$classId], $current) as $mine) {
+                if (schedule_rules_conflict($mine, $theirs)) {
                     throw new Exception('This schedule conflicts with another subject in your current enrollment (' . SCHEDULE_DAYS[$mine['day_of_week']] . ').');
                 }
             }

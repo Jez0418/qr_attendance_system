@@ -150,11 +150,9 @@ function auto_expire_sessions(PDO $pdo) {
 /* ------------------------------------------------------------
  * RECURRING CLASS SCHEDULES
  * A class assignment (teacher_subjects row) says who teaches what,
- * to which class, and where. WHEN it meets lives in class_schedules:
- * one row per weekly slot (day_of_week 1 = Monday ... 7 = Sunday,
- * ISO, same as date('N')). Whether a class meets "today" is always
- * derived from those slots and PHP's own clock (Asia/Manila, set in
- * includes/config.php) — never from anything the client sends.
+ * to which class, and where. WHEN it meets (class_schedules +
+ * schedule_exceptions) is read ONLY through includes/schedule.php.
+ * day_of_week is ISO: 1 = Monday ... 7 = Sunday, same as date('N').
  * ------------------------------------------------------------ */
 const SCHEDULE_DAYS = [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday', 7 => 'Sunday'];
 
@@ -167,92 +165,6 @@ function normalize_time($time) {
     }
     return null;
 }
-
-/** Weekly slots for many classes in one query: [teacher_subject_id => [slot, ...]] sorted by day/time. */
-function load_class_schedules(PDO $pdo, array $classIds) {
-    $classIds = array_values(array_unique(array_filter(array_map('intval', $classIds))));
-    $map = array_fill_keys($classIds, []);
-    if (!$classIds) return $map;
-    $in = implode(',', array_fill(0, count($classIds), '?'));
-    $stmt = $pdo->prepare("
-        SELECT schedule_id, teacher_subject_id, day_of_week, start_time, end_time
-        FROM class_schedules WHERE teacher_subject_id IN ($in)
-        ORDER BY day_of_week, start_time
-    ");
-    $stmt->execute($classIds);
-    foreach ($stmt->fetchAll() as $row) {
-        $row['day_of_week'] = (int) $row['day_of_week'];
-        $map[(int) $row['teacher_subject_id']][] = $row;
-    }
-    return $map;
-}
-
-/** Adds a 'schedules' key (list of weekly slots) to every class row. */
-function attach_class_schedules(PDO $pdo, array $rows, $idKey = 'teacher_subject_id') {
-    $map = load_class_schedules($pdo, array_column($rows, $idKey));
-    foreach ($rows as &$row) $row['schedules'] = $map[(int) $row[$idKey]] ?? [];
-    unset($row);
-    return $rows;
-}
-
-/** "Mon/Wed 08:00 AM–11:00 AM, Fri 01:00 PM–03:00 PM" — days sharing a time range are grouped. */
-function format_class_schedule(array $slots) {
-    if (!$slots) return 'No schedule set';
-    $groups = [];
-    foreach ($slots as $s) $groups[$s['start_time'] . '|' . $s['end_time']][] = (int) $s['day_of_week'];
-    $parts = [];
-    foreach ($groups as $range => $days) {
-        [$start, $end] = explode('|', $range);
-        $parts[] = implode('/', array_map(fn($d) => substr(SCHEDULE_DAYS[$d], 0, 3), $days))
-            . ' ' . format_time($start) . '–' . format_time($end);
-    }
-    return implode(', ', $parts);
-}
-
-/**
- * Where a class stands today, based on its weekly slots.
- * Returns ['status' => ..., 'slot' => today's relevant slot or null] with status one of:
- *   'no_schedule' — no weekly slots at all
- *   'not_today'   — no slot falls on today's weekday
- *   'upcoming'    — a slot later today hasn't started yet
- *   'active'      — now is within one of today's slots
- *   'ended'       — every slot today is already over
- */
-function class_schedule_status(array $slots, ?DateTime $now = null) {
-    $now = $now ?: new DateTime();
-    if (!$slots) return ['status' => 'no_schedule', 'slot' => null];
-    $today = (int) $now->format('N');
-    $date = $now->format('Y-m-d');
-    $todays = array_values(array_filter($slots, fn($s) => (int) $s['day_of_week'] === $today));
-    if (!$todays) return ['status' => 'not_today', 'slot' => null];
-    usort($todays, fn($a, $b) => strcmp($a['start_time'], $b['start_time']));
-    $ended = null;
-    foreach ($todays as $s) {
-        if ($now < new DateTime("$date {$s['start_time']}")) return ['status' => 'upcoming', 'slot' => $s];
-        if ($now <= new DateTime("$date {$s['end_time']}")) return ['status' => 'active', 'slot' => $s];
-        $ended = $s;
-    }
-    return ['status' => 'ended', 'slot' => $ended];
-}
-
-
-/** True if two weekly slots fall on the same day and their times overlap. */
-function schedule_slots_overlap(array $a, array $b) {
-    return (int) $a['day_of_week'] === (int) $b['day_of_week']
-        && $a['start_time'] < $b['end_time'] && $a['end_time'] > $b['start_time'];
-}
-
-/** Small badge-ready label + CSS class for a class_schedule_status() status. */
-function class_status_badge($status) {
-    return match ($status) {
-        'upcoming'  => ['label' => 'Later Today',  'class' => 'badge-late'],
-        'active'    => ['label' => 'In Class Now', 'class' => 'badge-active'],
-        'ended'     => ['label' => 'Ended Today',  'class' => 'badge-inactive'],
-        'not_today' => ['label' => 'Not Today',    'class' => 'badge-inactive'],
-        default     => ['label' => 'No Schedule',  'class' => 'badge-inactive'],
-    };
-}
-
 
 /* ------------------------------------------------------------
  * STUDENT ELIGIBILITY FOR A CLASS (server-side, never client-trusted)

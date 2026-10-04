@@ -5,6 +5,7 @@
  * teacher enrollment or an approved enrollment request).
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/schedule.php';
 require_role('student');
 $pageTitle = 'My Subjects';
 
@@ -24,14 +25,17 @@ $stmt = $pdo->prepare('
     ORDER BY sub.subject_code
 ');
 $stmt->execute([$studentId]);
-$subjects = attach_class_schedules($pdo, $stmt->fetchAll());
+$subjects = $stmt->fetchAll();
+// Recurring schedule, computed status and next meeting (includes/schedule.php)
+$summaries = get_class_schedule_summaries($pdo, array_column($subjects, 'teacher_subject_id'),
+    array_column(array_map(fn($s) => [(int) $s['teacher_subject_id'], $s['status'] === 'active'], $subjects), 1, 0));
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <div class="grid-3">
 <?php if (empty($subjects)): ?>
     <div class="empty-state" style="grid-column:1/-1"><i class="fa-solid fa-book"></i><p>You're not enrolled in any subjects yet. <a href="browse_subjects.php">Browse available subjects</a> to request enrollment.</p></div>
-<?php else: foreach ($subjects as $s): ?>
+<?php else: foreach ($subjects as $s): $sum = $summaries[(int) $s['teacher_subject_id']]; ?>
     <div class="card">
         <div class="card-body">
             <h3 style="margin:0 0 4px"><?php echo e($s['subject_code']); ?></h3>
@@ -39,11 +43,12 @@ require_once __DIR__ . '/../includes/header.php';
             <div style="font-size:13.5px;color:var(--slate-700);line-height:1.9">
                 <div><i class="fa-solid fa-chalkboard-user" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($s['teacher_name']); ?></div>
                 <div><i class="fa-solid fa-flask" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($s['lab_name']); ?></div>
-                <div><i class="fa-solid fa-calendar-week" style="width:18px;color:var(--indigo-600)"></i> <?php echo e(format_class_schedule($s['schedules'])); ?></div>
+                <div><i class="fa-solid fa-calendar-week" style="width:18px;color:var(--indigo-600)"></i> <?php echo $sum['label'] !== '' ? e($sum['label']) : 'No schedule set'; ?></div>
+                <div><i class="fa-solid fa-clock" style="width:18px;color:var(--indigo-600)"></i> Next: <?php echo e($sum['next_label']); ?><?php if ($sum['next'] && $sum['next']['is_rescheduled']): ?> · <?php echo e($sum['next']['lab_name']); ?> (rescheduled)<?php endif; ?></div>
                 <div><i class="fa-solid fa-calendar-check" style="width:18px;color:var(--indigo-600)"></i> Enrolled <?php echo format_date($s['enrolled_at']); ?></div>
                 <div><i class="fa-solid fa-list-check" style="width:18px;color:var(--indigo-600)"></i> Attended <?php echo (int) $s['times_attended']; ?> time(s)</div>
             </div>
-            <span class="badge badge-active" style="margin-top:12px;display:inline-block">Enrolled</span>
+            <span class="badge <?php echo $sum['badge'][1]; ?>" style="margin-top:12px;display:inline-block"><?php echo $sum['badge'][0]; ?></span>
         </div>
     </div>
 <?php endforeach; endif; ?>

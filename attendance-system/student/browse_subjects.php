@@ -17,6 +17,7 @@
  *     request still requires approval either way.
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/schedule.php';
 require_role('student');
 $pageTitle = 'Request Enrollment';
 
@@ -68,8 +69,9 @@ $stmt = $pdo->prepare("
     ORDER BY sub.subject_code
 ");
 $stmt->execute(array_merge([$studentId, $studentId], $params));
-$classes = attach_class_schedules($pdo, $stmt->fetchAll());
-foreach ($classes as &$c) $c['schedule_label'] = format_class_schedule($c['schedules']);
+$classes = $stmt->fetchAll();
+$summaries = get_class_schedule_summaries($pdo, array_column($classes, 'teacher_subject_id'));
+foreach ($classes as &$c) $c['schedule_label'] = $summaries[(int) $c['teacher_subject_id']]['label'] ?: 'No schedule set';
 unset($c);
 
 require_once __DIR__ . '/../includes/header.php';

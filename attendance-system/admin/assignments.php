@@ -54,43 +54,10 @@ $stmt = $pdo->prepare("
 $stmt->execute($params);
 $assignments = $stmt->fetchAll();
 
-// Weekly rules + the next year of meetings for this page's classes (one query each)
+// Weekly rules, schedule label, computed status and next meeting for this page's classes
 $now = schedule_now();
-$classIds = array_column($assignments, 'teacher_subject_id');
-$rulesByClass = get_schedule_rules($pdo, $classIds);
-$occurrencesByClass = [];
-if ($classIds) {
-    $occurrences = get_occurrences($pdo, $now->format('Y-m-d'), $now->modify('+' . SCHEDULE_MAX_RANGE_DAYS . ' days')->format('Y-m-d'),
-        ['teacher_subject_id' => $classIds]);
-    foreach ($occurrences as $o) $occurrencesByClass[$o['teacher_subject_id']][] = $o;
-}
-
-/** Status badge for a row: Disabled / No Schedule, or the computed ACTIVE / UPCOMING / CANCELLED / EXPIRED. */
-function assignment_status_badge(array $a, array $rules, array $summary) {
-    if ($a['status'] !== 'active') return ['Disabled', 'badge-inactive'];
-    if (!$rules) return ['No Schedule', 'badge-pending'];
-    return match ($summary['status']) {
-        OCCURRENCE_ACTIVE    => ['Active', 'badge-active'],
-        OCCURRENCE_UPCOMING  => ['Upcoming', 'badge-late'],
-        OCCURRENCE_CANCELLED => ['Cancelled', 'badge-absent'],
-        default              => ['Expired', 'badge-inactive'],
-    };
-}
-
-/** "Now · until 5:00 PM", "Today · 3:00 PM", "Tomorrow · 3:00 PM" or "Wed, Oct 07 · 3:00 PM". */
-function next_class_label(?array $occ, DateTimeImmutable $now) {
-    if (!$occ) return '—';
-    $start = new DateTimeImmutable($occ['starts_at'], schedule_tz());
-    if (get_occurrence_status($occ, $now) === OCCURRENCE_ACTIVE) {
-        return 'Now · until ' . (new DateTimeImmutable($occ['ends_at'], schedule_tz()))->format('g:i A');
-    }
-    $day = match ($occ['date']) {
-        $now->format('Y-m-d') => 'Today',
-        $now->modify('+1 day')->format('Y-m-d') => 'Tomorrow',
-        default => $start->format('D, M d'),
-    };
-    return $day . ' · ' . $start->format('g:i A');
-}
+$summaries = get_class_schedule_summaries($pdo, array_column($assignments, 'teacher_subject_id'),
+    array_column(array_map(fn($a) => [(int) $a['teacher_subject_id'], $a['status'] === 'active'], $assignments), 1, 0), $now);
 
 $teachers = $pdo->query('SELECT teacher_id, full_name FROM teachers ORDER BY full_name')->fetchAll();
 $subjects = $pdo->query('SELECT subject_id, subject_code, subject_name FROM subjects WHERE status="active" ORDER BY subject_code')->fetchAll();
@@ -121,12 +88,11 @@ require_once __DIR__ . '/../includes/header.php';
                     <tr><td colspan="9" class="text-center text-muted">No class assignments yet.</td></tr>
                 <?php else: foreach ($assignments as $a):
                     $id = (int) $a['teacher_subject_id'];
-                    $rules = $rulesByClass[$id] ?? [];
-                    $enabled = $a['status'] === 'active';
-                    $summary = summarize_class_occurrences($occurrencesByClass[$id] ?? [], $now);
-                    [$statusLabel, $statusClass] = assignment_status_badge($a, $rules, $summary);
-                    $next = $enabled ? $summary['next'] : null;
-                    $scheduleLabel = format_schedule_label($rules, $now);
+                    $sum = $summaries[$id];
+                    $rules = $sum['rules'];
+                    [$statusLabel, $statusClass] = $sum['badge'];
+                    $next = $sum['next'];
+                    $scheduleLabel = $sum['label'];
                     $a['rules'] = $rules;
                 ?>
                     <tr>
@@ -137,7 +103,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><?php echo e($a['lab_name']); ?></td>
                         <td style="white-space:nowrap"><?php echo $scheduleLabel !== '' ? e($scheduleLabel) : '<span class="text-muted">Not set</span>'; ?></td>
                         <td style="white-space:nowrap">
-                            <?php echo e(next_class_label($next, $now)); ?>
+                            <?php echo e($sum['next_label']); ?>
                             <?php if ($next && $next['is_rescheduled']): ?>
                                 <div class="text-muted" style="font-size:11px">Rescheduled<?php echo $next['lab_id'] !== (int) $a['lab_id'] ? ' · ' . e($next['lab_name']) : ''; ?></div>
                             <?php endif; ?>

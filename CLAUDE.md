@@ -33,9 +33,9 @@ don't break the Vercel + Supabase connection. (No secrets belong in this file.)
 - ISAP/MCNP departments + programs: `attendance-system/database/supabase_departments_programs.sql`.
 - Recurring class schedules: `attendance-system/database/supabase_class_schedules.sql` (adds `class_schedules`,
   backfills it from old `meeting_date`/`schedule_day`). A class assignment (`teacher_subjects`) = who/what/which class/where;
-  its weekly meetings live in `class_schedules` (day_of_week 1=Mon..7=Sun). `meeting_date` is deprecated, and
-  `schedule_day`/`start_time`/`end_time` on `teacher_subjects` are only a display summary. Use the helpers in
-  `includes/functions.php` (`load_class_schedules`, `class_schedule_status`, `format_class_schedule`).
+  its weekly meetings live in `class_schedules` (day_of_week 1=Mon..7=Sun). `meeting_date`, `schedule_day`,
+  `start_time` and `end_time` on `teacher_subjects` are legacy columns: nothing reads or writes them any more.
+  Read schedules ONLY through `includes/schedule.php` (e.g. `get_class_schedule_summaries()` for label/status/next class).
 - Recurring schedule + exceptions: `attendance-system/database/supabase_recurring_schedule.sql` (adds effective dates
   to `class_schedules`, adds `schedule_exceptions` for CANCELLED/RESCHEDULED single meetings). Meetings are never
   stored; `includes/schedule.php` generates them (`get_occurrences`, `get_occurrence_status`, `get_todays_occurrences`,

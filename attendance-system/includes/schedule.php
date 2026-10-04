@@ -425,3 +425,75 @@ function todays_classes_payload(PDO $pdo, $now = null): array {
         'classes'      => $classes,
     ];
 }
+
+/** Badge label + CSS class for a class as a whole: Disabled / No Schedule, or its computed status. */
+function class_status_meta(bool $enabled, array $rules, array $summary): array {
+    if (!$enabled) return ['Disabled', 'badge-inactive'];
+    if (!$rules) return ['No Schedule', 'badge-pending'];
+    return match ($summary['status']) {
+        OCCURRENCE_ACTIVE    => ['Active', 'badge-active'],
+        OCCURRENCE_UPCOMING  => ['Upcoming', 'badge-upcoming'],
+        OCCURRENCE_CANCELLED => ['Cancelled', 'badge-absent'],
+        default              => ['Expired', 'badge-inactive'],
+    };
+}
+
+/** "Now · until 5:00 PM", "Today · 3:00 PM", "Tomorrow · 3:00 PM", "Wed, Oct 07 · 3:00 PM" or "—". */
+function next_class_label(?array $occ, $now = null): string {
+    if (!$occ) return '—';
+    $now = schedule_now($now);
+    $start = new DateTimeImmutable($occ['starts_at'], schedule_tz());
+    if (get_occurrence_status($occ, $now) === OCCURRENCE_ACTIVE) {
+        return 'Now · until ' . (new DateTimeImmutable($occ['ends_at'], schedule_tz()))->format('g:i A');
+    }
+    $day = match ($occ['date']) {
+        $now->format('Y-m-d') => 'Today',
+        $now->modify('+1 day')->format('Y-m-d') => 'Tomorrow',
+        default => $start->format('D, M d'),
+    };
+    return $day . ' · ' . $start->format('g:i A');
+}
+
+/**
+ * Display summary for many classes at once (2 + 2 queries in total):
+ * [teacher_subject_id => ['rules', 'label' ("M/W 3:00-5:00 PM"), 'status' (summarize_class_occurrences),
+ *  'next' (occurrence|null), 'next_label', 'badge' => [label, css class]]].
+ * $enabled maps class id => bool (teacher_subjects.status = 'active'); missing ids count as enabled.
+ */
+function get_class_schedule_summaries(PDO $pdo, array $classIds, array $enabled = [], $now = null): array {
+    $now = schedule_now($now);
+    $classIds = array_values(array_unique(array_filter(array_map('intval', $classIds))));
+    if (!$classIds) return [];
+    $rules = get_schedule_rules($pdo, $classIds);
+    $byClass = [];
+    $occurrences = get_occurrences($pdo, $now->format('Y-m-d'), $now->modify('+' . SCHEDULE_MAX_RANGE_DAYS . ' days')->format('Y-m-d'),
+        ['teacher_subject_id' => $classIds]);
+    foreach ($occurrences as $o) $byClass[$o['teacher_subject_id']][] = $o;
+
+    $out = [];
+    foreach ($classIds as $id) {
+        $isEnabled = $enabled[$id] ?? true;
+        $summary = summarize_class_occurrences($byClass[$id] ?? [], $now);
+        $next = $isEnabled ? $summary['next'] : null;
+        $out[$id] = [
+            'rules'      => $rules[$id] ?? [],
+            'label'      => format_schedule_label($rules[$id] ?? [], $now),
+            'status'     => $summary['status'],
+            'next'       => $next,
+            'next_label' => next_class_label($next, $now),
+            'badge'      => class_status_meta($isEnabled, $rules[$id] ?? [], $summary),
+        ];
+    }
+    return $out;
+}
+
+/** True if two weekly rules can ever meet at the same time (same weekday, overlapping times and date ranges). */
+function schedule_rules_conflict(array $a, array $b): bool {
+    if ((int) $a['day_of_week'] !== (int) $b['day_of_week']) return false;
+    if (!(schedule_time($a['start_time']) < schedule_time($b['end_time']) && schedule_time($a['end_time']) > schedule_time($b['start_time']))) return false;
+    $aStart = $a['effective_start_date'] ?? null; $aEnd = $a['effective_end_date'] ?? null;
+    $bStart = $b['effective_start_date'] ?? null; $bEnd = $b['effective_end_date'] ?? null;
+    if ($aEnd && $bStart && $aEnd < $bStart) return false;
+    if ($bEnd && $aStart && $bEnd < $aStart) return false;
+    return true;
+}

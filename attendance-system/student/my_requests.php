@@ -6,6 +6,7 @@
  * rejection reason when applicable.
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/schedule.php';
 require_role('student');
 $pageTitle = 'My Enrollment Requests';
 
@@ -22,7 +23,8 @@ $stmt = $pdo->prepare('
     ORDER BY r.requested_at DESC
 ');
 $stmt->execute([$studentId]);
-$requests = attach_class_schedules($pdo, $stmt->fetchAll());
+$requests = $stmt->fetchAll();
+$rules = get_schedule_rules($pdo, array_column($requests, 'teacher_subject_id'));
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -39,7 +41,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <td><?php echo e($r['subject_code'] . ' - ' . $r['subject_name']); ?></td>
                     <td><?php echo e($r['teacher_name']); ?></td>
                     <td><?php echo e($r['lab_name']); ?></td>
-                    <td><?php echo e(format_class_schedule($r['schedules'])); ?></td>
+                    <td style="white-space:nowrap"><?php echo e(format_schedule_label($rules[(int) $r['teacher_subject_id']] ?? []) ?: '—'); ?></td>
                     <td><?php echo format_datetime($r['requested_at']); ?></td>
                     <td>
                         <?php if ($r['status'] === 'pending'): ?>
