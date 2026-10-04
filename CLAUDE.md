@@ -36,6 +36,11 @@ don't break the Vercel + Supabase connection. (No secrets belong in this file.)
   its weekly meetings live in `class_schedules` (day_of_week 1=Mon..7=Sun). `meeting_date` is deprecated, and
   `schedule_day`/`start_time`/`end_time` on `teacher_subjects` are only a display summary. Use the helpers in
   `includes/functions.php` (`load_class_schedules`, `class_schedule_status`, `format_class_schedule`).
+- Recurring schedule + exceptions: `attendance-system/database/supabase_recurring_schedule.sql` (adds effective dates
+  to `class_schedules`, adds `schedule_exceptions` for CANCELLED/RESCHEDULED single meetings). Meetings are never
+  stored; `includes/schedule.php` generates them (`get_occurrences`, `get_occurrence_status`, `get_todays_occurrences`,
+  Asia/Manila) and is meant to be the single source of truth for "when does a class meet". Test:
+  `php attendance-system/tests/schedule_test.php` (add `--db` with DB_* env vars; it rolls back). `tests/` is not deployed.
 - Any new table/column: write the SQL as a new file in `database/` AND run it in Supabase
   (SQL Editor: click in editor, Ctrl+A, Run so the whole script runs). Run SQL before pushing code that needs it.
 - Old MySQL files (`schema.sql`, `migration_v*.sql`, `database/*.php` helpers) are legacy and don't work on Postgres.
