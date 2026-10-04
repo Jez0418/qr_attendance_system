@@ -126,7 +126,7 @@ function get_setting_int(PDO $pdo, $key, $default = 0) {
 /** Create or update a setting value. */
 function set_setting(PDO $pdo, $key, $value) {
     $stmt = $pdo->prepare('INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)
-        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)');
+        ON CONFLICT (setting_key) DO UPDATE SET setting_value = EXCLUDED.setting_value, updated_at = NOW()');
     $stmt->execute([$key, $value]);
 }
 

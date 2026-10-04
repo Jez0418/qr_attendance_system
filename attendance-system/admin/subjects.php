@@ -14,7 +14,7 @@ $p = paginate($totalRows, 10);
 
 $stmt = $pdo->prepare("
     SELECT s.*,
-        (SELECT GROUP_CONCAT(DISTINCT t.full_name ORDER BY t.full_name SEPARATOR ', ')
+        (SELECT string_agg(DISTINCT t.full_name, ', ' ORDER BY t.full_name)
             FROM teacher_subjects ts JOIN teachers t ON t.teacher_id = ts.teacher_id
             WHERE ts.subject_id = s.subject_id AND ts.status = 'active') AS teachers_assigned
     FROM subjects s

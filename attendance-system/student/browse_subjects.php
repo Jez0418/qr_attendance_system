@@ -42,7 +42,7 @@ $params[] = $me['program_id'];
 if (!$isIrregular) {
     $where[] = '(ts.year_level IS NULL OR ts.year_level = ?)';
     $params[] = $me['year_level'];
-    $where[] = '(ts.section IS NULL OR ts.section = ? OR ? IS NULL)';
+    $where[] = '(ts.section IS NULL OR ts.section = ? OR CAST(? AS TEXT) IS NULL)';
     $params[] = $me['section']; $params[] = $me['section'];
 }
 
