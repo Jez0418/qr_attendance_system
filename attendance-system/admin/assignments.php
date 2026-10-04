@@ -1,9 +1,11 @@
 <?php
 /**
  * admin/assignments.php
- * Assigns a teacher to teach a subject, in a laboratory, on an
- * explicit meeting date — the "class" (teacher_subjects row) that
- * students get enrolled into. Institution determines which programs
+ * Defines a class (teacher_subjects row): who teaches what, to which
+ * class (institution/program/year/section), where (laboratory), and
+ * its recurring weekly schedule (class_schedules) — one assignment
+ * for the whole term, never one per meeting. Students get enrolled
+ * into it. Institution determines which programs
  * are selectable (MCNP programs only show for MCNP, ISAP programs
  * only show for ISAP) via a client-side cascade backed by data this
  * page embeds; the server independently re-validates the combination
@@ -42,11 +44,11 @@ $stmt = $pdo->prepare("
     LEFT JOIN institutions inst ON inst.institution_id = ts.institution_id
     LEFT JOIN departments dept ON dept.department_id = ts.department_id
     $where
-    ORDER BY ts.meeting_date IS NULL, ts.meeting_date DESC, ts.created_at DESC
+    ORDER BY ts.created_at DESC, ts.teacher_subject_id DESC
     LIMIT {$p['limit']} OFFSET {$p['offset']}
 ");
 $stmt->execute($params);
-$assignments = $stmt->fetchAll();
+$assignments = attach_class_schedules($pdo, $stmt->fetchAll());
 
 $teachers = $pdo->query('SELECT teacher_id, full_name FROM teachers ORDER BY full_name')->fetchAll();
 $subjects = $pdo->query('SELECT subject_id, subject_code, subject_name FROM subjects WHERE status="active" ORDER BY subject_code')->fetchAll();
@@ -71,13 +73,13 @@ require_once __DIR__ . '/../includes/header.php';
         </form>
         <div class="table-wrapper">
             <table class="data-table">
-                <thead><tr><th>Teacher</th><th>Subject</th><th>Institution/Program</th><th>Year/Section</th><th>Lab</th><th>Meeting Date &amp; Time</th><th>Enrolled</th><th>Status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Teacher</th><th>Subject</th><th>Institution/Program</th><th>Year/Section</th><th>Lab</th><th>Recurring Schedule</th><th>Enrolled</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
                 <?php if (empty($assignments)): ?>
                     <tr><td colspan="9" class="text-center text-muted">No class assignments yet.</td></tr>
                 <?php else: foreach ($assignments as $a):
-                    $cStatus = compute_class_status($a['meeting_date'], $a['start_time'], $a['end_time']);
-                    $cMeta = class_status_badge($cStatus);
+                    $cState = class_schedule_status($a['schedules']);
+                    $cMeta = class_status_badge($cState['status']);
                 ?>
                     <tr>
                         <td><?php echo e($a['teacher_name']); ?></td>
@@ -86,9 +88,11 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><?php echo $a['year_level'] ? 'Yr ' . e($a['year_level']) : 'Any'; ?> / <?php echo e($a['section']); ?></td>
                         <td><?php echo e($a['lab_name']); ?></td>
                         <td>
-                            <?php if ($a['meeting_date']): ?>
-                                <?php echo format_date($a['meeting_date']); ?> <span class="badge <?php echo $cMeta['class']; ?>" style="margin-left:4px"><?php echo $cMeta['label']; ?></span>
-                                <div class="text-muted" style="font-size:11px"><?php echo e($a['schedule_day']); ?> · <?php echo format_time($a['start_time']); ?>–<?php echo format_time($a['end_time']); ?></div>
+                            <?php if ($a['schedules']): ?>
+                                <?php foreach ($a['schedules'] as $slot): ?>
+                                    <div style="white-space:nowrap;font-size:12.5px"><?php echo substr(SCHEDULE_DAYS[$slot['day_of_week']], 0, 3); ?> · <?php echo format_time($slot['start_time']); ?>–<?php echo format_time($slot['end_time']); ?></div>
+                                <?php endforeach; ?>
+                                <?php if ($a['status'] === 'active' && in_array($cState['status'], ['upcoming', 'active'], true)): ?><span class="badge <?php echo $cMeta['class']; ?>" style="margin-top:3px"><?php echo $cMeta['label']; ?></span><?php endif; ?>
                             <?php else: ?>
                                 <span class="text-muted">Not set</span>
                             <?php endif; ?>
@@ -167,20 +171,16 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Meeting Date *</label><input type="date" name="meeting_date" id="meeting_date" class="form-control" required onchange="updateDayDisplay()"></div>
-                    <div class="form-group"><label>Day</label><input type="text" id="schedule_day_display" class="form-control" disabled placeholder="Auto-filled from meeting date"><input type="hidden" name="schedule_day" id="schedule_day"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Start Time *</label><input type="time" name="start_time" id="start_time" class="form-control" required></div>
-                    <div class="form-group"><label>End Time *</label><input type="time" name="end_time" id="end_time" class="form-control" required></div>
-                </div>
-                <div class="form-row">
                     <div class="form-group"><label>Maximum Students *</label><input type="number" name="max_students" id="max_students" class="form-control" value="40" min="1" max="200" required></div>
                     <div class="form-group"><label>Status</label>
                         <select name="status" id="status" class="form-control"><option value="active">Active</option><option value="inactive">Inactive</option></select>
                     </div>
                 </div>
-                <div class="alert alert-info" style="margin-bottom:0"><i class="fa-solid fa-circle-info"></i> A class can only be activated for attendance on its own meeting date — never before, and never after.</div>
+
+                <h4 style="margin:18px 0 10px;font-size:12px;color:var(--slate-500);text-transform:uppercase;letter-spacing:.03em">Recurring Schedule</h4>
+                <div id="scheduleRows"></div>
+                <button type="button" class="btn btn-outline btn-sm" onclick="addScheduleRow()"><i class="fa-solid fa-plus"></i> Add Meeting Day</button>
+                <div class="alert alert-info" style="margin:14px 0 0"><i class="fa-solid fa-circle-info"></i> The class repeats every week on these days for as long as the assignment is active. Attendance can be opened on a scheduled day, before or during that day's class time — no need to create an assignment for each meeting.</div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline" onclick="closeModal('assignModal')">Cancel</button>
@@ -193,7 +193,7 @@ require_once __DIR__ . '/../includes/header.php';
 <script>
 const DEPARTMENTS = <?php echo json_encode($departments); ?>;
 const PROGRAMS = <?php echo json_encode($programs); ?>;
-const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const SCHEDULE_DAYS = <?php echo json_encode(SCHEDULE_DAYS); ?>;
 
 function populateDepartments(institutionId, selectedDeptId) {
     const sel = document.getElementById('department_id');
@@ -244,13 +244,39 @@ function onProgramChange(selectedYear) {
     const opt = sel.options[sel.selectedIndex];
     populateYearLevels(opt ? opt.dataset.duration : 4, selectedYear);
 }
-function updateDayDisplay() {
-    const val = document.getElementById('meeting_date').value;
-    if (!val) { document.getElementById('schedule_day_display').value = ''; document.getElementById('schedule_day').value = ''; return; }
-    const d = new Date(val + 'T00:00:00');
-    const dayName = DAY_NAMES[d.getDay()];
-    document.getElementById('schedule_day_display').value = dayName;
-    document.getElementById('schedule_day').value = dayName;
+function addScheduleRow(slot) {
+    slot = slot || {};
+    const row = document.createElement('div');
+    row.className = 'schedule-row';
+    let dayOptions = '<option value="">Select day</option>';
+    for (const [num, name] of Object.entries(SCHEDULE_DAYS)) {
+        dayOptions += '<option value="' + num + '"' + (String(slot.day_of_week) === num ? ' selected' : '') + '>' + name + '</option>';
+    }
+    row.innerHTML =
+        '<div><label>Day *</label><select class="form-control sched-day" required>' + dayOptions + '</select></div>' +
+        '<div><label>Start *</label><input type="time" class="form-control sched-start" required></div>' +
+        '<div><label>End *</label><input type="time" class="form-control sched-end" required></div>' +
+        '<button type="button" class="btn btn-outline btn-sm" title="Remove" onclick="removeScheduleRow(this)"><i class="fa-solid fa-xmark"></i></button>';
+    row.querySelector('.sched-start').value = (slot.start_time || '').substring(0, 5);
+    row.querySelector('.sched-end').value = (slot.end_time || '').substring(0, 5);
+    document.getElementById('scheduleRows').appendChild(row);
+}
+function removeScheduleRow(btn) {
+    if (document.querySelectorAll('#scheduleRows .schedule-row').length <= 1) {
+        showToast('error', 'A class needs at least one meeting day.'); return;
+    }
+    btn.closest('.schedule-row').remove();
+}
+function resetScheduleRows(slots) {
+    document.getElementById('scheduleRows').innerHTML = '';
+    (slots && slots.length ? slots : [{}]).forEach(addScheduleRow);
+}
+function collectSchedules() {
+    return Array.from(document.querySelectorAll('#scheduleRows .schedule-row')).map(r => ({
+        day_of_week: r.querySelector('.sched-day').value,
+        start_time: r.querySelector('.sched-start').value,
+        end_time: r.querySelector('.sched-end').value,
+    }));
 }
 
 function openAddModal() {
@@ -259,7 +285,7 @@ function openAddModal() {
     document.getElementById('department_id').innerHTML = '<option value="">Select institution first</option>';
     document.getElementById('program_id').innerHTML = '<option value="">Select department first</option>';
     document.getElementById('year_level').innerHTML = '<option value="">Select program first</option>';
-    document.getElementById('schedule_day_display').value = '';
+    resetScheduleRows([]);
     document.getElementById('assignModalTitle').textContent = 'New Assignment';
     openModal('assignModal');
 }
@@ -272,10 +298,7 @@ function openEditModal(a) {
     document.getElementById('lab_id').value = a.lab_id;
     document.getElementById('section').value = a.section;
     document.getElementById('max_students').value = a.max_students || 40;
-    document.getElementById('meeting_date').value = a.meeting_date || '';
-    updateDayDisplay();
-    document.getElementById('start_time').value = a.start_time.substring(0,5);
-    document.getElementById('end_time').value = a.end_time.substring(0,5);
+    resetScheduleRows(a.schedules);
     document.getElementById('status').value = a.status;
     document.getElementById('assignModalTitle').textContent = 'Edit Assignment';
     openModal('assignModal');
@@ -283,11 +306,12 @@ function openEditModal(a) {
 document.getElementById('assignForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('assignSubmitBtn');
-    if (new Date('1970-01-01T' + document.getElementById('end_time').value) <= new Date('1970-01-01T' + document.getElementById('start_time').value)) {
-        showToast('error', 'End time must be after start time.'); return;
-    }
+    const schedules = collectSchedules();
+    const bad = schedules.find(s => s.end_time <= s.start_time);
+    if (bad) { showToast('error', 'End time must be after start time (' + SCHEDULE_DAYS[bad.day_of_week] + ').'); return; }
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving...';
     const data = Object.fromEntries(new FormData(e.target));
+    data.schedules = JSON.stringify(schedules);
     data.action = data.teacher_subject_id ? 'update' : 'create';
     const res = await ajaxPost('ajax_assignments.php', data);
     if (res.success) { showToast('success', res.message); closeModal('assignModal'); setTimeout(() => location.reload(), 700); }

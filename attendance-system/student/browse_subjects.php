@@ -68,7 +68,9 @@ $stmt = $pdo->prepare("
     ORDER BY sub.subject_code
 ");
 $stmt->execute(array_merge([$studentId, $studentId], $params));
-$classes = $stmt->fetchAll();
+$classes = attach_class_schedules($pdo, $stmt->fetchAll());
+foreach ($classes as &$c) $c['schedule_label'] = format_class_schedule($c['schedules']);
+unset($c);
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -112,8 +114,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <div><i class="fa-solid fa-chalkboard-user" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['teacher_name']); ?></div>
                 <div><i class="fa-solid fa-building-columns" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['institution_code'] ?? 'Any'); ?></div>
                 <div><i class="fa-solid fa-flask" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['lab_name']); ?></div>
-                <div><i class="fa-solid fa-calendar-day" style="width:18px;color:var(--indigo-600)"></i> <?php echo $c['meeting_date'] ? format_date($c['meeting_date']) : e($c['schedule_day']); ?></div>
-                <div><i class="fa-solid fa-clock" style="width:18px;color:var(--indigo-600)"></i> <?php echo format_time($c['start_time']); ?> – <?php echo format_time($c['end_time']); ?></div>
+                <div><i class="fa-solid fa-calendar-week" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['schedule_label']); ?></div>
                 <div><i class="fa-solid fa-graduation-cap" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['program_code'] ?? 'Any Course'); ?><?php echo $c['year_level'] ? ' · Year ' . e($c['year_level']) : ''; ?> · <?php echo e($c['section']); ?></div>
                 <div><i class="fa-solid fa-users" style="width:18px;color:var(--indigo-600)"></i> <?php echo (int) $c['enrolled_count']; ?>/<?php echo (int) $c['max_students']; ?> slots filled</div>
             </div>
@@ -177,7 +178,7 @@ function openRequestModal(c) {
     document.getElementById('req_subject_label').value = c.subject_code + ' - ' + c.subject_name;
     document.getElementById('req_teacher_label').value = c.teacher_name;
     document.getElementById('req_lab_label').value = c.lab_name;
-    document.getElementById('req_schedule_label').value = c.schedule_day + ' · ' + c.start_time.substring(0,5) + '–' + c.end_time.substring(0,5);
+    document.getElementById('req_schedule_label').value = c.schedule_label;
     document.getElementById('req_remarks').value = '';
     openModal('requestModal');
 }

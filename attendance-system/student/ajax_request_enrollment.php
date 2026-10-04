@@ -56,21 +56,18 @@ try {
         throw new Exception('This subject is currently full.');
     }
 
-    // Rule 4: schedule conflict with an already-enrolled class on the same day?
-    $conflictStmt = $pdo->prepare("
-        SELECT ts2.schedule_day, ts2.start_time, ts2.end_time
-        FROM enrollments e
-        JOIN teacher_subjects ts2 ON ts2.teacher_subject_id = e.teacher_subject_id
-        WHERE e.student_id = ? AND e.status = 'enrolled' AND ts2.schedule_day = ?
-    ");
-    $conflictStmt->execute([$studentId, $class['schedule_day']]);
-    foreach ($conflictStmt->fetchAll() as $existing) {
-        $newStart = strtotime($class['start_time']);
-        $newEnd = strtotime($class['end_time']);
-        $exStart = strtotime($existing['start_time']);
-        $exEnd = strtotime($existing['end_time']);
-        if ($newStart < $exEnd && $newEnd > $exStart) {
-            throw new Exception('This schedule conflicts with another subject in your current enrollment.');
+    // Rule 4: does any weekly meeting overlap a class they're already enrolled in?
+    $enrolledIds = $pdo->prepare("SELECT teacher_subject_id FROM enrollments WHERE student_id = ? AND status = 'enrolled'");
+    $enrolledIds->execute([$studentId]);
+    $schedules = load_class_schedules($pdo, array_merge([$classId], $enrolledIds->fetchAll(PDO::FETCH_COLUMN)));
+    foreach ($schedules as $otherId => $otherSlots) {
+        if ($otherId === $classId) continue;
+        foreach ($otherSlots as $theirs) {
+            foreach ($schedules[$classId] as $mine) {
+                if (schedule_slots_overlap($mine, $theirs)) {
+                    throw new Exception('This schedule conflicts with another subject in your current enrollment (' . SCHEDULE_DAYS[$mine['day_of_week']] . ').');
+                }
+            }
         }
     }
 

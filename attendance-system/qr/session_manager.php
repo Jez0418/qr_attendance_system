@@ -24,9 +24,9 @@ require_once __DIR__ . '/qr_helper.php';
  * @param int    $classId          teacher_subject_id
  * @param string $role             'teacher' or 'admin' — who is activating
  * @param int    $activatorUserId  users.user_id of whoever clicked Activate
- * @param string|null $sessionDate  'Y-m-d', defaults to today
- * @param string|null $startTime    'H:i' or 'H:i:s', defaults to the class's own start_time
- * @param string|null $endTime      'H:i' or 'H:i:s', defaults to the class's own end_time
+ * @param string|null $sessionDate  'Y-m-d'; must be today (kept for the admin form), defaults to today
+ * @param string|null $startTime    'H:i' or 'H:i:s', defaults to today's scheduled slot start
+ * @param string|null $endTime      'H:i' or 'H:i:s', defaults to today's scheduled slot end
  * @param int|null    $radiusMeters overrides the laboratory's configured geofence radius
  * @return array ['success' => bool, 'message' => string, 'session' => array|null]
  */
@@ -47,23 +47,22 @@ function activate_attendance_session(PDO $pdo, $classId, $role, $activatorUserId
         return ['success' => false, 'message' => 'This laboratory has no GPS coordinates configured yet. An administrator must set them (Admin > Laboratories) before attendance can be geofenced.', 'session' => null];
     }
 
-    // CRITICAL: a class assignment's meeting_date is the single source of
-    // truth for "is this class today?" — never day-of-week alone, and
-    // never anything the client claims. A class scheduled for yesterday
-    // (or any other date) must never be activatable today, and a class
-    // scheduled for a future date can't be activated early either.
-    if (!empty($class['meeting_date'])) {
-        $today = date('Y-m-d');
-        if ($class['meeting_date'] !== $today) {
-            return ['success' => false, 'message' => 'This class is not scheduled for today. Its meeting date is ' . format_date($class['meeting_date']) . '.', 'session' => null];
-        }
-        // Right date — but has today's own time window already closed?
-        if (compute_class_status($class['meeting_date'], $class['start_time'], $class['end_time']) === 'expired') {
-            return ['success' => false, 'message' => 'Today\'s scheduled time window for this class (' . format_time($class['start_time']) . '\u2013' . format_time($class['end_time']) . ') has already ended.', 'session' => null];
-        }
+    // CRITICAL: the class's recurring weekly schedule (class_schedules) is
+    // the single source of truth for "does this class meet today?" — never
+    // anything the client claims. Attendance can only be opened on a
+    // scheduled weekday, before or during that day's slot, and only for today.
+    $slots = load_class_schedules($pdo, [$classId])[(int) $classId] ?? [];
+    $blockReason = class_activation_block_reason($slots);
+    if ($blockReason !== '') {
+        return ['success' => false, 'message' => $blockReason, 'session' => null];
     }
+    $todaySlot = class_schedule_status($slots)['slot'];
 
-    $sessionDate = $sessionDate ?: date('Y-m-d');
+    $today = date('Y-m-d');
+    if ($sessionDate && $sessionDate !== $today) {
+        return ['success' => false, 'message' => 'Attendance can only be opened for today\'s meeting.', 'session' => null];
+    }
+    $sessionDate = $today;
 
     // Only one active session per class per day, regardless of who activates it
     $existing = $pdo->prepare('SELECT session_id FROM attendance_sessions WHERE teacher_subject_id = ? AND session_date = ? AND is_active = 1');
@@ -72,8 +71,8 @@ function activate_attendance_session(PDO $pdo, $classId, $role, $activatorUserId
         return ['success' => false, 'message' => 'A session is already active for this class today.', 'session' => null];
     }
 
-    $startTime = $startTime ?: $class['start_time'];
-    $endTime = $endTime ?: $class['end_time'];
+    $startTime = $startTime ?: $todaySlot['start_time'];
+    $endTime = $endTime ?: $todaySlot['end_time'];
     $scheduledStart = $sessionDate . ' ' . $startTime;
     $sessionEnd = $sessionDate . ' ' . $endTime;
 
