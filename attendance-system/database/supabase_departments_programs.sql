@@ -17,7 +17,6 @@ FROM (VALUES
     ('ISAP', 'CITE', 'College of Information Technology and Engineering'),
     ('ISAP', 'CBEM', 'College of Business Education and Management'),
     ('ISAP', 'CCJE', 'College of Criminal Justice Education'),
-    ('ISAP', 'BASICED', 'Basic Education'),
     ('ISAP', 'TVET', 'TVET Programs (TESDA)'),
     ('MCNP', 'ALLIED_HEALTH', 'Allied Health & Medical Programs'),
     ('MCNP', 'SHORT_TERM', 'Short-Term & Technical Programs')

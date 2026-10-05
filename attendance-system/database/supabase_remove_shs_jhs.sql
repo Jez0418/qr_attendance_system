@@ -1,5 +1,6 @@
 -- ============================================================
--- Remove the Senior High School (SHS) and Junior High School (JHS) programs.
+-- Remove the Senior High School (SHS) and Junior High School (JHS) programs
+-- and the Basic Education (BASICED) department that held them.
 -- Run in Supabase SQL Editor (click in editor, Ctrl+A, Run).
 -- Safe to re-run.
 --
@@ -16,9 +17,21 @@ WHERE p.program_code IN ('SHS', 'JHS')
   AND NOT EXISTS (SELECT 1 FROM students s WHERE s.program_id = p.program_id)
   AND NOT EXISTS (SELECT 1 FROM teacher_subjects ts WHERE ts.program_id = p.program_id);
 
+-- Basic Education only held SHS/JHS; remove it the same way.
+UPDATE departments SET status = 'inactive'
+WHERE department_code = 'BASICED';
+
+DELETE FROM departments d
+WHERE d.department_code = 'BASICED'
+  AND NOT EXISTS (SELECT 1 FROM programs p WHERE p.department_id = d.department_id)
+  AND NOT EXISTS (SELECT 1 FROM students s WHERE s.department_id = d.department_id)
+  AND NOT EXISTS (SELECT 1 FROM teacher_subjects ts WHERE ts.department_id = d.department_id);
+
 -- Check the result (rows left here are inactive and still referenced)
 SELECT p.program_code, p.status,
        (SELECT COUNT(*) FROM students s WHERE s.program_id = p.program_id) AS students,
        (SELECT COUNT(*) FROM teacher_subjects ts WHERE ts.program_id = p.program_id) AS assignments
 FROM programs p
 WHERE p.program_code IN ('SHS', 'JHS');
+
+SELECT department_code, status FROM departments WHERE department_code = 'BASICED';
