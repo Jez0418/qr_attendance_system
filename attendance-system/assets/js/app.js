@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
         document.addEventListener('click', (e) => {
             if (window.innerWidth <= 900 && sidebar.classList.contains('open')
-                && !sidebar.contains(e.target) && e.target !== toggleBtn) {
+                && !sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
                 sidebar.classList.remove('open');
             }
         });
