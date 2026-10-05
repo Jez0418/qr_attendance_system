@@ -53,7 +53,10 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="card">
     <div class="card-header">
         <h3>Students (<?php echo $totalRows; ?>)</h3>
-        <button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> Add Student</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a href="students_import.php" class="btn btn-outline btn-sm"><i class="fa-solid fa-file-csv"></i> Import CSV</a>
+            <button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> Add Student</button>
+        </div>
     </div>
     <div class="card-body">
         <form method="GET" class="toolbar">

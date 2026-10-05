@@ -56,6 +56,13 @@ don't break the Vercel + Supabase connection. (No secrets belong in this file.)
   any active class, including other programs and institutions (e.g. an MCNP student taking ISAP subjects).
   Every request still needs teacher/admin approval; direct enrollment by a teacher/admin skips these rules.
 
+## Batch CSV imports (no database changes)
+- Admin: `admin/students_import.php` (button on Students page) creates student accounts; teacher: `teacher/enrollment_import.php`
+  (button on Student Enrollment) enrolls a CSV list of student numbers into one of the teacher's classes.
+  Flow = upload -> validate/preview (nothing saved) -> confirm -> one transaction. Shared helpers: `includes/import_csv.php`
+  (CSRF, CSV parsing, template) and `includes/import_students.php`. Limits: 1 MB, 50 student rows / 100 enrollment rows
+  (bcrypt is slow on serverless). Password column blank = student number (app convention). Test: `php attendance-system/tests/import_csv_test.php`.
+
 ## Workflow rules
 - UI: `assets/css/style.css` (colors in `:root` variables), `includes/header.php`,
   `includes/sidebar.php`, `includes/footer.php`, `login.php`, per-page files in `admin/`, `teacher/`, `student/`.

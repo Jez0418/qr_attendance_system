@@ -67,6 +67,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="card">
     <div class="card-header">
         <h3>Select Class</h3>
+        <a href="enrollment_import.php<?php echo $selectedClass ? '?class=' . (int) $selectedClass : ''; ?>" class="btn btn-outline btn-sm"><i class="fa-solid fa-file-csv"></i> Import CSV</a>
     </div>
     <div class="card-body">
         <form method="GET" class="toolbar">
