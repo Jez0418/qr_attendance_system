@@ -38,6 +38,7 @@ FROM (VALUES
     ('ISAP', 'BSPE', 'BS in Physical Education', 'Bachelor''s Degree', 4.0, 'CASTE'),
     ('ISAP', 'BSIT', 'BS in Information Technology', 'Bachelor''s Degree', 4.0, 'CITE'),
     ('ISAP', 'BSCPE', 'BS in Computer Engineering', 'Bachelor''s Degree', 4.0, 'CITE'),
+    ('ISAP', 'BSCS', 'Bachelor of Science in Computer Science', 'Bachelor''s Degree', 4.0, 'CITE'),
     ('ISAP', 'BSCA', 'BS in Customs Administration', 'Bachelor''s Degree', 4.0, 'CBEM'),
     ('ISAP', 'BSBA', 'BS in Business Administration', 'Bachelor''s Degree', 4.0, 'CBEM'),
     ('ISAP', 'BSA', 'BS in Accountancy', 'Bachelor''s Degree', 4.0, 'CBEM'),
