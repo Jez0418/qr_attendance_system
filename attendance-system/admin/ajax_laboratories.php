@@ -76,6 +76,14 @@ try {
     } elseif ($action === 'delete') {
         $id = (int) ($_POST['lab_id'] ?? 0);
         if (!$id) throw new Exception('Invalid laboratory.');
+
+        $used = $pdo->prepare('SELECT COUNT(*) FROM teacher_subjects WHERE lab_id = ?');
+        $used->execute([$id]);
+        $count = (int) $used->fetchColumn();
+        if ($count > 0) {
+            throw new Exception("This laboratory is used by $count class assignment(s). Set it to Inactive instead of deleting it.");
+        }
+
         $stmt = $pdo->prepare('DELETE FROM laboratories WHERE lab_id = ?');
         $stmt->execute([$id]);
         log_activity($pdo, $_SESSION['user_id'], "Deleted laboratory ID: $id");
