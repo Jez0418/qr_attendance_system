@@ -179,6 +179,14 @@ function normalize_time($time) {
  * restriction" so older data keeps working.
  * Returns [bool eligible, string reason].
  * ------------------------------------------------------------ */
+/**
+ * Reduce a section label to its comparable part. Students store "3A"; classes store
+ * "BSIT-3A" (older rows "BSIT 3A"). Compare only what follows the last "-" or space.
+ */
+function section_key($section): string {
+    return strtoupper(preg_replace('/^.*[- ]/', '', trim((string) $section)));
+}
+
 function student_eligible_for_class(array $student, array $class) {
     if (!empty($class['institution_id']) && (int) $class['institution_id'] !== (int) $student['institution_id']) {
         return [false, 'This subject belongs to a different institution.'];
@@ -193,7 +201,7 @@ function student_eligible_for_class(array $student, array $class) {
         return [false, 'This subject is for a different year level. Only irregular students may request it.'];
     }
     if (!empty($class['section']) && !empty($student['section'])
-        && strcasecmp(trim($class['section']), trim($student['section'])) !== 0) {
+        && section_key($class['section']) !== section_key($student['section'])) {
         return [false, 'This subject is for a different section. Only irregular students may request it.'];
     }
     return [true, ''];
