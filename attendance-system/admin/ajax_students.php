@@ -21,12 +21,17 @@ function read_academic_fields(PDO $pdo) {
     $departmentId  = (int) ($_POST['department_id'] ?? 0);
     $programId     = (int) ($_POST['program_id'] ?? 0);
     $yearLevel     = (int) ($_POST['year_level'] ?? 0);
-    $section       = clean($_POST['section'] ?? '');
+    $sectionLetter = strtoupper(trim($_POST['section_letter'] ?? ''));
     $studentType   = in_array($_POST['student_type'] ?? '', ['regular', 'irregular']) ? $_POST['student_type'] : 'regular';
 
-    if (!$institutionId || !$departmentId || !$programId || !$yearLevel || $section === '') {
+    if (!$institutionId || !$departmentId || !$programId || !$yearLevel || $sectionLetter === '') {
         throw new Exception('Please complete the academic placement fields (institution, department, program, year, section).');
     }
+    if (!preg_match('/^[A-Z][A-Z0-9]{0,4}$/', $sectionLetter)) {
+        throw new Exception('Section must start with a letter, e.g. A, B, C.');
+    }
+    // Stored as year level + letter, e.g. year 2 + "A" = "2A".
+    $section = $yearLevel . $sectionLetter;
 
     $check = $pdo->prepare('
         SELECT p.duration_years FROM programs p

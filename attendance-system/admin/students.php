@@ -149,7 +149,13 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Section *</label><input type="text" name="section" id="section" class="form-control" placeholder="e.g. 3A" required></div>
+                    <div class="form-group"><label>Section *</label>
+                        <div class="input-prefix">
+                            <span class="input-prefix-label" id="section_year" title="Year level">–</span>
+                            <input type="text" name="section_letter" id="section_letter" class="form-control" placeholder="e.g. A" maxlength="5" pattern="[A-Za-z][A-Za-z0-9]*" title="Section letter, e.g. A, B, C" required>
+                        </div>
+                        <small class="text-muted">The year level is added automatically (e.g. 2 + A = 2A).</small>
+                    </div>
                     <div class="form-group"><label>Student Type *</label>
                         <select name="student_type" id="student_type" class="form-control" required>
                             <option value="regular">Regular</option>
@@ -231,16 +237,27 @@ function populateYearLevels(maxYear, selectedYear) {
         if (selectedYear && String(y) === String(selectedYear)) opt.selected = true;
         sel.appendChild(opt);
     }
+    updateSectionYear();
 }
+// Section is stored as year level + letter ("2A"); the form only asks for the letter.
+function updateSectionYear() {
+    document.getElementById('section_year').textContent = document.getElementById('year_level').value || '–';
+}
+document.getElementById('year_level').addEventListener('change', updateSectionYear);
+document.getElementById('section_letter').addEventListener('input', (e) => {
+    e.target.value = e.target.value.toUpperCase();
+});
 function onInstitutionChange(selectedDeptId, selectedProgramId, selectedYear) {
     populateDepartments(document.getElementById('institution_id').value, selectedDeptId);
     document.getElementById('program_id').innerHTML = '<option value="">Select department first</option>';
     document.getElementById('year_level').innerHTML = '<option value="">Select program first</option>';
+    updateSectionYear();
     if (selectedDeptId) onDepartmentChange(selectedProgramId, selectedYear);
 }
 function onDepartmentChange(selectedProgramId, selectedYear) {
     populatePrograms(document.getElementById('department_id').value, selectedProgramId);
     document.getElementById('year_level').innerHTML = '<option value="">Select program first</option>';
+    updateSectionYear();
     if (selectedProgramId) onProgramChange(selectedYear);
 }
 function onProgramChange(selectedYear) {
@@ -255,6 +272,7 @@ function openAddModal() {
     document.getElementById('department_id').innerHTML = '<option value="">Select institution first</option>';
     document.getElementById('program_id').innerHTML = '<option value="">Select department first</option>';
     document.getElementById('year_level').innerHTML = '<option value="">Select program first</option>';
+    updateSectionYear();
     document.getElementById('studentModalTitle').textContent = 'Add Student';
     document.getElementById('passwordLabel').textContent = 'Password *';
     document.getElementById('password').required = true;
@@ -273,7 +291,9 @@ function openEditModal(s) {
     document.getElementById('full_name').value = s.full_name;
     document.getElementById('institution_id').value = s.institution_id || '';
     onInstitutionChange(s.department_id, s.program_id, s.year_level);
-    document.getElementById('section').value = s.section || '';
+    // Drop the leading year number from a stored "2A" so only the letter is edited.
+    document.getElementById('section_letter').value = (s.section || '').replace(/^\s*\d+\s*-?\s*/, '');
+    updateSectionYear();
     document.getElementById('student_type').value = s.student_type || 'regular';
     document.getElementById('email').value = s.email;
     document.getElementById('contact_number').value = s.contact_number || '';

@@ -179,6 +179,13 @@ img{max-width:100%}
 }
 .form-control:focus{outline:none;border-color:var(--indigo-500);box-shadow:0 0 0 3px var(--indigo-100)}
 textarea.form-control{resize:vertical}
+.input-prefix{display:flex}
+.input-prefix-label{
+    display:flex;align-items:center;padding:0 12px;min-width:40px;justify-content:center;
+    border:1px solid var(--slate-300);border-right:0;border-radius:var(--radius-sm) 0 0 var(--radius-sm);
+    background:var(--slate-100);color:var(--slate-600);font-size:14px;font-weight:600;
+}
+.input-prefix .form-control{border-radius:0 var(--radius-sm) var(--radius-sm) 0}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:700px){.form-row{grid-template-columns:1fr}}
 .form-section-title{margin:18px 0 10px;font-size:12px;color:var(--slate-500);text-transform:uppercase;letter-spacing:.03em}
