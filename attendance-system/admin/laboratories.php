@@ -3,7 +3,11 @@ require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
 $pageTitle = 'Laboratory Management';
 
-$labs = $pdo->query('SELECT * FROM laboratories ORDER BY lab_name ASC')->fetchAll();
+$labs = $pdo->query('
+    SELECT l.*,
+        (SELECT COUNT(*) FROM teacher_subjects ts WHERE ts.lab_id = l.lab_id) AS class_count
+    FROM laboratories l ORDER BY l.lab_name ASC
+')->fetchAll();
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -13,26 +17,34 @@ require_once __DIR__ . '/../includes/header.php';
         <button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> Add Laboratory</button>
     </div>
     <div class="card-body">
+        <div class="toolbar">
+            <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i>
+                <input type="search" class="form-control" id="labSearch" placeholder="Search code or name..." aria-label="Search laboratories by code or name"></div>
+        </div>
         <div class="table-wrapper">
-            <table class="data-table">
-                <thead><tr><th>Code</th><th>Lab Name</th><th>Location</th><th>GPS Coordinates</th><th>Radius</th><th>Capacity</th><th>Status</th><th>Actions</th></tr></thead>
+            <table class="data-table labs-table">
+                <thead><tr><th>Code</th><th>Lab Name</th><th>Location</th><th>GPS Coordinates</th><th>Radius (m)</th><th>Capacity</th><th>Classes</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
                 <?php if (empty($labs)): ?>
-                    <tr><td colspan="8" class="text-center text-muted">No laboratories found.</td></tr>
-                <?php else: foreach ($labs as $l): $hasCoords = $l['latitude'] !== null && $l['longitude'] !== null; ?>
-                    <tr>
+                    <tr><td colspan="9" class="text-center text-muted">No laboratories found.</td></tr>
+                <?php else: foreach ($labs as $l):
+                    $hasCoords = ($l['latitude'] ?? '') !== '' && ($l['longitude'] ?? '') !== '';
+                    $coords = $hasCoords ? (float) $l['latitude'] . ',' . (float) $l['longitude'] : '';
+                ?>
+                    <tr data-search="<?php echo e(strtolower($l['lab_code'] . ' ' . $l['lab_name'])); ?>">
                         <td><?php echo e($l['lab_code']); ?></td>
                         <td><?php echo e($l['lab_name']); ?></td>
                         <td><?php echo e($l['location']); ?></td>
                         <td>
                             <?php if ($hasCoords): ?>
-                                <span style="font-size:12px"><?php echo e($l['latitude']); ?>, <?php echo e($l['longitude']); ?></span>
+                                <a class="gps-link" href="https://www.google.com/maps?q=<?php echo e($coords); ?>" target="_blank" rel="noopener" title="Open in Google Maps"><i class="fa-solid fa-location-dot"></i> <?php echo e($l['latitude']); ?>, <?php echo e($l['longitude']); ?></a>
                             <?php else: ?>
-                                <span class="badge badge-late"><i class="fa-solid fa-triangle-exclamation"></i> Not set</span>
+                                <span class="badge badge-nogps"><i class="fa-solid fa-triangle-exclamation"></i> No GPS set</span>
                             <?php endif; ?>
                         </td>
-                        <td><?php echo (int) $l['allowed_radius_meters']; ?>m</td>
+                        <td><?php echo (int) $l['allowed_radius_meters']; ?></td>
                         <td><?php echo e($l['capacity']); ?></td>
+                        <td><?php echo (int) $l['class_count']; ?></td>
                         <td><span class="badge badge-<?php echo $l['status'] === 'active' ? 'active' : 'inactive'; ?>"><?php echo ucfirst($l['status']); ?></span></td>
                         <td>
                             <div style="display:flex;gap:8px">
@@ -42,8 +54,12 @@ require_once __DIR__ . '/../includes/header.php';
                         </td>
                     </tr>
                 <?php endforeach; endif; ?>
+                    <tr id="labNoMatch" hidden><td colspan="9" class="text-center text-muted">No laboratories match your search.</td></tr>
                 </tbody>
             </table>
+        </div>
+        <div class="table-footer">
+            <span class="table-count" id="labCount" aria-live="polite">Showing <?php echo count($labs); ?> of <?php echo count($labs); ?> laboratories</span>
         </div>
     </div>
 </div>
@@ -59,11 +75,12 @@ require_once __DIR__ . '/../includes/header.php';
                     <div class="form-group"><label>Lab Name *</label><input type="text" name="lab_name" id="lab_name" class="form-control" required></div>
                 </div>
                 <div class="form-group"><label>Location</label><input type="text" name="location" id="location" class="form-control"></div>
-                <div class="form-row">
-                    <div class="form-group"><label>Latitude</label><input type="text" name="latitude" id="latitude" class="form-control" placeholder="e.g. 17.6132000"></div>
-                    <div class="form-group"><label>Longitude</label><input type="text" name="longitude" id="longitude" class="form-control" placeholder="e.g. 121.7270000"></div>
+                <div class="gps-row">
+                    <div class="form-group"><label for="latitude">Latitude</label><input type="text" name="latitude" id="latitude" class="form-control" placeholder="e.g. 17.6132000"></div>
+                    <div class="form-group"><label for="longitude">Longitude</label><input type="text" name="longitude" id="longitude" class="form-control" placeholder="e.g. 121.7270000"></div>
+                    <div class="form-group"><button type="button" class="btn btn-outline" id="useLocationBtn" onclick="useMyLocation()"><i class="fa-solid fa-location-crosshairs"></i> Use my current location</button></div>
                 </div>
-                <button type="button" class="btn btn-outline btn-sm" style="margin-bottom:16px" onclick="useMyLocation()"><i class="fa-solid fa-location-crosshairs"></i> Use My Current Location</button>
+                <p class="gps-error" id="gpsError" role="alert" hidden></p>
                 <div class="form-row">
                     <div class="form-group"><label>Allowed Radius (meters)</label><input type="number" name="allowed_radius_meters" id="allowed_radius_meters" class="form-control" value="50" min="5" max="1000"></div>
                     <div class="form-group"><label>Capacity</label><input type="number" name="capacity" id="capacity" class="form-control" value="40"></div>
@@ -85,11 +102,13 @@ require_once __DIR__ . '/../includes/header.php';
 function openAddModal() {
     document.getElementById('labForm').reset();
     document.getElementById('lab_id').value = '';
+    showGpsError('');
     document.getElementById('labModalTitle').textContent = 'Add Laboratory';
     openModal('labModal');
 }
 function openEditModal(l) {
     document.getElementById('lab_id').value = l.lab_id;
+    showGpsError('');
     document.getElementById('lab_code').value = l.lab_code;
     document.getElementById('lab_name').value = l.lab_name;
     document.getElementById('location').value = l.location || '';
@@ -101,17 +120,46 @@ function openEditModal(l) {
     document.getElementById('labModalTitle').textContent = 'Edit Laboratory';
     openModal('labModal');
 }
+function showGpsError(msg) {
+    const el = document.getElementById('gpsError');
+    el.textContent = msg || '';
+    el.hidden = !msg;
+}
 function useMyLocation() {
-    if (!navigator.geolocation) { showToast('error', 'Geolocation is not supported by this browser.'); return; }
+    showGpsError('');
+    if (!navigator.geolocation) { showGpsError('Location is not supported by this browser. Enter the coordinates manually.'); return; }
+    const btn = document.getElementById('useLocationBtn');
+    btn.disabled = true;
     navigator.geolocation.getCurrentPosition(
         (pos) => {
+            btn.disabled = false;
             document.getElementById('latitude').value = pos.coords.latitude.toFixed(7);
             document.getElementById('longitude').value = pos.coords.longitude.toFixed(7);
             showToast('success', 'Current location captured. Review before saving.');
         },
-        () => showToast('error', 'Could not get your location. Please enter coordinates manually.')
+        (err) => {
+            btn.disabled = false;
+            showGpsError(err.code === err.PERMISSION_DENIED
+                ? 'Location permission was denied. Allow it in your browser or enter the coordinates manually.'
+                : 'Could not get your location. Enter the coordinates manually.');
+        },
+        { enableHighAccuracy: true, timeout: 15000 }
     );
 }
+
+// Live search by code or name
+const labRows = [...document.querySelectorAll('.labs-table tbody tr[data-search]')];
+document.getElementById('labSearch').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    let shown = 0;
+    labRows.forEach(tr => {
+        const match = tr.dataset.search.includes(q);
+        tr.hidden = !match;
+        if (match) shown++;
+    });
+    document.getElementById('labNoMatch').hidden = shown > 0 || labRows.length === 0;
+    document.getElementById('labCount').textContent = `Showing ${shown} of ${labRows.length} laboratories`;
+});
 document.getElementById('labForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('labSubmitBtn');

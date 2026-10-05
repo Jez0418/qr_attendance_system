@@ -491,3 +491,17 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .table-footer{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-top:18px}
 .table-footer .pagination{margin:0;flex-wrap:wrap}
 .table-count{color:var(--slate-600);font-size:13px}
+
+/* ================= LABORATORIES PAGE (admin/laboratories.php) ================= */
+.labs-table tbody tr:hover td{background:var(--slate-100)}
+.gps-link{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--indigo-600);font-weight:600;white-space:nowrap}
+.gps-link:hover{text-decoration:underline}
+.badge-nogps{background:var(--amber-100);color:#92400e;white-space:nowrap}
+.gps-row{display:grid;grid-template-columns:1fr 1fr auto;gap:16px;align-items:end}
+.gps-row .form-control,.gps-row .btn{height:42px}
+.gps-row .btn{white-space:nowrap}
+.gps-error{margin:-6px 0 16px;font-size:13px;color:#991b1b}
+@media(max-width:700px){
+    .gps-row{grid-template-columns:1fr;gap:0}
+    .gps-row .btn{width:100%}
+}
