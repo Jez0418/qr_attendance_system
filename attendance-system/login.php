@@ -45,95 +45,100 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css">
 </head>
-<body class="auth-body">
-    <div class="auth-wrapper">
-        <div class="auth-brand-panel">
-            <div class="auth-brand-inner">
-                <i class="fa-solid fa-qrcode auth-logo"></i>
-                <h1>MCNP<br>QR Attendance System</h1>
-                <p>Fast, accurate, and paperless attendance tracking for Medical Colleges of Northern Philippines laboratory classes — scan, verify, done.</p>
-                <ul class="auth-feature-list">
-                    <li><i class="fa-solid fa-check"></i> One fixed QR code per laboratory</li>
-                    <li><i class="fa-solid fa-check"></i> Automatic Present / Late detection</li>
-                    <li><i class="fa-solid fa-check"></i> Admin, Teacher &amp; Student portals</li>
-                </ul>
-            </div>
+<body class="lg-body">
+<main class="lg-wrap">
+    <header class="lg-brand">
+        <div class="lg-logo" aria-hidden="true"><i class="fa-solid fa-graduation-cap"></i></div>
+        <h1>MCNP QR Attendance</h1>
+        <p>Medical Colleges of Northern Philippines</p>
+    </header>
+
+    <section class="lg-card" aria-labelledby="lgTitle">
+        <h2 id="lgTitle" class="lg-sr">Sign in</h2>
+
+        <?php foreach ($errors as $err): ?>
+            <div class="lg-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> <span><?php echo e($err); ?></span></div>
+        <?php endforeach; ?>
+
+        <div class="lg-roles" id="roleTabs" role="group" aria-label="Account type">
+            <?php foreach (['admin' => 'Admin', 'teacher' => 'Teacher', 'student' => 'Student'] as $r => $label): ?>
+                <button type="button" class="lg-role <?php echo $selectedRole === $r ? 'active' : ''; ?>" data-role="<?php echo $r; ?>" aria-pressed="<?php echo $selectedRole === $r ? 'true' : 'false'; ?>"><?php echo $label; ?></button>
+            <?php endforeach; ?>
         </div>
-        <div class="auth-form-panel">
-            <div class="auth-form-box">
-                <h2>Welcome Back</h2>
-                <p class="auth-subtitle">Select your role and sign in to continue</p>
 
-                <?php foreach ($errors as $err): ?>
-                    <div class="alert alert-error"><i class="fa-solid fa-circle-exclamation"></i> <?php echo e($err); ?></div>
-                <?php endforeach; ?>
+        <form method="POST" action="login.php" autocomplete="off" novalidate>
+            <input type="hidden" name="role" id="roleInput" value="<?php echo e($selectedRole); ?>">
 
-                <div class="role-tabs" id="roleTabs">
-                    <div class="role-tab <?php echo $selectedRole === 'admin' ? 'active' : ''; ?>" data-role="admin"><i class="fa-solid fa-user-shield"></i> Admin</div>
-                    <div class="role-tab <?php echo $selectedRole === 'teacher' ? 'active' : ''; ?>" data-role="teacher"><i class="fa-solid fa-chalkboard-user"></i> Teacher</div>
-                    <div class="role-tab <?php echo $selectedRole === 'student' ? 'active' : ''; ?>" data-role="student"><i class="fa-solid fa-user-graduate"></i> Student</div>
-                </div>
-
-                <form method="POST" action="login.php" autocomplete="off">
-                    <input type="hidden" name="role" id="roleInput" value="<?php echo e($selectedRole); ?>">
-                    <div class="form-group">
-                        <label for="username">Username</label>
-                        <div class="input-icon">
-                            <i class="fa-solid fa-user"></i>
-                            <input type="text" id="username" name="username" placeholder="Enter your username" value="<?php echo e($_POST['username'] ?? ''); ?>" required autofocus>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="password">Password <span class="text-muted" id="pwHint" style="font-weight:400"></span></label>
-                        <div class="input-icon">
-                            <i class="fa-solid fa-lock"></i>
-                            <input type="password" id="password" name="password" placeholder="Enter your ID number" required>
-                            <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('password', this)"></i>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-block">Sign In <i class="fa-solid fa-arrow-right"></i></button>
-                </form>
-
-                <div class="demo-accounts">
-                    <p><strong>Your password is your ID number</strong></p>
-                    <p style="margin:6px 0 8px">Demo logins:</p>
-                    <div class="demo-chip-row">
-                        <span class="demo-chip">admin / ADM-0001</span>
-                        <span class="demo-chip">tcruz / EMP-001</span>
-                        <span class="demo-chip">s2023001 / 2023-0001</span>
-                    </div>
+            <div class="lg-field">
+                <label for="username">Username</label>
+                <div class="lg-input">
+                    <i class="fa-regular fa-user" aria-hidden="true"></i>
+                    <input type="text" id="username" name="username" placeholder="Enter your username" value="<?php echo e($_POST['username'] ?? ''); ?>" autocomplete="username" required autofocus>
                 </div>
             </div>
+
+            <div class="lg-field">
+                <div class="lg-label-row">
+                    <label for="password">Password</label>
+                    <span class="lg-hint" id="pwHint"></span>
+                </div>
+                <div class="lg-input">
+                    <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                    <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
+                    <button type="button" class="lg-eye" id="pwToggle" aria-label="Show password" aria-pressed="false"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
+                </div>
+            </div>
+
+            <button type="submit" class="lg-submit">Sign in <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+        </form>
+
+        <div class="lg-demo">
+            <span>Demo logins <small>(click to fill)</small></span>
+            <div class="lg-chips">
+                <button type="button" class="lg-chip" data-role="admin" data-user="admin" data-pass="password">Admin</button>
+                <button type="button" class="lg-chip" data-role="teacher" data-user="tcruz" data-pass="password">Teacher</button>
+                <button type="button" class="lg-chip" data-role="student" data-user="s2023001" data-pass="password">Student</button>
+            </div>
         </div>
-    </div>
+    </section>
+
+    <p class="lg-help">Need help? Contact the MCNP IT Services or Laboratory Department.</p>
+</main>
 
 <script>
-function togglePassword(id, icon) {
-    const input = document.getElementById(id);
-    const isPassword = input.type === 'password';
-    input.type = isPassword ? 'text' : 'password';
-    icon.classList.toggle('fa-eye');
-    icon.classList.toggle('fa-eye-slash');
-}
+const roleHints = { admin: 'Your Admin ID', teacher: 'Your Employee No.', student: 'Your Student No.' };
+const roleInput = document.getElementById('roleInput');
 
-// Role tab selector — sets the hidden "role" field the server checks against
-const roleHints = {
-    admin: '(your Admin ID)',
-    teacher: '(your Employee No.)',
-    student: '(your Student No.)'
-};
-function setRoleHint(role) {
+function setRole(role) {
+    roleInput.value = role;
+    document.querySelectorAll('.lg-role').forEach(t => {
+        const on = t.dataset.role === role;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
     document.getElementById('pwHint').textContent = roleHints[role] || '';
 }
-document.querySelectorAll('.role-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-        document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById('roleInput').value = tab.dataset.role;
-        setRoleHint(tab.dataset.role);
-    });
+document.querySelectorAll('.lg-role').forEach(t => t.addEventListener('click', () => setRole(t.dataset.role)));
+setRole(roleInput.value);
+
+// Show / hide password
+const pw = document.getElementById('password');
+const pwToggle = document.getElementById('pwToggle');
+pwToggle.addEventListener('click', () => {
+    const show = pw.type === 'password';
+    pw.type = show ? 'text' : 'password';
+    pwToggle.setAttribute('aria-pressed', show ? 'true' : 'false');
+    pwToggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    pwToggle.firstElementChild.className = show ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
 });
-setRoleHint(document.getElementById('roleInput').value);
+
+// Demo logins fill the form
+document.querySelectorAll('.lg-chip').forEach(c => c.addEventListener('click', () => {
+    setRole(c.dataset.role);
+    document.getElementById('username').value = c.dataset.user;
+    pw.value = c.dataset.pass;
+    document.querySelector('.lg-submit').focus();
+}));
 </script>
 </body>
 </html>
