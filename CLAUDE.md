@@ -50,6 +50,11 @@ don't break the Vercel + Supabase connection. (No secrets belong in this file.)
 - Old MySQL files (`schema.sql`, `migration_v*.sql`, `database/*.php` helpers) are legacy and don't work on Postgres.
 - Demo logins (seed data): admin / tcruz / jsantos / s2023001-s2023004, password `password`. Change in production.
 
+## Section format
+- ONE format for students and classes: year level + letter(s), e.g. `3A` (`build_section()` / `is_valid_section_letters()` in
+  `includes/functions.php`). The program is never part of the section. `database/supabase_normalize_sections.sql` converts old
+  `BSIT-3A` / `BSIT 3A` values; `section_key()` still tolerates old formats when comparing.
+
 ## Enrollment rules
 - Regular students may only request classes in their own institution, program, year level and section
   (`student_eligible_for_class()` + `section_key()` in `includes/functions.php`). Irregular students may request

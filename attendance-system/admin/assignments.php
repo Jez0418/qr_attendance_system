@@ -229,8 +229,8 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="form-row">
                     <div class="form-group"><label for="section_letter">Section *</label>
                         <div class="input-prefix">
-                            <span class="input-prefix-label" id="section_prefix" title="Program code and year level">–</span>
-                            <input type="text" name="section_letter" id="section_letter" class="form-control" placeholder="A" maxlength="1" aria-describedby="err_section_letter" required>
+                            <span class="input-prefix-label" id="section_prefix" title="Year level">–</span>
+                            <input type="text" name="section_letter" id="section_letter" class="form-control" placeholder="e.g. A" maxlength="5" pattern="[A-Za-z][A-Za-z0-9]*" aria-describedby="err_section_letter" required>
                         </div>
                         <p class="field-error" id="err_section_letter" hidden></p>
                     </div>
@@ -363,17 +363,13 @@ function populateYearLevels(maxYear, selectedYear) {
     }
     updateSectionPrefix();
 }
-// Section is saved as <PROGRAM CODE>-<YEAR><LETTER> (e.g. BSIT-3A); the form only asks for the letter.
+// Section is saved as year level + letter (e.g. 3A), exactly like a student's section; the form only asks for the letter.
 function updateSectionPrefix() {
-    const prog = document.getElementById('program_id');
-    const opt = prog.options[prog.selectedIndex];
-    const code = opt && opt.dataset.code ? opt.dataset.code.toUpperCase() : '';
-    const year = document.getElementById('year_level').value;
-    document.getElementById('section_prefix').textContent = code && year ? code + '-' + year : '–';
+    document.getElementById('section_prefix').textContent = document.getElementById('year_level').value || '–';
 }
 document.getElementById('year_level').addEventListener('change', updateSectionPrefix);
 document.getElementById('section_letter').addEventListener('input', (e) => {
-    e.target.value = e.target.value.replace(/[^a-z]/gi, '').toUpperCase();
+    e.target.value = e.target.value.replace(/[^a-z0-9]/gi, '').toUpperCase();
 });
 function onInstitutionChange(selectedDeptId, selectedProgramId, selectedYear) {
     const institutionId = document.getElementById('institution_id').value;
@@ -478,9 +474,8 @@ function openEditModal(a) {
     document.getElementById('teacher_id').value = a.teacher_id;
     document.getElementById('subject_id').value = a.subject_id;
     document.getElementById('lab_id').value = a.lab_id;
-    // Keep only the trailing letter of a stored section ("BSIT-3A", "BSIT 3A" or "3A" -> "A").
-    const letter = (a.section || '').match(/([A-Za-z])\s*$/);
-    document.getElementById('section_letter').value = letter ? letter[1].toUpperCase() : '';
+    // Drop the program prefix and year digit from a stored section ("BSIT-3A", "BSIT 3A" or "3A" -> "A").
+    document.getElementById('section_letter').value = (a.section || '').replace(/^.*[- ]/, '').replace(/^\s*\d+/, '').toUpperCase();
     document.getElementById('max_students').value = a.max_students || 40;
     document.getElementById('enabled').checked = a.status === 'active';
     updateEnabledLabel();
@@ -512,7 +507,7 @@ function validateScheduleFields(days) {
     const endsOn = document.getElementById('ends_on').value;
     const letter = document.getElementById('section_letter').value.trim();
     if (!letter) errors.section_letter = 'Enter the section letter, e.g. A.';
-    else if (!/^[A-Z]$/i.test(letter)) errors.section_letter = 'Section must be a single letter, e.g. A.';
+    else if (!/^[A-Z][A-Z0-9]{0,4}$/i.test(letter)) errors.section_letter = 'Section must start with a letter, e.g. A, B or C (max 5 characters).';
     if (!days.length) errors.days = 'Select at least one day for the recurring schedule.';
     if (!start) errors.start_time = 'Enter the class start time.';
     if (!end) errors.end_time = 'Enter the class end time.';

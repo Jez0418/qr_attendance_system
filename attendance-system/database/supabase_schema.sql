@@ -341,23 +341,23 @@ INSERT INTO teachers (user_id, employee_number, full_name, department, contact_n
 
 -- Rows are inserted one by one so student_id 1..4 match the enrollments below.
 INSERT INTO students (user_id, student_number, full_name, program_id, institution_id, department_id, year_level, section, contact_number)
-SELECT u.user_id, '2023-0001', 'Maria Dela Cruz', p.program_id, p.institution_id, p.department_id, 3, 'BSCS-3A', '09051112222'
+SELECT u.user_id, '2023-0001', 'Maria Dela Cruz', p.program_id, p.institution_id, p.department_id, 3, '3A', '09051112222'
 FROM users u, programs p WHERE u.username='s2023001' AND p.program_code='BSCS';
 INSERT INTO students (user_id, student_number, full_name, program_id, institution_id, department_id, year_level, section, contact_number)
-SELECT u.user_id, '2023-0002', 'Jose Rizal Jr.', p.program_id, p.institution_id, p.department_id, 3, 'BSCS-3A', '09053334444'
+SELECT u.user_id, '2023-0002', 'Jose Rizal Jr.', p.program_id, p.institution_id, p.department_id, 3, '3A', '09053334444'
 FROM users u, programs p WHERE u.username='s2023002' AND p.program_code='BSCS';
 INSERT INTO students (user_id, student_number, full_name, program_id, institution_id, department_id, year_level, section, contact_number)
-SELECT u.user_id, '2023-0003', 'Ana Lopez', p.program_id, p.institution_id, p.department_id, 2, 'BSIT-2A', '09055556666'
+SELECT u.user_id, '2023-0003', 'Ana Lopez', p.program_id, p.institution_id, p.department_id, 2, '2A', '09055556666'
 FROM users u, programs p WHERE u.username='s2023003' AND p.program_code='BSIT';
 INSERT INTO students (user_id, student_number, full_name, program_id, institution_id, department_id, year_level, section, contact_number)
-SELECT u.user_id, '2023-0004', 'Mark Villanueva', p.program_id, p.institution_id, p.department_id, 1, 'BSIT-1A', '09057778888'
+SELECT u.user_id, '2023-0004', 'Mark Villanueva', p.program_id, p.institution_id, p.department_id, 1, '1A', '09057778888'
 FROM users u, programs p WHERE u.username='s2023004' AND p.program_code='BSIT';
 
 -- Sample classes (meeting_date left NULL — set one in Admin > Assignments)
 INSERT INTO teacher_subjects (teacher_id, subject_id, program_id, year_level, lab_id, section, max_students, schedule_day, start_time, end_time) VALUES
-(1, 3, (SELECT program_id FROM programs WHERE program_code='BSCS'), 3, 1, 'BSCS-3A', 40, 'Monday', '08:00:00', '11:00:00'),
-(1, 4, (SELECT program_id FROM programs WHERE program_code='BSCS'), 3, 2, 'BSCS-3A', 40, 'Wednesday', '13:00:00', '16:00:00'),
-(2, 1, (SELECT program_id FROM programs WHERE program_code='BSIT'), 1, 3, 'BSIT-1A', 35, 'Tuesday', '09:00:00', '12:00:00');
+(1, 3, (SELECT program_id FROM programs WHERE program_code='BSCS'), 3, 1, '3A', 40, 'Monday', '08:00:00', '11:00:00'),
+(1, 4, (SELECT program_id FROM programs WHERE program_code='BSCS'), 3, 2, '3A', 40, 'Wednesday', '13:00:00', '16:00:00'),
+(2, 1, (SELECT program_id FROM programs WHERE program_code='BSIT'), 1, 3, '1A', 35, 'Tuesday', '09:00:00', '12:00:00');
 
 INSERT INTO class_schedules (teacher_subject_id, day_of_week, start_time, end_time) VALUES
 (1, 1, '08:00:00', '11:00:00'),

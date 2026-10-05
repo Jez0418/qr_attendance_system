@@ -187,6 +187,20 @@ function section_key($section): string {
     return strtoupper(preg_replace('/^.*[- ]/', '', trim((string) $section)));
 }
 
+/**
+ * THE section format, used for students AND classes: year level + letter(s), e.g. "3A".
+ * The program is never part of the section; it is stored/displayed separately.
+ */
+const SECTION_LETTERS_PATTERN = '/^[A-Z][A-Z0-9]{0,4}$/';
+
+function is_valid_section_letters($letters): bool {
+    return (bool) preg_match(SECTION_LETTERS_PATTERN, strtoupper(trim((string) $letters)));
+}
+
+function build_section($yearLevel, $letters): string {
+    return (int) $yearLevel . strtoupper(trim((string) $letters));
+}
+
 function student_eligible_for_class(array $student, array $class) {
     if (($student['student_type'] ?? 'regular') === 'irregular') {
         return [true, ''];

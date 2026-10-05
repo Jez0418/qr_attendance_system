@@ -27,11 +27,11 @@ function read_academic_fields(PDO $pdo) {
     if (!$institutionId || !$departmentId || !$programId || !$yearLevel || $sectionLetter === '') {
         throw new Exception('Please complete the academic placement fields (institution, department, program, year, section).');
     }
-    if (!preg_match('/^[A-Z][A-Z0-9]{0,4}$/', $sectionLetter)) {
+    if (!is_valid_section_letters($sectionLetter)) {
         throw new Exception('Section must start with a letter, e.g. A, B, C.');
     }
     // Stored as year level + letter, e.g. year 2 + "A" = "2A".
-    $section = $yearLevel . $sectionLetter;
+    $section = build_section($yearLevel, $sectionLetter);
 
     $check = $pdo->prepare('
         SELECT p.duration_years FROM programs p

@@ -83,8 +83,8 @@ function validate_assignment_input($pdo) {
     if ($sectionLetter === '') {
         throw new FieldError('section_letter', 'Enter the section letter, e.g. A.');
     }
-    if (!preg_match('/^[A-Z]$/', $sectionLetter)) {
-        throw new FieldError('section_letter', 'Section must be a single letter, e.g. A.');
+    if (!is_valid_section_letters($sectionLetter)) {
+        throw new FieldError('section_letter', 'Section must start with a letter, e.g. A, B or C (max 5 characters).');
     }
     if (!$teacherId || !$subjectId || !$labId
         || !$institutionId || !$departmentId || !$programId || !$yearLevel) {
@@ -109,8 +109,8 @@ function validate_assignment_input($pdo) {
     if ($yearLevel < 1 || $yearLevel > $maxYear) {
         throw new Exception("Year level must be between 1 and $maxYear for this program.");
     }
-    // Always stored as <PROGRAM CODE>-<YEAR><LETTER>, e.g. BSIT-3A.
-    $section = strtoupper($program['program_code']) . '-' . $yearLevel . $sectionLetter;
+    // Same format as a student's section: year level + letter, e.g. 3A (the program is stored separately).
+    $section = build_section($yearLevel, $sectionLetter);
 
     return [
         'teacher_id' => $teacherId, 'subject_id' => $subjectId, 'lab_id' => $labId, 'section' => $section,
