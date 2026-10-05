@@ -28,6 +28,15 @@ $me->execute([$studentId]);
 $me = $me->fetch();
 $isIrregular = ($me['student_type'] ?? 'regular') === 'irregular';
 
+// Students store their section as year + letter ("3A"); classes store it with the
+// program code in front ("BSIT-3A", older rows "BSIT 3A"). Compare only the part
+// after the last "-" or space. The program itself is matched separately below.
+function section_key($section): string {
+    return strtoupper(preg_replace('/^.*[- ]/', '', trim((string) $section)));
+}
+const SECTION_KEY_SQL = "UPPER(regexp_replace(TRIM(ts.section), '^.*[- ]', ''))";
+$mySection = section_key($me['section'] ?? '');
+
 $search = clean($_GET['search'] ?? '');
 $where = ['ts.status = "active"'];
 $params = [];
@@ -43,8 +52,10 @@ $params[] = $me['program_id'];
 if (!$isIrregular) {
     $where[] = '(ts.year_level IS NULL OR ts.year_level = ?)';
     $params[] = $me['year_level'];
-    $where[] = '(ts.section IS NULL OR ts.section = ? OR CAST(? AS TEXT) IS NULL)';
-    $params[] = $me['section']; $params[] = $me['section'];
+    if ($mySection !== '') {
+        $where[] = '(ts.section IS NULL OR ' . SECTION_KEY_SQL . ' = ?)';
+        $params[] = $mySection;
+    }
 }
 
 if ($search !== '') {
@@ -103,7 +114,7 @@ require_once __DIR__ . '/../includes/header.php';
     $isFull = $slotsLeft <= 0;
     $isEnrolled = $c['my_enrollment_status'] === 'enrolled';
     $isPending = !empty($c['my_pending_request']);
-    $offCohort = $isIrregular && ((int) $c['year_level'] !== (int) $me['year_level'] || strcasecmp((string) $c['section'], (string) $me['section']) !== 0);
+    $offCohort = $isIrregular && ((int) $c['year_level'] !== (int) $me['year_level'] || section_key($c['section']) !== $mySection);
 ?>
     <div class="card">
         <div class="card-body">
