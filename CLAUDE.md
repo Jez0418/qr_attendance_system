@@ -48,7 +48,7 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   only, and a closed session is never reopened. Late = scan after start + settings `late_grace_minutes` (default 15).
 - Any new table/column: write the SQL as a new file in `database/` AND run it in Supabase
   (SQL Editor: click in editor, Ctrl+A, Run so the whole script runs). Run SQL before pushing code that needs it.
-- Old MySQL files (`schema.sql`, `migration_v*.sql`, `database/*.php` helpers) are legacy and don't work on Postgres.
+- The old MySQL files (`schema.sql`, `migration_v*.sql`) and the `database/*.php` helper scripts were deleted (they are in git history only); never recreate them: they do not work on Postgres and `reset_passwords_to_id.php` could reset every password.
 - Demo logins (seed data): admin / tcruz / jsantos / s2023001-s2023004, password `password`. Change in production.
 
 ## Section format

@@ -1,312 +1,173 @@
-# MCNP / ISAP QR Laboratory Attendance Management System
+# MCNP-ISAP QR Laboratory Attendance System
 
-A complete, self-contained PHP + MySQL + JavaScript attendance system built
-for **Medical Colleges of Northern Philippines (MCNP)** and **International
-School of Asia and the Pacific (ISAP)**, built to run directly on **XAMPP**
-with no external frameworks (no Composer, no Laravel/CodeIgniter — plain
-PHP, prepared-statement MySQL, and vanilla JS/AJAX).
+A web system for recording laboratory-class attendance at **Medical Colleges of Northern
+Philippines (MCNP)** and **International School of Asia and the Pacific (ISAP)**. A teacher or
+admin shows a QR code, students scan it with their phone, and the server decides whether the
+student is Present, Late or rejected, using the class schedule, enrollment and the student's GPS
+location.
 
-**Core rule the whole system is built around:** a student can record
-attendance only if they're authenticated, officially enrolled in the
-subject, the class is scheduled for **today** (by explicit meeting date —
-never day-of-week alone), the QR session is active and hasn't expired, the
-current time is within the attendance window, their location is inside the
-laboratory's configured radius, and they haven't already recorded
-attendance for that session.
-
-
-> **Database: PostgreSQL / Supabase.** The app now runs on PostgreSQL (e.g. Supabase) instead of MySQL.
-> Run `database/supabase_schema.sql` once (Supabase → SQL Editor) — it already contains every
-> migration (v2–v5), so the old `schema.sql` / `migration_v*.sql` files are MySQL-only history.
-> Configure the connection with the `DB_*` environment variables (see `.env.example`).
-> The helper scripts in `database/*.php` still target MySQL and are not needed for a fresh install.
-> Vercel deployment: see `vercel.json` + `api/index.php`; sessions are stored in the `php_sessions` table.
+Plain PHP (no framework, no Composer) + vanilla JavaScript, **PostgreSQL on Supabase**, hosted on
+**Vercel**. Developer notes for AI assistants and maintainers are in [`../CLAUDE.md`](../CLAUDE.md).
 
 ---
 
-## ✨ What's in this version (v5)
+## How attendance works
 
-- **Institution → Department → Program → Year → Section hierarchy.**
-  MCNP and ISAP are seeded with their real program lists (BSN, BSMLS, BSPh,
-  BSRT, BSPT, and the three 2-year diplomas for MCNP; BSCRIM, BSCA, BSCPE,
-  BSIT, BSA, BSSW, BSPSY, BSHM, BSTM, BSBA for ISAP). Choosing an
-  institution in any form filters the program dropdown to only that
-  institution's programs — selecting MCNP never shows ISAP programs or
-  vice versa, and this is re-verified server-side, not just hidden in the UI.
-- **Explicit Meeting Date on every class assignment.** A class is no longer
-  "every Monday" in the abstract — it's tied to a real calendar date, and
-  that date is the single source of truth for whether it can be activated
-  today. A class from yesterday can never activate today; a class scheduled
-  for tomorrow can't be activated early either.
-- **Regular vs. Irregular students.** Regular students only see/request
-  subjects matching their own institution + program + year level + section.
-  Irregular students can see subjects from other year levels/sections
-  within their own institution + program — clearly labeled as such — but
-  every request still requires approval either way.
-- **Temporary, per-session QR tokens — no permanent codes.** Every time
-  attendance is opened, a brand-new random token is generated. It stops
-  working the instant that session closes or expires, and is never reused,
-  so an old screenshot can never be replayed for a later class meeting.
-- **Full server-side validation order** (student/ajax_scan.php): auth →
-  QR signature → session exists/active/not expired → enrollment → meeting
-  date matches today → time window → location available → GPS accuracy →
-  geofence radius → not already recorded. Every one of these is checked in
-  PHP, never trusted from the browser.
-- **Synchronized enrollment approvals.** A request is one shared row —
-  whichever the teacher *or* an admin approves/rejects first, it vanishes
-  from pending lists on both sides immediately (there's only one row to
-  update, so there's no way for it to go out of sync). Students can also
-  cancel their own still-pending requests.
+1. An admin creates a **class assignment**: subject, teacher, laboratory, program/year/section and a
+   **recurring weekly schedule** (e.g. Mon + Wed, 3:00-5:00 PM, optionally between two term dates).
+2. Meetings are never stored; they are generated from the schedule (`includes/schedule.php`) in
+   Asia/Manila time. Each meeting's status is **calculated**, never set by hand:
+   `UPCOMING` -> `ACTIVE` (start <= now < end) -> `EXPIRED`, or `CANCELLED` / rescheduled by a
+   per-date **schedule exception**.
+3. When a meeting is ACTIVE, an attendance session opens automatically with a fresh random QR token.
+   It closes at the meeting's end time (or when closed manually) and is never reopened.
+4. A student scans the QR (`student/ajax_scan.php`). The server checks, in order: logged in ->
+   QR signature -> session active and not expired -> student enrolled in that class -> meeting is
+   today and inside its time window -> GPS available and accurate enough -> inside the laboratory's
+   radius (Haversine) -> not already recorded. Then **Present**, or **Late** after the grace period
+   (Admin > Settings, default 15 minutes).
 
----
+Nothing is trusted from the browser: every rule is re-checked in PHP.
 
-## ✨ Full Feature List
+## Roles and pages
 
-**Login** — Role selector (Admin/Teacher/Student); password = the user's own
-ID number; the selected role must match the account's real role.
+| Role | What they can do |
+|---|---|
+| **Admin** | Dashboard (today's classes, live status), Students / Teachers / Subjects / Laboratories, Class Assignments, Class Schedule (week/month, cancel or reschedule one date), Attendance Sessions, Attendance Monitoring, Enrollment Requests, Reports & Analytics (Excel/PDF export), Settings, Notifications, **CSV import of student accounts** |
+| **Teacher** | Dashboard, own subjects/classes, student enrollment (one by one or **CSV import**), enrollment requests, live QR session page, attendance history, late students, notifications |
+| **Student** | Dashboard, request enrollment, my requests, my subjects, scan attendance, attendance history, profile (photo, contact, password), notifications |
 
-**Administrator**
-- Dashboard with live stats and config alerts (pending requests, labs
-  missing GPS setup)
-- Student / Teacher / Subject / Laboratory CRUD
-- **Institutions & Programs** are seeded with the MCNP/ISAP hierarchy;
-  manage departments and programs' active/inactive status from the database
-  directly or extend `admin/` with a dedicated settings page as needed
-- **Class Assignments** ("New Assignment"): Institution → Department →
-  Program → Year Level → Section → Subject → Teacher → Laboratory →
-  Meeting Date (Day auto-computed from the date) → Start/End Time → Max
-  Students → Status, fully validated server-side (start < end, all
-  required fields, program genuinely belongs to the chosen
-  institution/department)
-- **Attendance Session Management**: activate/deactivate attendance for any
-  class (date/radius constrained to that class's own meeting date), view
-  live sessions with their temporary QR codes, force-stop any session
-- **Settings**: configurable max GPS accuracy and default geofence radius
-- **Enrollment Requests**: system-wide view; admin can approve/reject any
-  request directly, same as the owning teacher can
-- Attendance monitoring with multi-filter search; PDF/Excel report export
-- Notification broadcast to teachers/students
+**Academic structure:** Institution -> Department -> Program -> Year level -> Section. A section is
+written the same way everywhere: year level + letter, e.g. `3A` (the program is stored separately).
 
-**Teacher**
-- **My Assigned Subjects** — only subjects the admin assigned to them,
-  each clickable into a hub showing subject info, pending requests for that
-  class, the enrolled roster, and a direct-enroll search
-- **Enrollment Requests** — approve/reject (rejection requires a reason);
-  approving enrolls the student immediately
-- **Attendance Session** — a toggle switch opens/closes attendance for the
-  selected class; the toggle is disabled entirely if the class's meeting
-  date isn't today. Shows the session's temporary QR code and a live
-  roster (Pending → Present/Late) that refreshes every few seconds
-- Attendance history + a dedicated "Late Students" report
-
-**Student**
-- **Request Enrollment** — browse subjects filtered by their own
-  institution/program (and, if Regular, their year/section too); submit a
-  request with optional remarks
-- **My Enrollment Requests** — track status, see who reviewed it, cancel
-  while still pending
-- **My Subjects** — everything officially enrolled in
-- **Scan Attendance** — camera-and-location permission flow (works on
-  Android, iPhone/iPad, and desktop browsers with camera support via a
-  resilient multi-CDN library loader), full result screen with distance
-  and status, or a specific rejection reason
-- Attendance history, editable profile, notifications
+**Enrollment rules:** a *regular* student can request only classes in their own institution,
+program, year level and section; an *irregular* student can request any active class (for example
+an MCNP student taking ISAP subjects). Every request is approved or rejected by the class's teacher
+or an admin. Direct enrollment by a teacher applies the same cohort rule.
 
 ---
 
-## 🗂 Key Files
+## Run it locally
+
+Requirements: PHP 8.1+ with `pdo_pgsql`, and a PostgreSQL database (a local one, or a free Supabase
+project).
+
+```bash
+# 1. create the database objects (see "Database files" below for the order)
+createdb qr_attendance
+psql qr_attendance -f attendance-system/database/supabase_schema.sql
+# ...then the other supabase_*.sql files in the listed order
+
+# 2. configure the connection (environment variables, see .env.example)
+export DB_HOST=localhost DB_PORT=5432 DB_NAME=qr_attendance DB_USER=postgres DB_PASS=secret DB_SSL=0
+
+# 3. start PHP from the folder that CONTAINS attendance-system/
+php -S localhost:8000 -t .
+# open http://localhost:8000/attendance-system/login.php
+```
+
+Optional: `SHOW_DEMO_LOGINS=1` shows demo logins on the login page (local testing only).
+
+## Deploy (Vercel + Supabase)
+
+1. **Supabase:** create a project, then run the SQL files in the order below (SQL Editor: click in
+   the editor, **Ctrl+A**, **Run**, so the whole file runs).
+2. **Vercel:** import the GitHub repo, set **Root Directory** to `attendance-system`, and add the
+   environment variables below. `vercel.json` sets the PHP runtime and the `syd1` region (keep it
+   next to a Sydney Supabase project). Production branch is `main`; every push redeploys.
+3. Open `/login.php`, sign in as admin and **change every demo password** (below).
+
+| Variable | Value |
+|---|---|
+| `DB_HOST`, `DB_PORT` | Supabase **Session pooler** host and port 5432 (6543 = transaction pooler) |
+| `DB_NAME` / `DB_USER` / `DB_PASS` | `postgres` / `postgres.<project-ref>` / your database password |
+| `DB_SSL` | `1` |
+| `QR_SECRET_KEY` | long random string (`php -r "echo bin2hex(random_bytes(32));"`); if unset a key is derived from the DB credentials |
+
+After changing variables, redeploy. Never commit real values (`.env` is git-ignored).
+
+### Database files (`database/`), run in this order on a fresh Supabase project
+
+| # | File | Purpose |
+|---|---|---|
+| 1 | `supabase_schema.sql` | Full schema + demo data (drops and recreates the app's tables!) |
+| 2 | `supabase_departments_programs.sql` | MCNP / ISAP departments and programs |
+| 3 | `supabase_class_schedules.sql` | Weekly class schedules |
+| 4 | `supabase_recurring_schedule.sql` | Term dates and per-date exceptions |
+| 5 | `supabase_late_grace_setting.sql` | Late grace setting (optional, default 15) |
+| 6 | `supabase_profile_photos.sql` | Profile photos stored in the database |
+| 7 | `supabase_remove_shs_jhs.sql` | Removes Senior/Junior High programs |
+| 8 | `supabase_remove_general_department.sql` | Removes the placeholder department |
+| 9 | `supabase_normalize_sections.sql` | One section format (`3A`) |
+| 10 | `supabase_login_attempts.sql` | Login lockout table |
+
+Supabase does **not** update from git pushes: any new table or column needs a new SQL file here
+**and** a manual run in the SQL Editor, before the code that needs it is deployed.
+
+### Demo accounts (seed data)
+
+`admin`, teachers `tcruz` / `jsantos`, students `s2023001` ... `s2023004`, all with password
+`password`. These are public: change or delete them before real use.
+
+## CSV batch imports
+
+* **Admin > Students > Import CSV**: creates up to 50 student accounts per file. Download the template
+  from the page. Required columns: `student_number, full_name, email, institution_code, program_code,
+  year_level, section`; optional: `username`, `password`, `student_type`, `contact_number`. A blank
+  password becomes the student number, so prefer filling the `password` column.
+* **Teacher > Student Enrollment > Import CSV**: enrolls up to 100 student numbers into one of the
+  teacher's classes.
+
+Both show a preview first (nothing is saved), then save everything in one transaction.
+
+## Tests
+
+```bash
+php attendance-system/tests/schedule_test.php      # recurring schedule engine (add --db for the database part)
+php attendance-system/tests/import_csv_test.php    # CSV parsing
+php attendance-system/tests/security_test.php      # CSRF, error messages, QR key, login throttle helpers
+```
+
+`tests/` is not deployed. Please also check pages for SQL errors after any change (PostgreSQL is
+stricter than MySQL).
+
+## Security
+
+Passwords are hashed (bcrypt); SQL uses prepared statements; role checks on every page; CSRF token on
+every POST; login lockout (5 failures per username, 50 per IP, in 15 minutes); session cookie is
+HttpOnly + SameSite=Lax (+ Secure on HTTPS); database errors are logged, never shown to users; QR
+payloads are signed and each token is single-session; attendance requires the student's GPS location
+to be inside the laboratory radius. Student locations are stored only to verify attendance, so tell
+students this and decide how long to keep them.
+
+## Project structure
 
 ```
 attendance-system/
-├── admin/
-│   ├── assignments.php / ajax_assignments.php   New Assignment (full hierarchy)
-│   ├── students.php / ajax_students.php          Student CRUD (full hierarchy)
-│   ├── qr_management.php                          Attendance Session Management
-│   ├── ajax_qr_activate.php / ajax_qr_deactivate.php
-│   ├── ajax_requests.php                           Admin approve/reject
-│   ├── settings.php                                 GPS accuracy / radius config
-├── teacher/
-│   ├── session.php / ajax_session.php              Open/close attendance + QR
-│   ├── class_view.php                                Per-class hub
-│   ├── ajax_requests.php                             Teacher approve/reject
-├── student/
-│   ├── browse_subjects.php / ajax_request_enrollment.php   Eligibility-filtered browsing + request
-│   ├── ajax_cancel_request.php                              Cancel a pending request
-│   ├── scanner.php / ajax_scan.php                            Core GPS+QR validation engine
-├── includes/
-│   ├── config.php                DB credentials + app constants (EDIT THIS FIRST)
-│   ├── functions.php               compute_class_status(), student_eligible_for_class(), etc.
-│   ├── geo.php                       Haversine distance / geofence check
-├── qr/
-│   ├── qr_helper.php           Signed, temporary per-SESSION QR payloads (no permanent codes)
-│   └── session_manager.php       Shared activate/deactivate — enforces meeting_date = today
-├── database/
-│   ├── schema.sql                                      Base tables (v1)
-│   ├── migration_v2_gps_qr_enrollment.sql
-│   ├── migration_v3_admin_enrollment_approval.sql
-│   ├── migration_v4_static_lab_qrcodes.sql
-│   ├── migration_v5_institution_hierarchy.sql            This version
-│   └── reset_passwords_to_id.php                           Sets demo passwords to ID numbers
-└── README.md
+  index.php, login.php, logout.php
+  admin/ teacher/ student/     one PHP file per page; ajax_*.php are the JSON endpoints
+  includes/                    auth, config, db (+ MySQL-to-PostgreSQL SQL shim), schedule engine,
+                               CSRF + helpers (functions.php), CSV import, login throttle, layout
+  qr/                          QR payload signing, automatic attendance sessions
+  api/index.php                Vercel entry point: maps each URL to its PHP file
+  assets/                      css, js, school emblem
+  database/                    supabase_*.sql files (run in Supabase)
+  tests/                       PHP test scripts (not deployed)
+  vercel.json, .vercelignore, .env.example
 ```
 
----
+## Troubleshooting
 
-## 🚀 Setup on XAMPP
+* **Blank page / HTTP 500 on Vercel**: open the deployment's *Logs*; the real error is logged there.
+* **"Service temporarily unavailable"**: the database could not be reached; check the `DB_*` variables.
+* **Pages are slow**: keep the Vercel region (`syd1`) next to the Supabase region.
+* **"Too many failed sign-in attempts"**: wait 15 minutes, or an admin runs
+  `DELETE FROM login_attempts WHERE username_key = 'the.username';` in Supabase.
+* **"Please reload the page and try again"**: the page's security token expired; reload it.
+* **Icons or charts missing**: fonts, icons and charts load from public CDNs.
 
-1. **Copy the project folder** into `htdocs`, e.g. `C:\xampp\htdocs\attendance-system\`.
-2. **Start Apache and MySQL** from the XAMPP Control Panel.
-3. **Create the database first, via phpMyAdmin's own UI** — click **"New"**
-   in the left sidebar, name it `qr_attendance_system`, set Collation to
-   `utf8mb4_unicode_ci`, click **Create**. None of this project's SQL
-   files run `DROP DATABASE` or `CREATE DATABASE` themselves — some
-   hosting panels and managed phpMyAdmin setups disable those two
-   statements even when table-level `CREATE`/`DROP TABLE` still work
-   fine, so creating the database through the UI sidesteps that entirely.
-4. **Select `qr_attendance_system`**, open its **SQL** tab, and run these
-   files **in this exact order** (paste each one's contents → **Go**):
-   1. `database/schema.sql` — safe to re-run any time; it drops and
-      recreates its own tables (not the database) first, so it won't
-      conflict with a previous attempt.
-   2. `database/migration_v2_gps_qr_enrollment.sql`
-   3. `database/migration_v3_admin_enrollment_approval.sql`
-   4. `database/migration_v4_static_lab_qrcodes.sql`
-   5. `database/migration_v5_institution_hierarchy.sql`
+## Known limits
 
-   This is required **even for a fresh install** — `schema.sql` alone only
-   has the original base tables; everything built since then (GPS,
-   enrollment requests, the institution hierarchy, meeting dates) lives in
-   the migration files. Each migration is idempotent and safe to run
-   exactly once.
-4. **Set demo passwords to ID numbers**: visit
-   `http://localhost/attendance-system/database/reset_passwords_to_id.php` once.
-5. **Check `includes/config.php`** (defaults match a stock XAMPP install;
-   `Asia/Manila` timezone is already set there).
-6. **Set real GPS coordinates** for your laboratories: Admin → Laboratories
-   → Edit → "Use My Current Location" while standing in each room. A class
-   cannot be activated until its laboratory has coordinates.
-7. **Create a class assignment with a real meeting date** (Admin → Class
-   Assignments → New Assignment) before trying to activate attendance —
-   there's nothing to activate until a class exists for today.
-
-### Demo accounts (password = ID number)
-| Role    | Username   | Password   |
-|---------|------------|------------|
-| Admin   | `admin`    | `ADM-0001` |
-| Teacher | `tcruz`    | `EMP-001`  |
-| Student | `s2023001` | `2023-0001`|
-
-> 🔒 Delete `database/reset_passwords_to_id.php` once your accounts are set up.
-
-### 🔧 Troubleshooting: "DROP DATABASE statements are disabled"
-This means your phpMyAdmin/hosting setup blocks that one specific
-statement — common on shared hosting, school/lab servers, and some managed
-panels, even when your account can freely create/drop tables. Fix: create
-`qr_attendance_system` yourself via phpMyAdmin's **"New"** button (step 3
-above) instead of letting a script do it, then run `schema.sql` — it only
-drops/recreates its own **tables**, never the database itself, so this
-error shouldn't come up again. If you're re-running `schema.sql` after a
-previous partial attempt, it's safe to just run it again as-is.
-
----
-
-## 🧪 Testing Checklist (matches the acceptance criteria this version was built against)
-
-**Assignment test** — Admin → Class Assignments → New Assignment → fill
-Institution/Department/Program/Year/Section/Subject/Teacher/Laboratory,
-Meeting Date, Start/End Time, Max Students → Save. Confirm it appears in
-the list with the correct computed status badge (Upcoming/Active/Expired).
-
-**Yesterday test** — Create (or edit) an assignment with `meeting_date` set
-to yesterday. Try to activate it from either Admin → Attendance Session
-Management or the Teacher's own toggle: both must refuse, with a message
-naming the actual meeting date.
-
-**Today's class test** — Create an assignment with today's date.
-- Before `start_time`: status badge shows **Upcoming**, activation is allowed.
-- Between `start_time` and `end_time`: status shows **Active**.
-- After `end_time`: status shows **Expired**; activation is refused with a
-  "time window has already ended" message, and any still-open session for
-  it auto-closes on the next page load.
-
-**Enrollment sync test** — Student submits a request (status: pending
-everywhere). Teacher approves → student becomes enrolled, request
-disappears from both the teacher's and the admin's pending lists in the
-same action (same underlying row). Repeat with an admin approving instead,
-and with a rejection (reason required, student notified).
-
-**QR / location test** — Activate a class, open **Scan Attendance** as an
-enrolled student (grant location, then camera), scan the QR shown on the
-teacher's/admin's screen. Confirm: inside the radius → recorded
-Present/Late; outside the radius → rejected with the exact "outside the
-allowed attendance area" message; same student scanning twice → second
-scan rejected as a duplicate; a student not enrolled in that subject →
-rejected as not enrolled.
-
----
-
-## 📸 Camera & Location Permissions
-
-Both the camera (QR scanning) and Geolocation API require a **secure
-context**: `http://localhost/...` works on the same computer, but a phone
-connecting over Wi-Fi via plain `http://192.168.x.x` will have both
-blocked by the browser. To test from a real phone, use an HTTPS tunnel
-(e.g. `ngrok http 80`) or, for local Android Chrome testing only, add your
-local IP under `chrome://flags/#unsafely-treat-insecure-origin-as-secure`.
-
-QR scanning and generation both load their JS libraries through a
-resilient multi-source loader (`assets/js/app.js`) that tries several CDNs
-and shows a clear error instead of a blank screen if all of them are
-blocked by a restrictive network.
-
----
-
-## 🔐 Security Notes
-
-- **Nothing from the browser is trusted for authorization decisions.**
-  Institution/department/program combinations, GPS coordinates, dates, and
-  times are all independently re-verified server-side against the database
-  — the client-side cascading dropdowns and status displays are UX
-  conveniences only.
-- All queries use **PDO prepared statements**. Passwords are hashed with
-  **bcrypt**. Session ID is regenerated on login.
-- **Role-based access control** guards every page, and **ownership** is
-  re-checked server-side on every teacher/admin action — a teacher cannot
-  approve another teacher's request or view another teacher's class by
-  editing the URL or a hidden form field.
-- QR payloads are HMAC-signed (`qr/qr_helper.php` — change `QR_SECRET_KEY`
-  before any real deployment) and scoped to one session's random token,
-  never reused.
-- GPS validation happens entirely server-side via the Haversine formula;
-  client-reported coordinates are just input to that calculation.
-
----
-
-## 🛠 Tech Stack
-
-PHP 8 (PDO, prepared statements, password_hash) · MySQL/MariaDB (InnoDB,
-foreign keys) · HTML5/CSS3/vanilla JS (`fetch` AJAX) · Chart.js · QR
-generation via qrcode.js, scanning via html5-qrcode (both via a multi-CDN
-loader) · browser Geolocation API + server-side Haversine · browser
-print-to-PDF and native `.xls` streaming for exports.
-
-No Composer, no Node build step — everything runs as-is once dropped into
-`htdocs` and the database is imported.
-
----
-
-## ⚠️ Known Scope Limitations (honest notes for whoever maintains this next)
-
-- There's no dedicated admin UI yet for creating/editing **Institutions**
-  and **Departments** as standalone records — they're seeded correctly in
-  the migration, and Programs are manageable implicitly through the schema,
-  but a polished CRUD screen for institutions/departments themselves would
-  need to be added the same way `admin/laboratories.php` was built.
-- Cross-device QR/camera behavior (Android/iPhone/desktop browsers) has
-  been built against the standard Geolocation + camera APIs and a
-  multi-source library loader for resilience, but hasn't been verified on
-  physical devices in this environment — test on real hardware before
-  relying on it for an actual class.
-- CSRF tokens are not yet implemented on top of the existing
-  session-based auth + role checks; add them to form submissions if this
-  is deployed somewhere more exposed than a campus-internal XAMPP server.
+* Vercel functions are short-lived, so imports are capped (50 student rows, 100 enrollment rows).
+* Uploaded files do not persist on Vercel: profile photos are stored as small images in the database.
+* Browser GPS can be inaccurate indoors; the accuracy limit and default radius are in Admin > Settings.
