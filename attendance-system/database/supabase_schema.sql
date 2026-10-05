@@ -71,7 +71,7 @@ CREATE TABLE students (
     year_level SMALLINT NOT NULL DEFAULT 1,
     section VARCHAR(50) NULL,
     contact_number VARCHAR(20),
-    photo VARCHAR(255) DEFAULT NULL,
+    photo TEXT DEFAULT NULL,  -- data URI (see supabase_profile_photos.sql)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -82,7 +82,7 @@ CREATE TABLE teachers (
     full_name VARCHAR(150) NOT NULL,
     department VARCHAR(100),
     contact_number VARCHAR(20),
-    photo VARCHAR(255) DEFAULT NULL,
+    photo TEXT DEFAULT NULL,  -- data URI (see supabase_profile_photos.sql)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
