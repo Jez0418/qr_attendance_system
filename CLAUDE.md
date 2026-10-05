@@ -25,7 +25,8 @@ don't break the Vercel + Supabase connection. (No secrets belong in this file.)
 
 ## Configuration (environment variables — set in Vercel, never commit)
 `DB_HOST`, `DB_PORT` (5432 session pooler / 6543 transaction pooler), `DB_NAME` (postgres),
-`DB_USER` (`postgres.<project-ref>`), `DB_PASS`, `DB_SSL=1`. See `attendance-system/.env.example`
+`DB_USER` (`postgres.<project-ref>`), `DB_PASS`, `DB_SSL=1`, `QR_SECRET_KEY` (long random string signing QR payloads;
+if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1` (local only: shows demo logins on the login page). See `attendance-system/.env.example`
 (placeholders only). `.env` is git-ignored. After changing env vars, redeploy.
 
 ## Database changes (Supabase does NOT update from git pushes)
@@ -69,6 +70,13 @@ don't break the Vercel + Supabase connection. (No secrets belong in this file.)
   Flow = upload -> validate/preview (nothing saved) -> confirm -> one transaction. Shared helpers: `includes/import_csv.php`
   (CSRF, CSV parsing, template) and `includes/import_students.php`. Limits: 1 MB, 50 student rows / 100 enrollment rows
   (bcrypt is slow on serverless). Password column blank = student number (app convention). Test: `php attendance-system/tests/import_csv_test.php`.
+
+## Security conventions
+- Session cookie is HttpOnly + SameSite=Lax (+ Secure over HTTPS), set in `includes/config.php`.
+- Never return `$e->getMessage()` of a database error to the browser: use `safe_error_message($e)` (`includes/functions.php`);
+  PDOExceptions are logged with `error_log()` (Vercel runtime logs) and the user sees a generic message.
+  `php attendance-system/tests/security_test.php` fails if an endpoint echoes raw exception text again.
+- Demo logins are never shown on the login page unless `SHOW_DEMO_LOGINS=1`.
 
 ## Workflow rules
 - UI: `assets/css/style.css` (colors in `:root` variables), `includes/header.php`,

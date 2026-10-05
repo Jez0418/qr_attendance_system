@@ -21,8 +21,16 @@
  * ------------------------------------------------------------
  */
 
-// Secret key used only for signing QR payloads. Change this in production.
-define('QR_SECRET_KEY', 'CHANGE_THIS_SECRET_QR_SIGNING_KEY_2026');
+require_once __DIR__ . '/../includes/config.php';   // DB_* constants (used for the fallback key)
+
+// Secret key used only for signing QR payloads. Set the QR_SECRET_KEY environment variable
+// (a long random string) in Vercel. If it is missing, a key is derived from the database
+// credentials so it is still private (never a value published in the repository).
+define('QR_SECRET_KEY', (function () {
+    $key = getenv('QR_SECRET_KEY');
+    if ($key !== false && strlen($key) >= 16) return $key;
+    return hash_hmac('sha256', 'qr-payload-signing-v1', DB_USER . '|' . DB_PASS . '|' . DB_HOST);
+})());
 
 /** Build the signed payload for one active attendance session. */
 function qr_build_session_payload($sessionId, $token) {

@@ -47,5 +47,5 @@ try {
     $scannedCount = count(array_filter($records, fn($r) => $r['status'] !== 'Pending'));
     echo json_encode(['success' => true, 'records' => $records, 'scanned_count' => $scannedCount, 'total_count' => count($records)]);
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => safe_error_message($e)]);
 }

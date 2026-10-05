@@ -7,6 +7,21 @@
  * ------------------------------------------------------------
  */
 
+/**
+ * Error text that is safe to show a user. PDOExceptions carry SQL, table/column and
+ * host details, so they are written to the server log (Vercel runtime logs) and the
+ * user sees a generic message. Our own validation Exceptions are shown as written.
+ */
+function safe_error_message(Throwable $e): string {
+    if ($e instanceof PDOException) {
+        error_log(get_class($e) . ' [' . $e->getCode() . '] ' . $e->getMessage());
+        return $e->getCode() === '23505'
+            ? 'That record already exists.'
+            : 'Something went wrong while saving. Please try again.';
+    }
+    return $e->getMessage();
+}
+
 /** Escape output to prevent XSS */
 function e($value) {
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');

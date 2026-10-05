@@ -93,6 +93,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit" class="lg-submit">Sign in <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
         </form>
 
+        <?php // Demo credentials are hidden unless the SHOW_DEMO_LOGINS=1 environment variable is set (local testing only). ?>
+        <?php if (getenv('SHOW_DEMO_LOGINS') === '1'): ?>
         <div class="lg-demo">
             <span>Demo logins <small>(click to fill)</small></span>
             <div class="lg-chips">
@@ -101,6 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="button" class="lg-chip" data-role="student" data-user="s2023001" data-pass="password">Student</button>
             </div>
         </div>
+        <?php endif; ?>
     </section>
 
     <p class="lg-help">Need help? Contact the MCNP-ISAP IT Services or Laboratory Department.</p>

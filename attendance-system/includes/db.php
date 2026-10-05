@@ -17,11 +17,13 @@ try {
         $pdo = app_connect();
     }
 } catch (PDOException $e) {
+    // The real reason (host, user, SQLSTATE) goes to the server log only, never to the browser.
+    error_log('Database connection failed: ' . $e->getMessage());
+    http_response_code(503);
     die('<div style="font-family:sans-serif;padding:40px;color:#b91c1c">
-            <h2>Database Connection Failed</h2>
-            <p>' . htmlspecialchars($e->getMessage()) . '</p>
-            <p>Check the <code>DB_*</code> settings (<code>includes/config.php</code> or your
-            environment variables) and make sure <code>database/supabase_schema.sql</code>
-            has been run on the database.</p>
+            <h2>Service temporarily unavailable</h2>
+            <p>The system could not reach its database. Please try again in a few minutes.</p>
+            <p style="color:#64748b;font-size:14px">If this keeps happening, contact the system administrator.
+            (Administrators: check the <code>DB_*</code> settings and the server log.)</p>
         </div>');
 }

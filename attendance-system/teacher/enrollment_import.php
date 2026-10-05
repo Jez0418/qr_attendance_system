@@ -146,7 +146,7 @@ try {
         }
     }
 } catch (Exception $e) {
-    $errorMsg = $e->getMessage();
+    $errorMsg = safe_error_message($e);
     $preview = null;
 }
 

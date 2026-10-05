@@ -160,9 +160,9 @@ try {
     if (in_array($e->getCode(), ['23505', '23000'], true)) {   // unique (session_id, student_id)
         echo json_encode(['success' => false, 'message' => 'You have already recorded attendance for this class.']);
     } else {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => safe_error_message($e)]);
     }
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => safe_error_message($e)]);
 }
