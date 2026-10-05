@@ -194,34 +194,34 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="modal-backdrop" id="assignModal">
-    <div class="modal modal-lg">
+    <div class="modal modal-lg modal-sticky">
         <div class="modal-header"><h3 id="assignModalTitle">New Assignment</h3><button class="modal-close" onclick="closeModal('assignModal')">&times;</button></div>
-        <form id="assignForm" novalidate>
+        <form id="assignForm" class="assign-form" novalidate>
             <div class="modal-body">
                 <input type="hidden" name="teacher_subject_id" id="teacher_subject_id">
 
-                <h4 class="form-section-title" style="margin-top:0">Academic Information</h4>
+                <h4 class="form-section-title form-section-first">Academic Information</h4>
                 <div class="form-row">
-                    <div class="form-group"><label>Institution *</label>
+                    <div class="form-group"><label for="institution_id">Institution *</label>
                         <select name="institution_id" id="institution_id" class="form-control" required onchange="onInstitutionChange()">
                             <option value="">Select institution</option>
                             <?php foreach ($institutions as $i): ?><option value="<?php echo $i['institution_id']; ?>"><?php echo e($i['institution_code'] . ' - ' . $i['institution_name']); ?></option><?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="form-group"><label>Department *</label>
-                        <select name="department_id" id="department_id" class="form-control" required onchange="onDepartmentChange()">
+                    <div class="form-group"><label for="department_id">Department *</label>
+                        <select name="department_id" id="department_id" class="form-control" required disabled onchange="onDepartmentChange()">
                             <option value="">Select institution first</option>
                         </select>
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Course/Program *</label>
-                        <select name="program_id" id="program_id" class="form-control" required onchange="onProgramChange()">
+                    <div class="form-group"><label for="program_id">Course/Program *</label>
+                        <select name="program_id" id="program_id" class="form-control" required disabled onchange="onProgramChange()">
                             <option value="">Select department first</option>
                         </select>
                     </div>
-                    <div class="form-group"><label>Year Level *</label>
-                        <select name="year_level" id="year_level" class="form-control" required>
+                    <div class="form-group"><label for="year_level">Year Level *</label>
+                        <select name="year_level" id="year_level" class="form-control" required disabled>
                             <option value="">Select program first</option>
                         </select>
                     </div>
@@ -259,9 +259,9 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>Maximum Students *</label><input type="number" name="max_students" id="max_students" class="form-control" value="40" min="1" max="200" required></div>
-                    <div class="form-group"><label>Assignment</label>
+                    <div class="form-group"><label for="enabled">Status</label>
                         <div class="toggle-row" style="justify-content:flex-start;min-height:38px">
-                            <label class="toggle-switch"><input type="checkbox" id="enabled" checked onchange="updateEnabledLabel()"><span class="toggle-slider"></span></label>
+                            <label class="toggle-switch"><input type="checkbox" id="enabled" checked aria-describedby="enabledLabel" onchange="updateEnabledLabel()"><span class="toggle-slider"></span></label>
                             <span id="enabledLabel" style="font-size:13px;font-weight:600">Enabled</span>
                         </div>
                     </div>
@@ -275,6 +275,12 @@ require_once __DIR__ . '/../includes/header.php';
                             <label><input type="checkbox" name="days" value="<?php echo $num; ?>"><span><?php echo substr($name, 0, 3); ?></span></label>
                         <?php endforeach; ?>
                     </div>
+                    <div class="day-presets" role="group" aria-label="Day presets">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="setDays([1,2,3,4,5])">Mon-Fri</button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="setDays([1,3,5])">Mon/Wed/Fri</button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="setDays([2,4])">Tue/Thu</button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="setDays([])">Clear</button>
+                    </div>
                     <p class="field-error" id="err_days" hidden></p>
                 </div>
                 <div class="form-row">
@@ -283,6 +289,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <div class="form-group"><label for="end_time">End Time *</label><input type="time" name="end_time" id="end_time" class="form-control" aria-describedby="err_end_time" required>
                         <p class="field-error" id="err_end_time" hidden></p></div>
                 </div>
+                <p class="class-length" id="classLength" aria-live="polite" hidden></p>
                 <div class="form-row">
                     <div class="form-group"><label for="starts_on">Starts on</label><input type="date" name="starts_on" id="starts_on" class="form-control" aria-describedby="err_starts_on">
                         <p class="field-error" id="err_starts_on" hidden></p></div>
@@ -295,7 +302,7 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline" onclick="closeModal('assignModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary" id="assignSubmitBtn">Save Assignment</button>
+                <button type="submit" class="btn btn-primary" id="assignSubmitBtn">Save assignment</button>
             </div>
         </form>
     </div>
@@ -312,8 +319,15 @@ const PROGRAMS = <?php echo json_encode($programs); ?>;
 const SCHEDULE_DAYS = <?php echo json_encode(SCHEDULE_DAYS); ?>;
 const TODAY = <?php echo json_encode($now->format('Y-m-d')); ?>; // Asia/Manila
 
+/** Dependent dropdowns stay disabled (greyed) until their parent has a value. */
+function resetSelect(id, placeholder) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">' + placeholder + '</option>';
+    sel.disabled = true;
+}
 function populateDepartments(institutionId, selectedDeptId) {
     const sel = document.getElementById('department_id');
+    sel.disabled = !institutionId;
     sel.innerHTML = '<option value="">Select department</option>';
     DEPARTMENTS.filter(d => String(d.institution_id) === String(institutionId)).forEach(d => {
         const opt = document.createElement('option');
@@ -324,6 +338,7 @@ function populateDepartments(institutionId, selectedDeptId) {
 }
 function populatePrograms(departmentId, selectedProgramId) {
     const sel = document.getElementById('program_id');
+    sel.disabled = !departmentId;
     sel.innerHTML = '<option value="">Select program</option>';
     PROGRAMS.filter(p => String(p.department_id) === String(departmentId)).forEach(p => {
         const opt = document.createElement('option');
@@ -337,6 +352,7 @@ function populatePrograms(departmentId, selectedProgramId) {
 function populateYearLevels(maxYear, selectedYear) {
     const sel = document.getElementById('year_level');
     sel.innerHTML = '';
+    sel.disabled = false;
     const years = Math.max(1, Math.ceil(parseFloat(maxYear) || 4));
     const labels = ['1st Year','2nd Year','3rd Year','4th Year','5th Year'];
     for (let y = 1; y <= years; y++) {
@@ -360,21 +376,26 @@ document.getElementById('section_letter').addEventListener('input', (e) => {
     e.target.value = e.target.value.replace(/[^a-z]/gi, '').toUpperCase();
 });
 function onInstitutionChange(selectedDeptId, selectedProgramId, selectedYear) {
-    populateDepartments(document.getElementById('institution_id').value, selectedDeptId);
-    document.getElementById('program_id').innerHTML = '<option value="">Select department first</option>';
-    document.getElementById('year_level').innerHTML = '<option value="">Select program first</option>';
+    const institutionId = document.getElementById('institution_id').value;
+    if (institutionId) populateDepartments(institutionId, selectedDeptId);
+    else resetSelect('department_id', 'Select institution first');
+    resetSelect('program_id', 'Select department first');
+    resetSelect('year_level', 'Select program first');
     updateSectionPrefix();
     if (selectedDeptId) onDepartmentChange(selectedProgramId, selectedYear);
 }
 function onDepartmentChange(selectedProgramId, selectedYear) {
-    populatePrograms(document.getElementById('department_id').value, selectedProgramId);
-    document.getElementById('year_level').innerHTML = '<option value="">Select program first</option>';
+    const departmentId = document.getElementById('department_id').value;
+    if (departmentId) populatePrograms(departmentId, selectedProgramId);
+    else resetSelect('program_id', 'Select department first');
+    resetSelect('year_level', 'Select program first');
     updateSectionPrefix();
     if (selectedProgramId) onProgramChange(selectedYear);
 }
 function onProgramChange(selectedYear) {
     const sel = document.getElementById('program_id');
     const opt = sel.options[sel.selectedIndex];
+    if (!sel.value) { resetSelect('year_level', 'Select program first'); updateSectionPrefix(); return; }
     populateYearLevels(opt ? opt.dataset.duration : 4, selectedYear);
 }
 function updateEnabledLabel() {
@@ -384,6 +405,28 @@ function updateEnabledLabel() {
     label.style.color = on ? 'var(--green-600)' : 'var(--slate-500)';
 }
 function dayBoxes() { return Array.from(document.querySelectorAll('#assignForm input[name="days"]')); }
+/** Day preset buttons: check exactly these ISO days (1 = Mon ... 7 = Sun). */
+function setDays(days) {
+    dayBoxes().forEach(cb => cb.checked = days.includes(Number(cb.value)));
+    document.getElementById('err_days').hidden = true;
+}
+/** "2 hours", "1 hour 30 minutes", "45 minutes" under the time fields once both are set. */
+function updateClassLength() {
+    const out = document.getElementById('classLength');
+    const start = document.getElementById('start_time').value;
+    const end = document.getElementById('end_time').value;
+    if (!start || !end) { out.hidden = true; return; }
+    const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+    const mins = toMin(end) - toMin(start);
+    if (mins <= 0) { out.hidden = true; return; }
+    const h = Math.floor(mins / 60), m = mins % 60;
+    const parts = [];
+    if (h) parts.push(h + (h === 1 ? ' hour' : ' hours'));
+    if (m) parts.push(m + (m === 1 ? ' minute' : ' minutes'));
+    out.innerHTML = '<i class="fa-regular fa-clock"></i> Class length: ' + parts.join(' ');
+    out.hidden = false;
+}
+['start_time', 'end_time'].forEach(id => document.getElementById(id).addEventListener('input', updateClassLength));
 
 /** Fill the schedule fields from a class's weekly rules (current ones, or all of them once the term has ended). */
 function fillSchedule(rules) {
@@ -399,6 +442,7 @@ function fillSchedule(rules) {
     const [startsOn, endsOn] = terms.length === 1 ? terms[0].split('|') : ['', ''];
     document.getElementById('starts_on').value = startsOn;
     document.getElementById('ends_on').value = endsOn;
+    updateClassLength();
 
     const warning = document.getElementById('mixedTimesWarning');
     const ranges = [...new Set(current.map(r => r.start_time.substring(0, 5) + '–' + r.end_time.substring(0, 5)))];
@@ -415,9 +459,9 @@ function fillSchedule(rules) {
 function openAddModal() {
     document.getElementById('assignForm').reset();
     document.getElementById('teacher_subject_id').value = '';
-    document.getElementById('department_id').innerHTML = '<option value="">Select institution first</option>';
-    document.getElementById('program_id').innerHTML = '<option value="">Select department first</option>';
-    document.getElementById('year_level').innerHTML = '<option value="">Select program first</option>';
+    resetSelect('department_id', 'Select institution first');
+    resetSelect('program_id', 'Select department first');
+    resetSelect('year_level', 'Select program first');
     document.getElementById('enabled').checked = true;
     updateEnabledLabel();
     updateSectionPrefix();
@@ -502,7 +546,7 @@ document.getElementById('assignForm').addEventListener('submit', async (e) => {
     catch (err) { res = { success: false, message: err.message }; }
     if (res.success) { showToast('success', res.message); closeModal('assignModal'); setTimeout(() => location.reload(), 700); }
     else if (!(res.field && showFieldError(res.field, res.message))) showToast('error', res.message);
-    btn.disabled = false; btn.innerHTML = 'Save Assignment';
+    btn.disabled = false; btn.innerHTML = 'Save assignment';
 });
 async function deleteAssignment(id) {
     if (!confirmDelete('Delete this class assignment? This cannot be undone.')) return;
