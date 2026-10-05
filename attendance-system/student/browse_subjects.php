@@ -28,12 +28,8 @@ $me->execute([$studentId]);
 $me = $me->fetch();
 $isIrregular = ($me['student_type'] ?? 'regular') === 'irregular';
 
-// Students store their section as year + letter ("3A"); classes store it with the
-// program code in front ("BSIT-3A", older rows "BSIT 3A"). Compare only the part
-// after the last "-" or space. The program itself is matched separately below.
-function section_key($section): string {
-    return strtoupper(preg_replace('/^.*[- ]/', '', trim((string) $section)));
-}
+// Section labels are compared with section_key() (includes/functions.php): students
+// store "3A", classes store "BSIT-3A" / "BSIT 3A". The program is matched separately below.
 const SECTION_KEY_SQL = "UPPER(regexp_replace(TRIM(ts.section), '^.*[- ]', ''))";
 $mySection = section_key($me['section'] ?? '');
 
