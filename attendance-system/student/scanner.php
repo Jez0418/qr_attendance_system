@@ -1,8 +1,9 @@
 <?php
 /**
  * student/scanner.php
- * "Scan Attendance" — the student must grant location access first,
- * then scan the QR code. Both the QR payload AND the raw GPS reading
+ * "Scan Attendance" — opening the page asks for location right away and,
+ * once it is granted, starts the camera so the student can scan the QR
+ * code (the buttons are only a retry fallback). Both the QR payload AND the raw GPS reading
  * are sent to the server; the SERVER (not the browser) makes the
  * final decision on whether attendance is recorded. See
  * student/ajax_scan.php for the actual validation logic.
@@ -33,13 +34,13 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="geo-status-row">
                     <span class="geo-status-label">Attendance Status</span>
-                    <span class="geo-status-value" id="attendanceStatusText">Allow location to begin</span>
+                    <span class="geo-status-value" id="attendanceStatusText">Getting your location...</span>
                 </div>
             </div>
 
             <div class="text-center" style="margin:18px 0">
-                <button class="btn btn-primary btn-block" id="allowLocationBtn" onclick="requestLocation()"><i class="fa-solid fa-location-crosshairs"></i> Allow Location</button>
-                <button class="btn btn-success btn-block" id="scanBtn" style="margin-top:10px" disabled onclick="startScanner()"><i class="fa-solid fa-camera"></i> Start Scanner</button>
+                <button class="btn btn-primary btn-block" id="allowLocationBtn" onclick="requestLocation()" disabled><span class="spinner"></span> Getting location...</button>
+                <button class="btn btn-success btn-block" id="scanBtn" style="margin-top:10px;display:none" onclick="startScanner()"><i class="fa-solid fa-camera"></i> Start Scanner</button>
             </div>
 
             <div id="qrReader" style="width:100%"></div>
@@ -53,10 +54,10 @@ require_once __DIR__ . '/../includes/header.php';
 
 <style>
 .geo-status-panel{background:var(--slate-50);border:1px solid var(--slate-200);border-radius:var(--radius-md);padding:14px 16px}
-.geo-status-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;font-size:13.5px}
+.geo-status-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;padding:7px 0;font-size:13.5px}
 .geo-status-row:not(:last-child){border-bottom:1px solid var(--slate-200)}
 .geo-status-label{color:var(--slate-500);font-weight:600}
-.geo-status-value{color:var(--slate-900);font-weight:600}
+.geo-status-value{color:var(--slate-900);font-weight:600;text-align:right;margin-left:auto;min-width:0;overflow-wrap:anywhere}
 </style>
 
 <script>
@@ -65,11 +66,13 @@ let scanning = false;
 let currentPosition = null; // { latitude, longitude, accuracy }
 
 function requestLocation() {
+    const btn = document.getElementById('allowLocationBtn');
     if (!navigator.geolocation) {
+        btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Location not supported';
+        document.getElementById('attendanceStatusText').textContent = 'Location required';
         showToast('error', 'Geolocation is not supported by this browser.');
         return;
     }
-    const btn = document.getElementById('allowLocationBtn');
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Getting location...';
 
     navigator.geolocation.getCurrentPosition(
@@ -83,14 +86,15 @@ function requestLocation() {
                 '<span class="dot dot-green" style="width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px"></span>Verified ✓';
             document.getElementById('accuracyText').textContent = Math.round(pos.coords.accuracy) + ' meters';
             document.getElementById('attendanceStatusText').textContent = 'Ready to Scan';
-            document.getElementById('scanBtn').disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-check"></i> Location Allowed';
-            showToast('success', 'Location detected. You can now scan the QR code.');
+            startScanner();
         },
         (err) => {
             btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Allow Location';
             document.getElementById('attendanceStatusText').textContent = 'Location required';
-            showToast('error', 'Location access is required to verify that you are physically present in the laboratory.');
+            showToast('error', err.code === err.PERMISSION_DENIED
+                ? 'Location is blocked. Allow location for this site in your browser settings, then tap Allow Location.'
+                : 'Could not get your location. Make sure GPS is on, then tap Allow Location.');
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
@@ -126,8 +130,12 @@ async function startScanner() {
         document.getElementById('cameraStatusText').innerHTML =
             '<span class="dot dot-green" style="width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px"></span>Connected';
     } catch (err) {
+        scanning = false;
         document.getElementById('qrReader').innerHTML =
-            '<div class="alert alert-error">Could not access camera: ' + err + '. Please allow camera permission and reload.</div>';
+            '<div class="alert alert-error">Could not access camera: ' + err + '. Please allow camera permission, then tap Start Scanner.</div>';
+        const scanBtn = document.getElementById('scanBtn');
+        scanBtn.style.display = 'inline-flex';
+        scanBtn.disabled = false;
     }
 }
 
@@ -186,9 +194,11 @@ async function onScanSuccess(decodedText) {
 function resetScanner() {
     document.getElementById('scanResult').innerHTML = '';
     document.getElementById('restartBtn').style.display = 'none';
-    document.getElementById('scanBtn').style.display = 'inline-flex';
     document.getElementById('attendanceStatusText').textContent = 'Ready to Scan';
     startScanner();
 }
+
+// Opening "Scan Attendance" starts the flow: location first, then the camera.
+document.addEventListener('DOMContentLoaded', requestLocation);
 </script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
