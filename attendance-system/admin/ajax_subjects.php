@@ -45,6 +45,14 @@ try {
     } elseif ($action === 'delete') {
         $id = (int) ($_POST['subject_id'] ?? 0);
         if (!$id) throw new Exception('Invalid subject.');
+
+        $used = $pdo->prepare('SELECT COUNT(*) FROM teacher_subjects WHERE subject_id = ?');
+        $used->execute([$id]);
+        $count = (int) $used->fetchColumn();
+        if ($count > 0) {
+            throw new Exception("This subject is used by $count class assignment(s). Set it to Inactive instead of deleting it.");
+        }
+
         $stmt = $pdo->prepare('DELETE FROM subjects WHERE subject_id = ?');
         $stmt->execute([$id]);
         log_activity($pdo, $_SESSION['user_id'], "Deleted subject ID: $id");

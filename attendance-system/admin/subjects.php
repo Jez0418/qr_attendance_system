@@ -53,8 +53,10 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><?php echo e($s['units']); ?></td>
                         <td><span class="badge badge-<?php echo $s['status'] === 'active' ? 'active' : 'inactive'; ?>"><?php echo ucfirst($s['status']); ?></span></td>
                         <td>
-                            <button class="btn btn-outline btn-sm" onclick='openEditModal(<?php echo json_encode($s); ?>)'><i class="fa-solid fa-pen"></i></button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteSubject(<?php echo $s['subject_id']; ?>)"><i class="fa-solid fa-trash"></i></button>
+                            <div style="display:flex;gap:8px">
+                                <button class="btn btn-outline btn-sm" style="width:40px;height:40px;padding:0" title="Edit subject" aria-label="Edit subject" onclick='openEditModal(<?php echo json_encode($s); ?>)'><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn btn-danger btn-sm" style="width:40px;height:40px;padding:0" title="Delete subject" aria-label="Delete subject" onclick="deleteSubject(<?php echo $s['subject_id']; ?>)"><i class="fa-solid fa-trash"></i></button>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; endif; ?>
@@ -116,7 +118,7 @@ document.getElementById('subjectForm').addEventListener('submit', async (e) => {
     btn.disabled = false; btn.innerHTML = 'Save Subject';
 });
 async function deleteSubject(id) {
-    if (!confirmDelete('Delete this subject? Related class assignments will also be removed.')) return;
+    if (!confirmDelete('Delete this subject? This cannot be undone.')) return;
     const res = await ajaxPost('ajax_subjects.php', { action: 'delete', subject_id: id });
     if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 700); } else showToast('error', res.message);
 }
