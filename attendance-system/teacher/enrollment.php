@@ -11,7 +11,8 @@ $pageTitle = 'Student Enrollment';
 $teacherId = $_SESSION['profile_id'];
 
 $classes = $pdo->prepare('
-    SELECT ts.teacher_subject_id, sub.subject_code, sub.subject_name, ts.section
+    SELECT ts.teacher_subject_id, sub.subject_code, sub.subject_name, ts.section,
+        ts.institution_id, ts.program_id, ts.year_level
     FROM teacher_subjects ts JOIN subjects sub ON sub.subject_id = ts.subject_id
     WHERE ts.teacher_id = ? ORDER BY sub.subject_code
 ');
@@ -21,12 +22,13 @@ $classes = $classes->fetchAll();
 $selectedClass = (int) ($_GET['class'] ?? ($classes[0]['teacher_subject_id'] ?? 0));
 
 // Verify the selected class actually belongs to this teacher
-$belongsToTeacher = false;
-foreach ($classes as $c) if ((int) $c['teacher_subject_id'] === $selectedClass) $belongsToTeacher = true;
-if (!$belongsToTeacher) $selectedClass = 0;
+$selectedClassRow = null;
+foreach ($classes as $c) if ((int) $c['teacher_subject_id'] === $selectedClass) $selectedClassRow = $c;
+if (!$selectedClassRow) $selectedClass = 0;
 
 $enrolled = [];
 $notEnrolled = [];
+$hiddenCount = 0;   // regular students outside this class's program/year/section (can't be enrolled)
 $filterProgram = clean($_GET['filter_program'] ?? '');
 $filterYear = clean($_GET['filter_year'] ?? '');
 
@@ -50,14 +52,19 @@ if ($selectedClass) {
     $sortCol = $sortMap[$_GET['sort'] ?? 'name'] ?? 's.full_name';
 
     $notEnrolledStmt = $pdo->prepare('
-        SELECT s.student_id, s.student_number, s.full_name, s.year_level, pr.program_name
+        SELECT s.student_id, s.student_number, s.full_name, s.year_level, pr.program_name,
+            s.institution_id, s.program_id, s.section, s.student_type
         FROM students s
         LEFT JOIN programs pr ON pr.program_id = s.program_id
         WHERE ' . implode(' AND ', $naWhere) . "
         ORDER BY $sortCol ASC
     ");
     $notEnrolledStmt->execute($naParams);
-    $notEnrolled = $notEnrolledStmt->fetchAll();
+    // Only list students who may be enrolled (same rule as ajax_enrollment.php enforces).
+    foreach ($notEnrolledStmt->fetchAll() as $s) {
+        if (enrollment_block_reason($s, $selectedClassRow) === '') $notEnrolled[] = $s;
+        else $hiddenCount++;
+    }
 }
 
 $programs = $pdo->query('SELECT program_id, program_code FROM programs WHERE status = \'active\' ORDER BY program_code')->fetchAll();
@@ -134,18 +141,23 @@ require_once __DIR__ . '/../includes/header.php';
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" id="availableSearch" class="form-control" placeholder="Search students by name or ID...">
             </div>
+            <?php if ($hiddenCount > 0): ?>
+                <p class="text-muted" style="margin:0;font-size:12.5px"><i class="fa-solid fa-circle-info"></i>
+                    <?php echo $hiddenCount; ?> student(s) not shown: they are in a different course, year level or section than this class.
+                    Only irregular students can be enrolled in another course's class.</p>
+            <?php endif; ?>
         </div>
         <div class="table-wrapper">
             <table class="data-table">
                 <thead><tr><th>Student No.</th><th>Name</th><th>Program</th><th></th></tr></thead>
                 <tbody id="availableBody">
                 <?php if (empty($notEnrolled)): ?>
-                    <tr><td colspan="4" class="text-center text-muted">All students are already enrolled.</td></tr>
+                    <tr><td colspan="4" class="text-center text-muted">No students available to enroll in this class.</td></tr>
                 <?php else: foreach ($notEnrolled as $s): ?>
                     <tr data-student="<?php echo $s['student_id']; ?>" data-search="<?php echo e(strtolower($s['full_name'] . ' ' . $s['student_number'])); ?>">
                         <td><?php echo e($s['student_number']); ?></td>
                         <td><?php echo e($s['full_name']); ?></td>
-                        <td><?php echo e($s['program_name'] ?? '—'); ?></td>
+                        <td><?php echo e($s['program_name'] ?? '—'); ?><?php if ($s['student_type'] === 'irregular'): ?> <span class="badge badge-late" style="font-size:10px">Irregular</span><?php endif; ?></td>
                         <td><button class="btn btn-success btn-sm" onclick="enroll(<?php echo $s['student_id']; ?>)"><i class="fa-solid fa-user-plus"></i></button></td>
                     </tr>
                 <?php endforeach; endif; ?>

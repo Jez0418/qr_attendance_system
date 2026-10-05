@@ -59,7 +59,9 @@ don't break the Vercel + Supabase connection. (No secrets belong in this file.)
 - Regular students may only request classes in their own institution, program, year level and section
   (`student_eligible_for_class()` + `section_key()` in `includes/functions.php`). Irregular students may request
   any active class, including other programs and institutions (e.g. an MCNP student taking ISAP subjects).
-  Every request still needs teacher/admin approval; direct enrollment by a teacher/admin skips these rules.
+  Every request still needs teacher/admin approval. Direct teacher enrollment (`teacher/ajax_enrollment.php`, the
+  Available Students list in `teacher/enrollment.php`, and the CSV import `teacher/enrollment_import.php`) applies the
+  same rule via `enrollment_block_reason()`: regular students only into their own cohort's class, irregular into any.
 
 ## Batch CSV imports (no database changes)
 - Admin: `admin/students_import.php` (button on Students page) creates student accounts; teacher: `teacher/enrollment_import.php`

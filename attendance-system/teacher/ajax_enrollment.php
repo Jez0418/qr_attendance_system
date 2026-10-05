@@ -17,11 +17,20 @@ try {
     if (!$studentId || !$classId) throw new Exception('Invalid request.');
 
     // Ownership check: this class must belong to the logged-in teacher
-    $own = $pdo->prepare('SELECT COUNT(*) FROM teacher_subjects WHERE teacher_subject_id = ? AND teacher_id = ?');
+    $own = $pdo->prepare('SELECT institution_id, program_id, year_level, section FROM teacher_subjects WHERE teacher_subject_id = ? AND teacher_id = ?');
     $own->execute([$classId, $teacherId]);
-    if ($own->fetchColumn() == 0) throw new Exception('You do not have access to this class.');
+    $class = $own->fetch();
+    if (!$class) throw new Exception('You do not have access to this class.');
 
     if ($action === 'enroll') {
+        // Regular students only join classes of their own program/year/section; irregular students may join any.
+        $cohort = $pdo->prepare('SELECT institution_id, program_id, year_level, section, student_type FROM students WHERE student_id = ?');
+        $cohort->execute([$studentId]);
+        $student = $cohort->fetch();
+        if (!$student) throw new Exception('Student not found.');
+        $blocked = enrollment_block_reason($student, $class);
+        if ($blocked !== '') throw new Exception($blocked);
+
         $check = $pdo->prepare('SELECT enrollment_id, status FROM enrollments WHERE student_id = ? AND teacher_subject_id = ?');
         $check->execute([$studentId, $classId]);
         $existing = $check->fetch();

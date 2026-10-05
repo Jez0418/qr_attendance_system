@@ -7,7 +7,8 @@
  *   2. Preview -> OK / already enrolled / not found / class full
  *   3. Confirm -> valid rows are enrolled in one transaction
  * Teacher only; the class must belong to the teacher; POSTs are CSRF-protected.
- * Same rules as the one-by-one teacher enrollment (no cohort check), plus the class capacity.
+ * Same rules as the one-by-one teacher enrollment (regular students must match the class's
+ * institution/program/year/section; irregular students may join any class), plus the class capacity.
  */
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/import_csv.php';
@@ -18,7 +19,8 @@ const ENROLL_IMPORT_MAX_ROWS = 100;
 $teacherId = (int) $_SESSION['profile_id'];
 
 $classesStmt = $pdo->prepare('
-    SELECT ts.teacher_subject_id, ts.section, ts.max_students, sub.subject_code, sub.subject_name
+    SELECT ts.teacher_subject_id, ts.section, ts.max_students, ts.institution_id, ts.program_id, ts.year_level,
+        sub.subject_code, sub.subject_name
     FROM teacher_subjects ts JOIN subjects sub ON sub.subject_id = ts.subject_id
     WHERE ts.teacher_id = ? ORDER BY sub.subject_code');
 $classesStmt->execute([$teacherId]);
@@ -40,7 +42,8 @@ function classify_enrollment_rows(PDO $pdo, int $classId, array $class, array $r
     $nums = array_values(array_unique(array_map(fn($r) => strtolower($r['student_number']), array_filter($rows, fn($r) => $r['student_number'] !== ''))));
     $students = [];
     if ($nums) {
-        $st = $pdo->prepare('SELECT s.student_id, s.student_number, s.full_name, s.user_id, u.status FROM students s JOIN users u ON u.user_id = s.user_id WHERE LOWER(s.student_number) IN (' . implode(',', array_fill(0, count($nums), '?')) . ')');
+        $st = $pdo->prepare('SELECT s.student_id, s.student_number, s.full_name, s.user_id, u.status,
+            s.institution_id, s.program_id, s.year_level, s.section, s.student_type FROM students s JOIN users u ON u.user_id = s.user_id WHERE LOWER(s.student_number) IN (' . implode(',', array_fill(0, count($nums), '?')) . ')');
         $st->execute($nums);
         foreach ($st->fetchAll() as $s) $students[strtolower($s['student_number'])] = $s;
     }
@@ -61,6 +64,7 @@ function classify_enrollment_rows(PDO $pdo, int $classId, array $class, array $r
             if ($s['status'] !== 'active') { $e['status'] = 'error'; $e['note'] = 'Account is inactive'; }
             elseif (isset($seen[$key])) { $e['status'] = 'skip'; $e['note'] = 'Repeated in the file'; }
             elseif (isset($already[$s['student_id']])) { $e['status'] = 'skip'; $e['note'] = 'Already enrolled'; }
+            elseif (($blocked = enrollment_block_reason($s, $class)) !== '') { $e['status'] = 'error'; $e['note'] = $blocked; }
             elseif ($free <= 0) { $e['status'] = 'error'; $e['note'] = 'Class is full'; }
             else { $free--; }
             $seen[$key] = true;
@@ -108,6 +112,16 @@ try {
                 $lock->execute([$selectedClass]);
                 $free = (int) $class['max_students'] - (int) $lock->fetchColumn();
                 if (count($stash['rows']) > $free) throw new Exception('The class does not have enough free seats any more. Nothing was saved.');
+
+                // Re-check the cohort rule: a student's program/section/type may have changed since the preview.
+                $cohort = $pdo->prepare('SELECT institution_id, program_id, year_level, section, student_type FROM students WHERE student_id = ?');
+                foreach ($stash['rows'] as $row) {
+                    $cohort->execute([$row['student_id']]);
+                    $s = $cohort->fetch();
+                    if (!$s || enrollment_block_reason($s, $class) !== '') {
+                        throw new Exception('A student in this file can no longer be enrolled in this class (program, section or student type changed). Nothing was saved; please upload the file again.');
+                    }
+                }
 
                 $find = $pdo->prepare('SELECT enrollment_id, status FROM enrollments WHERE student_id = ? AND teacher_subject_id = ?');
                 $upd = $pdo->prepare("UPDATE enrollments SET status = 'enrolled' WHERE enrollment_id = ?");

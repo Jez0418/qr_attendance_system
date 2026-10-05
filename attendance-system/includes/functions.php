@@ -201,24 +201,48 @@ function build_section($yearLevel, $letters): string {
     return (int) $yearLevel . strtoupper(trim((string) $letters));
 }
 
-function student_eligible_for_class(array $student, array $class) {
-    if (($student['student_type'] ?? 'regular') === 'irregular') {
-        return [true, ''];
-    }
-    if (!empty($class['institution_id']) && (int) $class['institution_id'] !== (int) $student['institution_id']) {
-        return [false, 'This subject belongs to a different institution. Only irregular students may request it.'];
-    }
-    if (!empty($class['program_id']) && (int) $class['program_id'] !== (int) $student['program_id']) {
-        return [false, 'This subject is not offered for your course/program. Only irregular students may request it.'];
-    }
-    if (!empty($class['year_level']) && (int) $class['year_level'] !== (int) $student['year_level']) {
-        return [false, 'This subject is for a different year level. Only irregular students may request it.'];
-    }
+/**
+ * Which part of a class's cohort a REGULAR student does not match:
+ * '' (match, or irregular student), 'institution', 'program', 'year_level' or 'section'.
+ * $student needs institution_id, program_id, year_level, section, student_type;
+ * $class needs institution_id, program_id, year_level, section.
+ */
+function class_cohort_mismatch(array $student, array $class): string {
+    if (($student['student_type'] ?? 'regular') === 'irregular') return '';
+    if (!empty($class['institution_id']) && (int) $class['institution_id'] !== (int) $student['institution_id']) return 'institution';
+    if (!empty($class['program_id']) && (int) $class['program_id'] !== (int) $student['program_id']) return 'program';
+    if (!empty($class['year_level']) && (int) $class['year_level'] !== (int) $student['year_level']) return 'year_level';
     if (!empty($class['section']) && !empty($student['section'])
-        && section_key($class['section']) !== section_key($student['section'])) {
-        return [false, 'This subject is for a different section. Only irregular students may request it.'];
-    }
-    return [true, ''];
+        && section_key($class['section']) !== section_key($student['section'])) return 'section';
+    return '';
+}
+
+/** Student-facing check used when a student requests enrollment. */
+function student_eligible_for_class(array $student, array $class) {
+    $messages = [
+        'institution' => 'This subject belongs to a different institution. Only irregular students may request it.',
+        'program' => 'This subject is not offered for your course/program. Only irregular students may request it.',
+        'year_level' => 'This subject is for a different year level. Only irregular students may request it.',
+        'section' => 'This subject is for a different section. Only irregular students may request it.',
+    ];
+    $mismatch = class_cohort_mismatch($student, $class);
+    return $mismatch === '' ? [true, ''] : [false, $messages[$mismatch]];
+}
+
+/**
+ * Teacher-facing check for direct enrollment (one-by-one and CSV import): a regular student may
+ * only be enrolled in a class of their own institution, program, year level and section.
+ * Returns '' when allowed, otherwise the reason to show.
+ */
+function enrollment_block_reason(array $student, array $class): string {
+    $messages = [
+        'institution' => 'Student is from a different institution than this class. Only irregular students can be enrolled.',
+        'program' => 'Student is in a different course/program than this class. Only irregular students can be enrolled.',
+        'year_level' => 'Student is in a different year level than this class. Only irregular students can be enrolled.',
+        'section' => 'Student is in a different section than this class. Only irregular students can be enrolled.',
+    ];
+    $mismatch = class_cohort_mismatch($student, $class);
+    return $mismatch === '' ? '' : $messages[$mismatch];
 }
 
 /** Maximum valid year level for a program (2-year diplomas => 2, degrees => 4). */
