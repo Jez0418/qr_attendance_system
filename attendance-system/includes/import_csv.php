@@ -13,18 +13,12 @@
 
 const IMPORT_MAX_BYTES = 1048576;   // 1 MB
 
-/** Per-session CSRF token for the import forms. */
-function import_csrf_token(): string {
-    if (empty($_SESSION['import_csrf'])) {
-        $_SESSION['import_csrf'] = bin2hex(random_bytes(32));
-    }
-    return $_SESSION['import_csrf'];
-}
+/** The import forms use the app-wide CSRF token (see csrf_token() in functions.php). */
+function import_csrf_token(): string { return csrf_token(); }
 
-/** Throws unless the POSTed token matches the session token. */
+/** Throws unless the POSTed token matches the session token (require_login() already enforces it too). */
 function import_csrf_check(): void {
-    $sent = (string) ($_POST['csrf'] ?? '');
-    if ($sent === '' || empty($_SESSION['import_csrf']) || !hash_equals($_SESSION['import_csrf'], $sent)) {
+    if (!csrf_request_is_valid()) {
         throw new Exception('Your session expired. Please reload the page and try again.');
     }
 }

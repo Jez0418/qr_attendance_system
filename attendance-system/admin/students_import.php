@@ -88,7 +88,7 @@ require_once __DIR__ . '/../includes/header.php';
             Use institution codes like <code>MCNP</code> / <code>ISAP</code> and program codes like <code>BSN</code> / <code>BSIT</code>; section is a letter (<code>A</code>).
         </p>
         <form method="POST" enctype="multipart/form-data" class="toolbar">
-            <input type="hidden" name="csrf" value="<?php echo e(import_csrf_token()); ?>">
+            <?php echo csrf_field(); ?>
             <input type="hidden" name="action" value="preview">
             <input type="file" name="file" accept=".csv,text/csv" class="form-control" style="max-width:360px" required aria-label="CSV file">
             <button class="btn btn-primary btn-sm" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Check file</button>
@@ -117,7 +117,7 @@ require_once __DIR__ . '/../includes/header.php';
         </table>
         </div>
         <form method="POST" class="toolbar" style="margin-top:18px">
-            <input type="hidden" name="csrf" value="<?php echo e(import_csrf_token()); ?>">
+            <?php echo csrf_field(); ?>
             <input type="hidden" name="action" value="confirm">
             <input type="hidden" name="import_id" value="<?php echo e($importId); ?>">
             <?php if ($okCount): ?>

@@ -77,6 +77,13 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   PDOExceptions are logged with `error_log()` (Vercel runtime logs) and the user sees a generic message.
   `php attendance-system/tests/security_test.php` fails if an endpoint echoes raw exception text again.
 - Demo logins are never shown on the login page unless `SHOW_DEMO_LOGINS=1`.
+- CSRF: `require_login()`/`require_role()` call `csrf_guard()`, so every POST of a logged-in user needs the session token.
+  `ajaxPost()` (assets/js/app.js) sends it automatically (from `<meta name="csrf-token">` in header.php); every new
+  `<form method="POST">` MUST contain `<?php echo csrf_field(); ?>` (tests/security_test.php fails otherwise). Never
+  call `fetch()` with POST directly: use `ajaxPost()`.
+- Login lockout (`includes/login_throttle.php`, table `login_attempts` from `database/supabase_login_attempts.sql`):
+  5 failures/15 min per username, 50/15 min per IP. Fails open if the table is missing. Unlock:
+  `DELETE FROM login_attempts WHERE username_key = '...';`
 
 ## Workflow rules
 - UI: `assets/css/style.css` (colors in `:root` variables), `includes/header.php`,

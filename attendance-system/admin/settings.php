@@ -44,6 +44,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card-header"><h3>Attendance Settings</h3></div>
         <div class="card-body">
             <form method="POST">
+                <?php echo csrf_field(); ?>
                 <div class="form-group">
                     <label>Maximum GPS Accuracy (meters)</label>
                     <input type="number" name="max_gps_accuracy_meters" class="form-control" value="<?php echo e($maxAccuracy); ?>" min="10" max="1000" required>

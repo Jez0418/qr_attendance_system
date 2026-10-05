@@ -113,6 +113,7 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
 
             <form method="POST" id="profileForm">
+                <?php echo csrf_field(); ?>
                 <input type="hidden" name="action" value="profile">
                 <input type="hidden" name="photo_data" id="photoData">
                 <input type="hidden" name="remove_photo" id="removePhoto" value="">
@@ -142,6 +143,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card-header"><h3>Change Password</h3></div>
         <div class="card-body">
             <form method="POST">
+                <?php echo csrf_field(); ?>
                 <input type="hidden" name="action" value="password">
                 <div class="form-group"><label>Current Password</label><input type="password" name="current_password" class="form-control"></div>
                 <div class="form-group"><label>New Password</label><input type="password" name="new_password" class="form-control"></div>

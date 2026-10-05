@@ -172,7 +172,7 @@ require_once __DIR__ . '/../includes/header.php';
             Nothing is saved until you confirm the preview.
         </p>
         <form method="POST" enctype="multipart/form-data" class="toolbar">
-            <input type="hidden" name="csrf" value="<?php echo e(import_csrf_token()); ?>">
+            <?php echo csrf_field(); ?>
             <input type="hidden" name="action" value="preview">
             <select name="class_id" class="form-control" style="max-width:340px" aria-label="Class">
                 <?php foreach ($classes as $c): ?>
@@ -208,7 +208,7 @@ require_once __DIR__ . '/../includes/header.php';
         </table>
         </div>
         <form method="POST" class="toolbar" style="margin-top:18px">
-            <input type="hidden" name="csrf" value="<?php echo e(import_csrf_token()); ?>">
+            <?php echo csrf_field(); ?>
             <input type="hidden" name="action" value="confirm">
             <input type="hidden" name="class_id" value="<?php echo $selectedClass; ?>">
             <input type="hidden" name="import_id" value="<?php echo e($importId); ?>">
