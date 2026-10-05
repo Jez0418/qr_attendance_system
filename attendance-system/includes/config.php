@@ -31,7 +31,7 @@ define('DB_PASS', getenv('DB_PASS') !== false ? getenv('DB_PASS') : '');
 define('DB_SSL',  getenv('DB_SSL') !== false ? (bool) getenv('DB_SSL') : (bool) getenv('VERCEL'));
 
 // ---- App constants ----
-define('APP_NAME', 'MCNP QR Laboratory Attendance System');
+define('APP_NAME', 'MCNP-ISAP QR Laboratory Attendance System');
 // BASE_URL: change this if you rename the project folder in htdocs
 define('BASE_URL', getenv('VERCEL') ? '/' : '/attendance-system/');
 // Late grace period: Admin > Settings (settings.late_grace_minutes, default 15).
