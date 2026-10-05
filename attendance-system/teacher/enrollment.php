@@ -60,7 +60,7 @@ if ($selectedClass) {
     $notEnrolled = $notEnrolledStmt->fetchAll();
 }
 
-$programs = $pdo->query('SELECT program_id, program_code FROM programs ORDER BY program_code')->fetchAll();
+$programs = $pdo->query('SELECT program_id, program_code FROM programs WHERE status = \'active\' ORDER BY program_code')->fetchAll();
 
 require_once __DIR__ . '/../includes/header.php';
 ?>

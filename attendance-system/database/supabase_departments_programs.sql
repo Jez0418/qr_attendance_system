@@ -45,8 +45,6 @@ FROM (VALUES
     ('ISAP', 'BSHM', 'BS in Hospitality Management', 'Bachelor''s Degree', 4.0, 'CBEM'),
     ('ISAP', 'BSTM', 'BS in Tourism Management', 'Bachelor''s Degree', 4.0, 'CBEM'),
     ('ISAP', 'BSCRIM', 'BS in Criminology', 'Bachelor''s Degree', 4.0, 'CCJE'),
-    ('ISAP', 'SHS', 'Senior High School', 'Diploma', 2.0, 'BASICED'),
-    ('ISAP', 'JHS', 'Junior High School (K-12 Special Science Curriculum)', 'Diploma', 4.0, 'BASICED'),
     ('ISAP', 'FBS_NCII', 'Food and Beverages NCII', 'Diploma', 1.0, 'TVET'),
     ('ISAP', 'HK_NCII', 'Housekeeping NCII', 'Diploma', 1.0, 'TVET'),
     ('ISAP', 'CSS_NCII', 'Computer Systems Servicing NCII', 'Diploma', 1.0, 'TVET'),
