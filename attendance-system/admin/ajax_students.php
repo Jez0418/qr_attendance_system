@@ -152,6 +152,13 @@ try {
         if ($count > 0) {
             throw new Exception("This student is enrolled in $count class(es). Set their account to Inactive instead of deleting it.");
         }
+        // Past attendance is kept even after a student drops every class.
+        $history = $pdo->prepare('SELECT COUNT(*) FROM attendance_records WHERE student_id = ?');
+        $history->execute([$studentId]);
+        $records = (int) $history->fetchColumn();
+        if ($records > 0) {
+            throw new Exception("This student has $records attendance record(s). Set their account to Inactive instead of deleting it.");
+        }
 
         // Deleting the user cascades to students, enrollments, attendance_records via FK
         $del = $pdo->prepare('DELETE FROM users WHERE user_id = ?');
