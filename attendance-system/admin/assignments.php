@@ -109,9 +109,11 @@ require_once __DIR__ . '/../includes/header.php';
                             <?php endif; ?>
                         </td>
                         <td><span class="badge <?php echo $statusClass; ?>"><?php echo $statusLabel; ?></span></td>
-                        <td style="white-space:nowrap">
-                            <button class="btn btn-outline btn-sm" title="Edit" onclick="openEditModal(<?php echo e(json_encode($a)); ?>)"><i class="fa-solid fa-pen"></i></button>
-                            <button class="btn btn-danger btn-sm" title="Delete" onclick="deleteAssignment(<?php echo $id; ?>)"><i class="fa-solid fa-trash"></i></button>
+                        <td>
+                            <div style="display:flex;gap:8px">
+                                <button class="btn btn-outline btn-sm" style="width:40px;height:40px;padding:0" title="Edit assignment" aria-label="Edit assignment" onclick="openEditModal(<?php echo e(json_encode($a)); ?>)"><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn btn-danger btn-sm" style="width:40px;height:40px;padding:0" title="Delete assignment" aria-label="Delete assignment" onclick="deleteAssignment(<?php echo $id; ?>)"><i class="fa-solid fa-trash"></i></button>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; endif; ?>
@@ -346,7 +348,7 @@ document.getElementById('assignForm').addEventListener('submit', async (e) => {
     btn.disabled = false; btn.innerHTML = 'Save Assignment';
 });
 async function deleteAssignment(id) {
-    if (!confirmDelete('Delete this class assignment? Enrollments and attendance history for it will also be removed.')) return;
+    if (!confirmDelete('Delete this class assignment? This cannot be undone.')) return;
     const res = await ajaxPost('ajax_assignments.php', { action: 'delete', teacher_subject_id: id });
     if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 700); } else showToast('error', res.message);
 }

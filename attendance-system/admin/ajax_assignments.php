@@ -218,6 +218,20 @@ try {
     } elseif ($action === 'delete') {
         $id = (int) ($_POST['teacher_subject_id'] ?? 0);
         if (!$id) throw new Exception('Invalid assignment.');
+
+        $usage = $pdo->prepare("
+            SELECT
+                (SELECT COUNT(*) FROM enrollments WHERE teacher_subject_id = ? AND status = 'enrolled') AS enrolled,
+                (SELECT COUNT(*) FROM attendance_sessions WHERE teacher_subject_id = ?) AS sessions
+        ");
+        $usage->execute([$id, $id]);
+        $usage = $usage->fetch();
+        $enrolled = (int) $usage['enrolled'];
+        $sessions = (int) $usage['sessions'];
+        if ($enrolled > 0 || $sessions > 0) {
+            throw new Exception("This class has $enrolled enrolled student(s) and $sessions attendance session(s). Disable it instead of deleting it.");
+        }
+
         $stmt = $pdo->prepare('DELETE FROM teacher_subjects WHERE teacher_subject_id = ?');
         $stmt->execute([$id]);
         log_activity($pdo, $_SESSION['user_id'], "Deleted class assignment ID $id");
