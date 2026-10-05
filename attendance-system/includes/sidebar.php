@@ -30,7 +30,7 @@ if ($role === 'teacher' && isset($pdo)) {
 ?>
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-        <div class="brand-badge"><i class="fa-solid fa-graduation-cap"></i></div>
+        <img class="brand-emblem" src="<?php echo BASE_URL; ?>assets/img/school-emblem-96.png" width="38" height="38" alt="MCNP and ISAP emblem">
         <span>MCNP</span>
     </div>
 

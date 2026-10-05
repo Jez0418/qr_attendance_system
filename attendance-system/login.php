@@ -43,12 +43,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <title>Login - <?php echo APP_NAME; ?></title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>assets/img/school-emblem-96.png">
 <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css">
 </head>
 <body class="lg-body">
 <main class="lg-wrap">
     <header class="lg-brand">
-        <div class="lg-logo" aria-hidden="true"><i class="fa-solid fa-graduation-cap"></i></div>
+        <img class="lg-logo" src="<?php echo BASE_URL; ?>assets/img/school-emblem-256.png" width="72" height="72" alt="MCNP and ISAP emblem">
         <h1>MCNP QR Attendance</h1>
         <p>Medical Colleges of Northern Philippines</p>
     </header>
