@@ -50,8 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <main class="lg-wrap">
     <header class="lg-brand">
         <img class="lg-logo" src="<?php echo BASE_URL; ?>assets/img/school-emblem-256.png" width="72" height="72" alt="MCNP and ISAP emblem">
-        <h1>MCNP QR Attendance</h1>
-        <p>Medical Colleges of Northern Philippines</p>
+        <h1>MCNP-ISAP QR Attendance</h1>
+        <p>Medical Colleges of Northern Philippines and International School of Asia and the Pacific</p>
     </header>
 
     <section class="lg-card" aria-labelledby="lgTitle">
