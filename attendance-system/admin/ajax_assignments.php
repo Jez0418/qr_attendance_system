@@ -19,36 +19,58 @@ header('Content-Type: application/json');
 
 $action = $_POST['action'] ?? '';
 
+/** A validation error tied to one form field, so the page can show it under that field. */
+class FieldError extends Exception {
+    public function __construct(public string $field, string $message) { parent::__construct($message); }
+}
+
+/** 'Y-m-d' or null when blank; throws when filled in but not a real date. */
+function optional_date_input(string $key, string $label): ?string {
+    $v = trim((string) ($_POST[$key] ?? ''));
+    if ($v === '') return null;
+    $d = DateTimeImmutable::createFromFormat('!Y-m-d', $v);
+    if (!$d || $d->format('Y-m-d') !== $v) throw new FieldError($key, "Enter a valid \"$label\" date.");
+    return $v;
+}
+
 /**
  * Parse + validate the recurring schedule: the checked weekdays ("days" =
  * comma-separated ISO numbers, 1 = Monday ... 7 = Sunday) sharing one start
- * and end time. Returns one weekly slot per checked day.
+ * and end time, plus the optional term dates it runs between (inclusive).
+ * Returns one weekly slot per checked day.
  */
 function validate_schedule_input() {
     $days = array_values(array_unique(array_map('intval', array_filter(explode(',', (string) ($_POST['days'] ?? ''))))));
     sort($days);
     if (!$days) {
-        throw new Exception('Select at least one day for the recurring schedule.');
+        throw new FieldError('days', 'Select at least one day for the recurring schedule.');
     }
     foreach ($days as $d) {
-        if (!isset(SCHEDULE_DAYS[$d])) throw new Exception('Invalid schedule day.');
+        if (!isset(SCHEDULE_DAYS[$d])) throw new FieldError('days', 'Invalid schedule day.');
     }
     $start = normalize_time($_POST['start_time'] ?? '');
     $end = normalize_time($_POST['end_time'] ?? '');
-    if (!$start || !$end) {
-        throw new Exception('Enter the class start time and end time.');
-    }
+    if (!$start) throw new FieldError('start_time', 'Enter the class start time.');
+    if (!$end) throw new FieldError('end_time', 'Enter the class end time.');
     if ($end <= $start) {
-        throw new Exception('End time must be after start time.');
+        throw new FieldError('end_time', 'End time must be after start time.');
     }
-    return array_map(fn($d) => ['day_of_week' => $d, 'start_time' => $start, 'end_time' => $end], $days);
+    $startsOn = optional_date_input('starts_on', 'Starts on');
+    $endsOn = optional_date_input('ends_on', 'Ends on');
+    if ($startsOn && $endsOn && $endsOn < $startsOn) {
+        throw new FieldError('ends_on', '"Ends on" must be on or after "Starts on".');
+    }
+    return array_map(fn($d) => [
+        'day_of_week' => $d, 'start_time' => $start, 'end_time' => $end,
+        'effective_start_date' => $startsOn, 'effective_end_date' => $endsOn,
+    ], $days);
 }
 
 function validate_assignment_input($pdo) {
     $teacherId = (int) ($_POST['teacher_id'] ?? 0);
     $subjectId = (int) ($_POST['subject_id'] ?? 0);
     $labId     = (int) ($_POST['lab_id'] ?? 0);
-    $section   = clean($_POST['section'] ?? '');
+    $sectionLetter = strtoupper(trim((string) ($_POST['section_letter'] ?? '')));
     // Enabled/Disabled switch for the assignment itself (stored as teacher_subjects.status).
     // Whether a class is in session is never set here; it is computed from the schedule.
     $status    = ($_POST['enabled'] ?? '1') === '1' ? 'active' : 'inactive';
@@ -58,7 +80,13 @@ function validate_assignment_input($pdo) {
     $yearLevel = ($_POST['year_level'] ?? '') !== '' ? (int) $_POST['year_level'] : null;
     $maxStudents = (int) ($_POST['max_students'] ?? 40);
 
-    if (!$teacherId || !$subjectId || !$labId || $section === ''
+    if ($sectionLetter === '') {
+        throw new FieldError('section_letter', 'Enter the section letter, e.g. A.');
+    }
+    if (!preg_match('/^[A-Z]$/', $sectionLetter)) {
+        throw new FieldError('section_letter', 'Section must be a single letter, e.g. A.');
+    }
+    if (!$teacherId || !$subjectId || !$labId
         || !$institutionId || !$departmentId || !$programId || !$yearLevel) {
         throw new Exception('Please fill in all required fields.');
     }
@@ -68,7 +96,7 @@ function validate_assignment_input($pdo) {
 
     // Re-verify the hierarchy server-side: program must belong to department must belong to institution.
     $check = $pdo->prepare('
-        SELECT p.program_id, p.duration_years FROM programs p
+        SELECT p.program_id, p.program_code, p.duration_years FROM programs p
         JOIN departments d ON d.department_id = p.department_id
         WHERE p.program_id = ? AND p.department_id = ? AND d.institution_id = ? AND p.status = "active"
     ');
@@ -81,6 +109,8 @@ function validate_assignment_input($pdo) {
     if ($yearLevel < 1 || $yearLevel > $maxYear) {
         throw new Exception("Year level must be between 1 and $maxYear for this program.");
     }
+    // Always stored as <PROGRAM CODE>-<YEAR><LETTER>, e.g. BSIT-3A.
+    $section = strtoupper($program['program_code']) . '-' . $yearLevel . $sectionLetter;
 
     return [
         'teacher_id' => $teacherId, 'subject_id' => $subjectId, 'lab_id' => $labId, 'section' => $section,
@@ -147,20 +177,16 @@ function check_assignment_conflicts(PDO $pdo, array $a, $excludeId = 0) {
 }
 
 /**
- * Replace a class's weekly rules (call inside the save transaction).
- * If all of the old rules shared one effective
- * date range (e.g. a semester), the new rules keep it.
+ * Replace a class's weekly rules (call inside the save transaction), each
+ * with the term dates entered in the form ("Starts on" / "Ends on", either
+ * may be blank = open-ended).
  */
 function save_schedules(PDO $pdo, $classId, array $slots) {
-    $old = get_schedule_rules($pdo, [$classId])[(int) $classId] ?? [];
-    $ranges = array_unique(array_map(fn($r) => ($r['effective_start_date'] ?? '') . '|' . ($r['effective_end_date'] ?? ''), $old));
-    [$effStart, $effEnd] = count($ranges) === 1 ? explode('|', reset($ranges)) : ['', ''];
-
     $pdo->prepare('DELETE FROM class_schedules WHERE teacher_subject_id = ?')->execute([$classId]);
     $ins = $pdo->prepare('INSERT INTO class_schedules (teacher_subject_id, day_of_week, start_time, end_time, effective_start_date, effective_end_date)
                           VALUES (?, ?, ?, ?, ?, ?)');
     foreach ($slots as $s) {
-        $ins->execute([$classId, $s['day_of_week'], $s['start_time'], $s['end_time'], $effStart ?: null, $effEnd ?: null]);
+        $ins->execute([$classId, $s['day_of_week'], $s['start_time'], $s['end_time'], $s['effective_start_date'], $s['effective_end_date']]);
     }
 }
 
@@ -242,5 +268,7 @@ try {
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     $message = $e instanceof PDOException ? 'Database error: ' . $e->getMessage() : $e->getMessage();
-    echo json_encode(['success' => false, 'message' => $message]);
+    $out = ['success' => false, 'message' => $message];
+    if ($e instanceof FieldError) $out['field'] = $e->field;
+    echo json_encode($out);
 }

@@ -196,7 +196,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="modal-backdrop" id="assignModal">
     <div class="modal modal-lg">
         <div class="modal-header"><h3 id="assignModalTitle">New Assignment</h3><button class="modal-close" onclick="closeModal('assignModal')">&times;</button></div>
-        <form id="assignForm">
+        <form id="assignForm" novalidate>
             <div class="modal-body">
                 <input type="hidden" name="teacher_subject_id" id="teacher_subject_id">
 
@@ -227,7 +227,13 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Section *</label><input type="text" name="section" id="section" class="form-control" placeholder="e.g. 3A" required></div>
+                    <div class="form-group"><label for="section_letter">Section *</label>
+                        <div class="input-prefix">
+                            <span class="input-prefix-label" id="section_prefix" title="Program code and year level">–</span>
+                            <input type="text" name="section_letter" id="section_letter" class="form-control" placeholder="A" maxlength="1" aria-describedby="err_section_letter" required>
+                        </div>
+                        <p class="field-error" id="err_section_letter" hidden></p>
+                    </div>
                     <div class="form-group"><label>Subject *</label>
                         <select name="subject_id" id="subject_id" class="form-control" required>
                             <option value="">Select subject</option>
@@ -269,11 +275,21 @@ require_once __DIR__ . '/../includes/header.php';
                             <label><input type="checkbox" name="days" value="<?php echo $num; ?>"><span><?php echo substr($name, 0, 3); ?></span></label>
                         <?php endforeach; ?>
                     </div>
+                    <p class="field-error" id="err_days" hidden></p>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Start Time *</label><input type="time" name="start_time" id="start_time" class="form-control" required></div>
-                    <div class="form-group"><label>End Time *</label><input type="time" name="end_time" id="end_time" class="form-control" required></div>
+                    <div class="form-group"><label for="start_time">Start Time *</label><input type="time" name="start_time" id="start_time" class="form-control" aria-describedby="err_start_time" required>
+                        <p class="field-error" id="err_start_time" hidden></p></div>
+                    <div class="form-group"><label for="end_time">End Time *</label><input type="time" name="end_time" id="end_time" class="form-control" aria-describedby="err_end_time" required>
+                        <p class="field-error" id="err_end_time" hidden></p></div>
                 </div>
+                <div class="form-row">
+                    <div class="form-group"><label for="starts_on">Starts on</label><input type="date" name="starts_on" id="starts_on" class="form-control" aria-describedby="err_starts_on">
+                        <p class="field-error" id="err_starts_on" hidden></p></div>
+                    <div class="form-group"><label for="ends_on">Ends on</label><input type="date" name="ends_on" id="ends_on" class="form-control" aria-describedby="err_ends_on">
+                        <p class="field-error" id="err_ends_on" hidden></p></div>
+                </div>
+                <p class="text-muted" style="font-size:12px;margin:-8px 0 14px">Optional term dates. Leave blank for no start or end limit; no meetings are generated outside them.</p>
                 <div class="alert alert-error" id="mixedTimesWarning" style="display:none"></div>
                 <div class="alert alert-info" style="margin-bottom:0"><i class="fa-solid fa-circle-info"></i> The class meets every week on the checked days at this time. Single-date changes (cancellations, make-up classes) are handled as schedule exceptions, not new assignments.</div>
             </div>
@@ -285,6 +301,11 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
+<style>
+/* Inline field errors for the assignment form (red text under the field). */
+#assignForm .field-error{margin:6px 0 0;font-size:12.5px;font-weight:500;color:#991b1b}
+#assignForm [aria-invalid="true"]{border-color:var(--red-600)}
+</style>
 <script>
 const DEPARTMENTS = <?php echo json_encode($departments); ?>;
 const PROGRAMS = <?php echo json_encode($programs); ?>;
@@ -308,6 +329,7 @@ function populatePrograms(departmentId, selectedProgramId) {
         const opt = document.createElement('option');
         opt.value = p.program_id; opt.textContent = p.program_code + ' - ' + p.program_name;
         opt.dataset.duration = p.duration_years;
+        opt.dataset.code = p.program_code;
         if (selectedProgramId && String(p.program_id) === String(selectedProgramId)) opt.selected = true;
         sel.appendChild(opt);
     });
@@ -323,16 +345,31 @@ function populateYearLevels(maxYear, selectedYear) {
         if (selectedYear && String(y) === String(selectedYear)) opt.selected = true;
         sel.appendChild(opt);
     }
+    updateSectionPrefix();
 }
+// Section is saved as <PROGRAM CODE>-<YEAR><LETTER> (e.g. BSIT-3A); the form only asks for the letter.
+function updateSectionPrefix() {
+    const prog = document.getElementById('program_id');
+    const opt = prog.options[prog.selectedIndex];
+    const code = opt && opt.dataset.code ? opt.dataset.code.toUpperCase() : '';
+    const year = document.getElementById('year_level').value;
+    document.getElementById('section_prefix').textContent = code && year ? code + '-' + year : '–';
+}
+document.getElementById('year_level').addEventListener('change', updateSectionPrefix);
+document.getElementById('section_letter').addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/[^a-z]/gi, '').toUpperCase();
+});
 function onInstitutionChange(selectedDeptId, selectedProgramId, selectedYear) {
     populateDepartments(document.getElementById('institution_id').value, selectedDeptId);
     document.getElementById('program_id').innerHTML = '<option value="">Select department first</option>';
     document.getElementById('year_level').innerHTML = '<option value="">Select program first</option>';
+    updateSectionPrefix();
     if (selectedDeptId) onDepartmentChange(selectedProgramId, selectedYear);
 }
 function onDepartmentChange(selectedProgramId, selectedYear) {
     populatePrograms(document.getElementById('department_id').value, selectedProgramId);
     document.getElementById('year_level').innerHTML = '<option value="">Select program first</option>';
+    updateSectionPrefix();
     if (selectedProgramId) onProgramChange(selectedYear);
 }
 function onProgramChange(selectedYear) {
@@ -348,13 +385,20 @@ function updateEnabledLabel() {
 }
 function dayBoxes() { return Array.from(document.querySelectorAll('#assignForm input[name="days"]')); }
 
-/** Fill the schedule fields from a class's weekly rules (current ones only). */
+/** Fill the schedule fields from a class's weekly rules (current ones, or all of them once the term has ended). */
 function fillSchedule(rules) {
-    const current = (rules || []).filter(r => !r.effective_end_date || r.effective_end_date >= TODAY);
+    rules = rules || [];
+    let current = rules.filter(r => !r.effective_end_date || r.effective_end_date >= TODAY);
+    if (!current.length) current = rules;
     const days = current.map(r => String(r.day_of_week));
     dayBoxes().forEach(cb => cb.checked = days.includes(cb.value));
     document.getElementById('start_time').value = current.length ? current[0].start_time.substring(0, 5) : '';
     document.getElementById('end_time').value = current.length ? current[0].end_time.substring(0, 5) : '';
+    // Term dates: shown when every slot shares them (the form saves one range for all days).
+    const terms = [...new Set(current.map(r => (r.effective_start_date || '') + '|' + (r.effective_end_date || '')))];
+    const [startsOn, endsOn] = terms.length === 1 ? terms[0].split('|') : ['', ''];
+    document.getElementById('starts_on').value = startsOn;
+    document.getElementById('ends_on').value = endsOn;
 
     const warning = document.getElementById('mixedTimesWarning');
     const ranges = [...new Set(current.map(r => r.start_time.substring(0, 5) + '–' + r.end_time.substring(0, 5)))];
@@ -376,6 +420,8 @@ function openAddModal() {
     document.getElementById('year_level').innerHTML = '<option value="">Select program first</option>';
     document.getElementById('enabled').checked = true;
     updateEnabledLabel();
+    updateSectionPrefix();
+    clearFieldErrors();
     fillSchedule([]);
     document.getElementById('assignModalTitle').textContent = 'New Assignment';
     openModal('assignModal');
@@ -388,22 +434,64 @@ function openEditModal(a) {
     document.getElementById('teacher_id').value = a.teacher_id;
     document.getElementById('subject_id').value = a.subject_id;
     document.getElementById('lab_id').value = a.lab_id;
-    document.getElementById('section').value = a.section;
+    // Keep only the trailing letter of a stored section ("BSIT-3A", "BSIT 3A" or "3A" -> "A").
+    const letter = (a.section || '').match(/([A-Za-z])\s*$/);
+    document.getElementById('section_letter').value = letter ? letter[1].toUpperCase() : '';
     document.getElementById('max_students').value = a.max_students || 40;
     document.getElementById('enabled').checked = a.status === 'active';
     updateEnabledLabel();
+    clearFieldErrors();
     fillSchedule(a.rules);
     document.getElementById('assignModalTitle').textContent = 'Edit Assignment';
     openModal('assignModal');
 }
+/* Field errors: red text under the field (ids err_<field>), mirrored by the server's "field" key. */
+const FIELD_INPUT = { days: null, section_letter: 'section_letter', start_time: 'start_time', end_time: 'end_time', starts_on: 'starts_on', ends_on: 'ends_on' };
+function showFieldError(field, msg) {
+    const el = document.getElementById('err_' + field);
+    if (!el) return false;
+    el.textContent = msg; el.hidden = false;
+    const input = FIELD_INPUT[field] && document.getElementById(FIELD_INPUT[field]);
+    if (input) input.setAttribute('aria-invalid', 'true');
+    return true;
+}
+function clearFieldErrors() {
+    document.querySelectorAll('#assignForm .field-error').forEach(el => { el.hidden = true; el.textContent = ''; });
+    document.querySelectorAll('#assignForm [aria-invalid]').forEach(el => el.removeAttribute('aria-invalid'));
+}
+/** Same rules as the server: a day, a section letter, end after start, ends-on not before starts-on. */
+function validateScheduleFields(days) {
+    const errors = {};
+    const start = document.getElementById('start_time').value;
+    const end = document.getElementById('end_time').value;
+    const startsOn = document.getElementById('starts_on').value;
+    const endsOn = document.getElementById('ends_on').value;
+    const letter = document.getElementById('section_letter').value.trim();
+    if (!letter) errors.section_letter = 'Enter the section letter, e.g. A.';
+    else if (!/^[A-Z]$/i.test(letter)) errors.section_letter = 'Section must be a single letter, e.g. A.';
+    if (!days.length) errors.days = 'Select at least one day for the recurring schedule.';
+    if (!start) errors.start_time = 'Enter the class start time.';
+    if (!end) errors.end_time = 'Enter the class end time.';
+    else if (start && end <= start) errors.end_time = 'End time must be after start time.';
+    if (startsOn && endsOn && endsOn < startsOn) errors.ends_on = '"Ends on" must be on or after "Starts on".';
+    return errors;
+}
+
 document.getElementById('assignForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const form = e.target;
     const btn = document.getElementById('assignSubmitBtn');
     const days = dayBoxes().filter(cb => cb.checked).map(cb => cb.value);
-    if (!days.length) { showToast('error', 'Select at least one day for the recurring schedule.'); return; }
-    if (document.getElementById('end_time').value <= document.getElementById('start_time').value) {
-        showToast('error', 'End time must be after start time.'); return;
+    clearFieldErrors();
+    const errors = validateScheduleFields(days);
+    Object.entries(errors).forEach(([field, msg]) => showFieldError(field, msg));
+    if (Object.keys(errors).length) {
+        const first = document.getElementById('err_' + Object.keys(errors)[0]);
+        if (first) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        return;
     }
+    // Remaining required selects (teacher, subject, lab...) use the browser's own messages.
+    if (!form.checkValidity()) { form.reportValidity(); return; }
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving...';
     const data = Object.fromEntries(new FormData(e.target));
     data.days = days.join(',');
@@ -413,7 +501,7 @@ document.getElementById('assignForm').addEventListener('submit', async (e) => {
     try { res = await ajaxPost('ajax_assignments.php', data); }
     catch (err) { res = { success: false, message: err.message }; }
     if (res.success) { showToast('success', res.message); closeModal('assignModal'); setTimeout(() => location.reload(), 700); }
-    else showToast('error', res.message);
+    else if (!(res.field && showFieldError(res.field, res.message))) showToast('error', res.message);
     btn.disabled = false; btn.innerHTML = 'Save Assignment';
 });
 async function deleteAssignment(id) {
