@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </section>
 
-    <p class="lg-help">Need help? Contact the MCNP IT Services or Laboratory Department.</p>
+    <p class="lg-help">Need help? Contact the MCNP-ISAP IT Services or Laboratory Department.</p>
 </main>
 
 <script>
