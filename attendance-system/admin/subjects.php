@@ -16,7 +16,8 @@ $stmt = $pdo->prepare("
     SELECT s.*,
         (SELECT string_agg(DISTINCT t.full_name, ', ' ORDER BY t.full_name)
             FROM teacher_subjects ts JOIN teachers t ON t.teacher_id = ts.teacher_id
-            WHERE ts.subject_id = s.subject_id AND ts.status = 'active') AS teachers_assigned
+            WHERE ts.subject_id = s.subject_id AND ts.status = 'active') AS teachers_assigned,
+        (SELECT COUNT(*) FROM teacher_subjects ts WHERE ts.subject_id = s.subject_id) AS class_count
     FROM subjects s
     $where
     ORDER BY s.subject_code ASC
@@ -33,23 +34,24 @@ require_once __DIR__ . '/../includes/header.php';
         <button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> Add Subject</button>
     </div>
     <div class="card-body">
-        <form method="GET" class="toolbar">
+        <form method="GET" class="toolbar subject-search">
             <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" class="form-control" name="search" placeholder="Search code or name..." value="<?php echo e($search); ?>"></div>
             <button class="btn btn-outline btn-sm" type="submit">Search</button>
             <?php if ($search): ?><a href="subjects.php" class="btn btn-outline btn-sm">Reset</a><?php endif; ?>
         </form>
         <div class="table-wrapper">
-            <table class="data-table">
-                <thead><tr><th>Code</th><th>Subject Name</th><th>Teacher Assigned</th><th>Units</th><th>Status</th><th>Actions</th></tr></thead>
+            <table class="data-table subjects-table">
+                <thead><tr><th>Code</th><th>Subject Name</th><th>Teacher Assigned</th><th>Classes</th><th>Units</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
                 <?php if (empty($subjects)): ?>
-                    <tr><td colspan="6" class="text-center text-muted">No subjects found.</td></tr>
+                    <tr><td colspan="7" class="text-center text-muted">No subjects found.</td></tr>
                 <?php else: foreach ($subjects as $s): ?>
                     <tr>
                         <td><?php echo e($s['subject_code']); ?></td>
                         <td><?php echo e($s['subject_name']); ?></td>
-                        <td><?php echo $s['teachers_assigned'] ? e($s['teachers_assigned']) : '<span class="text-muted">Unassigned</span>'; ?></td>
+                        <td><?php echo $s['teachers_assigned'] ? e($s['teachers_assigned']) : '<span class="badge-unassigned">Unassigned</span>'; ?></td>
+                        <td><?php echo (int) $s['class_count']; ?></td>
                         <td><?php echo e($s['units']); ?></td>
                         <td><span class="badge badge-<?php echo $s['status'] === 'active' ? 'active' : 'inactive'; ?>"><?php echo ucfirst($s['status']); ?></span></td>
                         <td>
@@ -63,7 +65,12 @@ require_once __DIR__ . '/../includes/header.php';
                 </tbody>
             </table>
         </div>
-        <?php render_pagination($p['page'], $p['totalPages']); ?>
+        <div class="table-footer">
+            <?php if ($totalRows > 0): ?>
+                <span class="table-count">Showing <?php echo $p['offset'] + 1; ?>-<?php echo $p['offset'] + count($subjects); ?> of <?php echo $totalRows; ?></span>
+            <?php endif; ?>
+            <?php render_pagination($p['page'], $p['totalPages']); ?>
+        </div>
     </div>
 </div>
 

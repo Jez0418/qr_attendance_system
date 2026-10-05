@@ -479,3 +479,15 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 /* ================= TODAY'S CLASSES (admin/dashboard.php) ================= */
 #tcBody tr.tc-active td{background:var(--green-100)}
 #tcBody tr.tc-cancelled td:not(:last-child){color:var(--slate-500);text-decoration:line-through}
+
+/* ================= SUBJECTS PAGE (admin/subjects.php) ================= */
+.subject-search{gap:8px;flex-wrap:nowrap;align-items:stretch}
+.subject-search .search-box{min-width:0}
+.subject-search .form-control{max-width:none}
+.subject-search .btn{padding:0 16px;font-size:14px;flex-shrink:0}
+.subjects-table tbody tr:hover td{background:var(--slate-100)}
+.subjects-table .badge-inactive{background:var(--slate-200);color:var(--slate-700);border:1px solid var(--slate-300)}
+.badge-unassigned{display:inline-block;padding:2px 8px;border-radius:20px;background:var(--slate-100);border:1px solid var(--slate-200);color:var(--slate-700);font-size:12px;font-weight:600}
+.table-footer{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-top:18px}
+.table-footer .pagination{margin:0;flex-wrap:wrap}
+.table-count{color:var(--slate-600);font-size:13px}
