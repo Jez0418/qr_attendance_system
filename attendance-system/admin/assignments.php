@@ -22,12 +22,22 @@ require_role('admin');
 $pageTitle = 'Class Assignments';
 
 $search = clean($_GET['search'] ?? '');
-$where = ''; $params = [];
-if ($search !== '') {
-    $where = 'WHERE (t.full_name LIKE ? OR sub.subject_name LIKE ? OR ts.section LIKE ?)';
-    $params = ["%$search%", "%$search%", "%$search%"];
-}
+$filterProgram = (int) ($_GET['program_id'] ?? 0);
+$filterTeacher = (int) ($_GET['teacher_id'] ?? 0);
+$filterLab     = (int) ($_GET['lab_id'] ?? 0);
 
+$conds = []; $params = [];
+if ($search !== '') {
+    $conds[] = '(t.full_name LIKE ? OR sub.subject_name LIKE ? OR ts.section LIKE ?)';
+    array_push($params, "%$search%", "%$search%", "%$search%");
+}
+if ($filterProgram) { $conds[] = 'ts.program_id = ?'; $params[] = $filterProgram; }
+if ($filterTeacher) { $conds[] = 'ts.teacher_id = ?'; $params[] = $filterTeacher; }
+if ($filterLab)     { $conds[] = 'ts.lab_id = ?';     $params[] = $filterLab; }
+$where = $conds ? 'WHERE ' . implode(' AND ', $conds) : '';
+$isFiltered = (bool) $conds;
+
+$allRows = (int) $pdo->query('SELECT COUNT(*) FROM teacher_subjects')->fetchColumn();
 $countStmt = $pdo->prepare("
     SELECT COUNT(*) FROM teacher_subjects ts
     JOIN teachers t ON t.teacher_id = ts.teacher_id
@@ -40,13 +50,14 @@ $p = paginate($totalRows, 10);
 
 $stmt = $pdo->prepare("
     SELECT ts.*, t.full_name AS teacher_name, sub.subject_name, sub.subject_code, lab.lab_name,
-        pr.program_code, inst.institution_code
+        pr.program_code, inst.institution_code,
+        (SELECT COUNT(*) FROM enrollments en WHERE en.teacher_subject_id = ts.teacher_subject_id AND en.status = 'enrolled') AS enrolled_count
     FROM teacher_subjects ts
     JOIN teachers t ON t.teacher_id = ts.teacher_id
     JOIN subjects sub ON sub.subject_id = ts.subject_id
     JOIN laboratories lab ON lab.lab_id = ts.lab_id
     LEFT JOIN programs pr ON pr.program_id = ts.program_id
-    LEFT JOIN institutions inst ON inst.institution_id = ts.institution_id
+    LEFT JOIN institutions inst ON inst.institution_id = COALESCE(ts.institution_id, pr.institution_id)
     $where
     ORDER BY ts.created_at DESC, ts.teacher_subject_id DESC
     LIMIT {$p['limit']} OFFSET {$p['offset']}
@@ -65,6 +76,44 @@ $labs = $pdo->query('SELECT lab_id, lab_name FROM laboratories WHERE status="act
 $institutions = $pdo->query('SELECT institution_id, institution_code, institution_name FROM institutions WHERE status="active" ORDER BY institution_name')->fetchAll();
 $departments = $pdo->query('SELECT department_id, institution_id, department_name FROM departments WHERE status="active" ORDER BY department_name')->fetchAll();
 $programs = $pdo->query('SELECT program_id, institution_id, department_id, program_code, program_name, duration_years FROM programs WHERE status="active" ORDER BY program_code')->fetchAll();
+// Filter dropdowns list everything a class can point at, including inactive labs.
+$filterLabs = $pdo->query('SELECT lab_id, lab_name FROM laboratories ORDER BY lab_name')->fetchAll();
+
+/** "Mon, Wed · 3:00-5:00 PM"; slots at different times are joined with "; ". Ended rules are left out. */
+function assignment_schedule_text(array $rules, DateTimeImmutable $now): string {
+    $today = $now->format('Y-m-d');
+    $groups = [];
+    foreach ($rules as $r) {
+        if (!empty($r['effective_end_date']) && $r['effective_end_date'] < $today) continue;
+        $groups[schedule_time($r['start_time']) . '|' . schedule_time($r['end_time'])][(int) $r['day_of_week']] = true;
+    }
+    foreach ($groups as &$days) ksort($days);
+    unset($days);
+    uasort($groups, fn($x, $y) => array_key_first($x) <=> array_key_first($y)); // earliest weekday first
+    $parts = [];
+    foreach ($groups as $range => $days) {
+        [$start, $end] = explode('|', $range);
+        $names = array_map(fn($d) => substr(SCHEDULE_DAYS[$d], 0, 3), array_keys($days));
+        $parts[] = implode(', ', $names) . ' · ' . format_time_range($start, $end);
+    }
+    return implode('; ', $parts);
+}
+
+/** "Now · until 5:00 PM", "Today · 3:00 PM", "Tomorrow · 3:00 PM", "Wed, Oct 7 · 3:00 PM" or "—". */
+function assignment_next_text(?array $occ, DateTimeImmutable $now): string {
+    if (!$occ) return '—';
+    $tz = schedule_tz();
+    $start = new DateTimeImmutable($occ['starts_at'], $tz);
+    if (get_occurrence_status($occ, $now) === OCCURRENCE_ACTIVE) {
+        return 'Now · until ' . (new DateTimeImmutable($occ['ends_at'], $tz))->format('g:i A');
+    }
+    $day = match ($occ['date']) {
+        $now->format('Y-m-d') => 'Today',
+        $now->modify('+1 day')->format('Y-m-d') => 'Tomorrow',
+        default => $start->format('D, M j'),
+    };
+    return $day . ' · ' . $start->format('g:i A');
+}
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -74,40 +123,57 @@ require_once __DIR__ . '/../includes/header.php';
         <button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> New Assignment</button>
     </div>
     <div class="card-body">
-        <form method="GET" class="toolbar">
-            <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" class="form-control" name="search" placeholder="Search teacher, subject, section..." value="<?php echo e($search); ?>"></div>
-            <button class="btn btn-outline btn-sm" type="submit">Search</button>
-            <?php if ($search): ?><a href="assignments.php" class="btn btn-outline btn-sm">Reset</a><?php endif; ?>
+        <form method="GET" class="list-filters">
+            <div class="search-row">
+                <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" class="form-control" name="search" placeholder="Search teacher, subject, section..." aria-label="Search teacher, subject or section" value="<?php echo e($search); ?>"></div>
+                <button class="btn btn-outline" type="submit">Search</button>
+                <?php if ($isFiltered): ?><a href="assignments.php" class="btn btn-outline">Reset</a><?php endif; ?>
+            </div>
+            <div class="filter-row">
+                <select name="program_id" class="form-control" aria-label="Filter by program" onchange="this.form.submit()">
+                    <option value="">All programs</option>
+                    <?php foreach ($programs as $pr): ?><option value="<?php echo $pr['program_id']; ?>" <?php echo $filterProgram === (int) $pr['program_id'] ? 'selected' : ''; ?>><?php echo e($pr['program_code']); ?></option><?php endforeach; ?>
+                </select>
+                <select name="teacher_id" class="form-control" aria-label="Filter by teacher" onchange="this.form.submit()">
+                    <option value="">All teachers</option>
+                    <?php foreach ($teachers as $t): ?><option value="<?php echo $t['teacher_id']; ?>" <?php echo $filterTeacher === (int) $t['teacher_id'] ? 'selected' : ''; ?>><?php echo e($t['full_name']); ?></option><?php endforeach; ?>
+                </select>
+                <select name="lab_id" class="form-control" aria-label="Filter by laboratory" onchange="this.form.submit()">
+                    <option value="">All laboratories</option>
+                    <?php foreach ($filterLabs as $l): ?><option value="<?php echo $l['lab_id']; ?>" <?php echo $filterLab === (int) $l['lab_id'] ? 'selected' : ''; ?>><?php echo e($l['lab_name']); ?></option><?php endforeach; ?>
+                </select>
+            </div>
         </form>
         <div class="table-wrapper">
-            <table class="data-table">
-                <thead><tr><th>Teacher</th><th>Subject</th><th>Program</th><th>Year/Section</th><th>Laboratory</th><th>Schedule</th><th>Next Class</th><th>Status</th><th>Actions</th></tr></thead>
+            <table class="data-table assignments-table">
+                <thead><tr><th>Teacher</th><th>Subject</th><th>Program</th><th>Year/Section</th><th>Laboratory</th><th>Schedule</th><th>Next Class</th><th>Enrolled</th><th>Next class status</th><th>Actions</th></tr></thead>
                 <tbody>
                 <?php if (empty($assignments)): ?>
-                    <tr><td colspan="9" class="text-center text-muted">No class assignments yet.</td></tr>
+                    <tr><td colspan="10" class="text-center text-muted"><?php echo $isFiltered ? 'No class assignments match these filters.' : 'No class assignments yet.'; ?></td></tr>
                 <?php else: foreach ($assignments as $a):
                     $id = (int) $a['teacher_subject_id'];
                     $sum = $summaries[$id];
                     $rules = $sum['rules'];
                     [$statusLabel, $statusClass] = $sum['badge'];
                     $next = $sum['next'];
-                    $scheduleLabel = $sum['label'];
+                    $scheduleLabel = assignment_schedule_text($rules, $now);
                     $a['rules'] = $rules;
                 ?>
                     <tr>
-                        <td><?php echo e($a['teacher_name']); ?></td>
-                        <td><?php echo e($a['subject_code'] . ' - ' . $a['subject_name']); ?></td>
-                        <td><?php echo e($a['program_code'] ?? 'Any'); ?><?php if ($a['institution_code']): ?><div class="text-muted" style="font-size:11px"><?php echo e($a['institution_code']); ?></div><?php endif; ?></td>
-                        <td><?php echo $a['year_level'] ? 'Yr ' . e($a['year_level']) : 'Any'; ?> / <?php echo e($a['section']); ?></td>
-                        <td><?php echo e($a['lab_name']); ?></td>
-                        <td style="white-space:nowrap"><?php echo $scheduleLabel !== '' ? e($scheduleLabel) : '<span class="text-muted">Not set</span>'; ?></td>
-                        <td style="white-space:nowrap">
-                            <?php echo e($sum['next_label']); ?>
+                        <td class="nowrap"><?php echo e($a['teacher_name']); ?></td>
+                        <td class="col-subject"><?php echo e($a['subject_code'] . ' - ' . $a['subject_name']); ?></td>
+                        <td class="nowrap"><?php echo e($a['program_code'] ?? 'Any'); ?><div class="cell-sub"><?php echo e($a['institution_code'] ?? '—'); ?></div></td>
+                        <td class="nowrap"><?php echo $a['year_level'] ? 'Yr ' . e($a['year_level']) : 'Any'; ?> / <?php echo e($a['section']); ?></td>
+                        <td class="nowrap"><?php echo e($a['lab_name']); ?></td>
+                        <td class="nowrap"><?php echo $scheduleLabel !== '' ? e($scheduleLabel) : '<span class="text-muted">Not set</span>'; ?></td>
+                        <td class="nowrap">
+                            <?php echo e(assignment_next_text($next, $now)); ?>
                             <?php if ($next && $next['is_rescheduled']): ?>
                                 <div class="text-muted" style="font-size:11px">Rescheduled<?php echo $next['lab_id'] !== (int) $a['lab_id'] ? ' · ' . e($next['lab_name']) : ''; ?></div>
                             <?php endif; ?>
                         </td>
+                        <td class="nowrap"><?php echo (int) $a['enrolled_count']; ?>/<?php echo (int) $a['max_students']; ?></td>
                         <td><span class="badge <?php echo $statusClass; ?>"><?php echo $statusLabel; ?></span></td>
                         <td>
                             <div style="display:flex;gap:8px">
@@ -120,7 +186,10 @@ require_once __DIR__ . '/../includes/header.php';
                 </tbody>
             </table>
         </div>
-        <?php render_pagination($p['page'], $p['totalPages']); ?>
+        <div class="table-footer">
+            <span class="table-count">Showing <?php echo count($assignments); ?> of <?php echo $totalRows; ?><?php echo $isFiltered ? ' (filtered from ' . $allRows . ')' : ''; ?></span>
+            <?php render_pagination($p['page'], $p['totalPages']); ?>
+        </div>
     </div>
 </div>
 
