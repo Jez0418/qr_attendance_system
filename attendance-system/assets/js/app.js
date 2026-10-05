@@ -53,10 +53,14 @@ document.addEventListener('click', (e) => {
 });
 
 /* ---------------- GENERIC AJAX (fetch wrapper) ---------------- */
+// CSRF token from <meta name="csrf-token"> (see includes/header.php); sent with every POST.
+const CSRF_TOKEN = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+
 async function ajaxPost(url, data) {
     const formData = new FormData();
     for (const key in data) formData.append(key, data[key]);
-    const res = await fetch(url, { method: 'POST', body: formData });
+    formData.append('csrf', CSRF_TOKEN);
+    const res = await fetch(url, { method: 'POST', body: formData, headers: { 'X-CSRF-Token': CSRF_TOKEN } });
     let json;
     try {
         json = await res.json();

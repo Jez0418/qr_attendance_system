@@ -24,6 +24,7 @@ function require_login() {
         set_flash('error', 'Please log in to continue.');
         redirect('login.php');
     }
+    csrf_guard();   // every POST from a logged-in user must carry the CSRF token
 }
 
 /**
@@ -60,6 +61,7 @@ function attempt_login(PDO $pdo, $username, $password, $expectedRole = null) {
         }
         // Regenerate session ID on login to prevent session fixation
         session_regenerate_id(true);
+        unset($_SESSION['csrf_token']);   // fresh CSRF token for the new login session
 
         $_SESSION['user_id']  = $user['user_id'];
         $_SESSION['username'] = $user['username'];

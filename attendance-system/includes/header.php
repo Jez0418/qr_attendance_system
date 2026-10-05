@@ -39,6 +39,7 @@ if ($photoTable && !empty($_SESSION['profile_id'])) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>assets/img/school-emblem-96.png">
+<meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
 <title><?php echo isset($pageTitle) ? e($pageTitle) . ' - ' . APP_NAME : APP_NAME; ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">

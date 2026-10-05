@@ -267,7 +267,7 @@ try {
     }
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
-    $message = $e instanceof PDOException ? 'Database error: ' . $e->getMessage() : $e->getMessage();
+    $message = safe_error_message($e);
     $out = ['success' => false, 'message' => $message];
     if ($e instanceof FieldError) $out['field'] = $e->field;
     echo json_encode($out);

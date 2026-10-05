@@ -7,6 +7,59 @@
  * ------------------------------------------------------------
  */
 
+/**
+ * Error text that is safe to show a user. PDOExceptions carry SQL, table/column and
+ * host details, so they are written to the server log (Vercel runtime logs) and the
+ * user sees a generic message. Our own validation Exceptions are shown as written.
+ */
+function safe_error_message(Throwable $e): string {
+    if ($e instanceof PDOException) {
+        error_log(get_class($e) . ' [' . $e->getCode() . '] ' . $e->getMessage());
+        return $e->getCode() === '23505'
+            ? 'That record already exists.'
+            : 'Something went wrong while saving. Please try again.';
+    }
+    return $e->getMessage();
+}
+
+/* ------------------------------------------------------------
+ * CSRF protection
+ * One token per login session. Every POST (or other unsafe method) to a page that calls
+ * require_login()/require_role() must carry it: ajaxPost() in assets/js/app.js adds it
+ * automatically, and every <form method="POST"> must contain <?php echo csrf_field(); ?>.
+ * ------------------------------------------------------------ */
+function csrf_token(): string {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function csrf_field(): string {
+    return '<input type="hidden" name="csrf" value="' . htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') . '">';
+}
+
+function csrf_request_is_valid(): bool {
+    $sent = (string) ($_POST['csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+    return $sent !== '' && !empty($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $sent);
+}
+
+/** Stops the request (403) when an unsafe-method request has no valid CSRF token. */
+function csrf_guard(): void {
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    if (in_array($method, ['GET', 'HEAD', 'OPTIONS'], true) || csrf_request_is_valid()) return;
+    http_response_code(403);
+    $msg = 'Your session expired or the request was not allowed. Please reload the page and try again.';
+    $wantsJson = strpos(basename($_SERVER['PHP_SELF'] ?? ''), 'ajax_') === 0
+        || stripos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false
+        || ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest';
+    if ($wantsJson) {
+        header('Content-Type: application/json');
+        die(json_encode(['success' => false, 'message' => $msg]));
+    }
+    die('<div style="font-family:sans-serif;padding:60px;text-align:center"><h1>Request blocked</h1><p>' . $msg . '</p><a href="javascript:history.back()">Go back</a></div>');
+}
+
 /** Escape output to prevent XSS */
 function e($value) {
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');

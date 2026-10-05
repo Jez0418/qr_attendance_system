@@ -34,5 +34,5 @@ try {
     $stmt->execute([$classId, "%$q%", "%$q%"]);
     echo json_encode(['success' => true, 'students' => $stmt->fetchAll()]);
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => safe_error_message($e)]);
 }

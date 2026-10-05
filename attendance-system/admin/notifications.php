@@ -73,6 +73,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card-header"><h3>Broadcast Notification</h3></div>
         <div class="card-body">
             <form method="POST">
+                <?php echo csrf_field(); ?>
                 <input type="hidden" name="action" value="broadcast">
                 <div class="form-group">
                     <label>Send To</label>

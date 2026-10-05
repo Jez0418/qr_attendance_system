@@ -149,9 +149,9 @@ try {
 } catch (InvalidArgumentException $e) {
     echo json_encode(['success' => false, 'message' => 'Please enter a valid date.']);
 } catch (PDOException $e) {
-    echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => safe_error_message($e)]);
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => safe_error_message($e)]);
 }
 
 /** 'H:i' or 'H:i:s' from a form, as 'H:i:s', or null if it isn't a valid time. */

@@ -7,6 +7,7 @@
  * ------------------------------------------------------------
  */
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/login_throttle.php';
 
 // Already logged in? Send to dashboard.
 if (is_logged_in()) {
@@ -21,13 +22,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = clean($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
 
+    $ip = login_client_ip();
     if ($username === '' || $password === '') {
         $errors[] = 'Please enter both username and password.';
+    } elseif (($wait = login_lock_seconds($pdo, $username, $ip)) > 0) {
+        $errors[] = login_lock_message($wait);          // locked: do not even check the password
     } else {
         $result = attempt_login($pdo, $username, $password, $selectedRole);
         if ($result === true) {
+            login_clear_failures($pdo, $username);
             redirect($_SESSION['role'] . '/dashboard.php');
-        } elseif ($result === 'wrong_role') {
+        }
+        login_record_failure($pdo, $username, $ip);
+        if ($result === 'wrong_role') {
             $errors[] = 'These credentials belong to a different account type. Please select the correct role above.';
         } else {
             $errors[] = 'Invalid username or password.';
@@ -93,6 +100,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit" class="lg-submit">Sign in <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
         </form>
 
+        <?php // Demo credentials are hidden unless the SHOW_DEMO_LOGINS=1 environment variable is set (local testing only). ?>
+        <?php if (getenv('SHOW_DEMO_LOGINS') === '1'): ?>
         <div class="lg-demo">
             <span>Demo logins <small>(click to fill)</small></span>
             <div class="lg-chips">
@@ -101,6 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="button" class="lg-chip" data-role="student" data-user="s2023001" data-pass="password">Student</button>
             </div>
         </div>
+        <?php endif; ?>
     </section>
 
     <p class="lg-help">Need help? Contact the MCNP-ISAP IT Services or Laboratory Department.</p>

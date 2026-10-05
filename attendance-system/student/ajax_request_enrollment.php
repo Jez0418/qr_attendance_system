@@ -90,7 +90,7 @@ try {
     echo json_encode(['success' => true, 'message' => 'Enrollment request submitted. You will be notified once the teacher reviews it.']);
 
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => safe_error_message($e)]);
 } catch (PDOException $e) {
-    echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => safe_error_message($e)]);
 }
