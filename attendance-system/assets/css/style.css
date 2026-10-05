@@ -595,3 +595,6 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
     .modal-sticky .modal-footer{padding:12px 16px}
     .modal-sticky .modal-footer .btn{flex:1}
 }
+
+/* ================= HEADER AVATAR PHOTO (includes/header.php) ================= */
+.avatar.avatar-photo{display:block;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--slate-200)}

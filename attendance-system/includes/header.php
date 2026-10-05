@@ -18,6 +18,20 @@ $notifPage = [
     'teacher' => 'teacher/notifications.php',
     'student' => 'student/notifications.php',
 ][$_SESSION['role'] ?? ''] ?? 'index.php';
+
+// Top-right avatar photo. Read from the DB on every request (not cached in $_SESSION) so a photo
+// saved or removed on the profile page shows immediately. Admins have no photo column.
+$headerPhotoSrc = '';
+$photoTable = ['student' => ['students', 'student_id'], 'teacher' => ['teachers', 'teacher_id']][$_SESSION['role'] ?? ''] ?? null;
+if ($photoTable && !empty($_SESSION['profile_id'])) {
+    $photoStmt = $pdo->prepare("SELECT photo FROM {$photoTable[0]} WHERE {$photoTable[1]} = ?");
+    $photoStmt->execute([$_SESSION['profile_id']]);
+    $headerPhoto = (string) $photoStmt->fetchColumn();
+    if ($headerPhoto !== '') {
+        // Same rule as student/profile.php: data URI as-is, older rows hold a filename under uploads/photos/
+        $headerPhotoSrc = strpos($headerPhoto, 'data:image/') === 0 ? $headerPhoto : UPLOAD_URL . $headerPhoto;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -62,7 +76,11 @@ $notifPage = [
                     </a>
                 </div>
                 <div class="user-chip">
+                    <?php if ($headerPhotoSrc !== ''): ?>
+                    <img class="avatar avatar-photo" src="<?php echo e($headerPhotoSrc); ?>" alt="<?php echo e($_SESSION['full_name'] ?? ''); ?>">
+                    <?php else: ?>
                     <div class="avatar"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></div>
+                    <?php endif; ?>
                     <div class="user-meta">
                         <span class="user-name"><?php echo e($_SESSION['full_name'] ?? ''); ?></span>
                         <span class="user-role"><?php echo e(ucfirst($_SESSION['role'] ?? '')); ?></span>

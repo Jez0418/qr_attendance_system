@@ -108,7 +108,7 @@ require_once __DIR__ . '/../includes/header.php';
             <?php if ($success): ?><div class="alert alert-success"><?php echo e($success); ?></div><?php endif; ?>
 
             <div class="text-center" style="margin-bottom:20px">
-                <img id="photoPreview" src="<?php echo e($photoSrc); ?>" alt="Profile photo" style="width:100px;height:100px;border-radius:50%;object-fit:cover;<?php echo $photoSrc ? '' : 'display:none'; ?>">
+                <img id="photoPreview" src="<?php echo e($photoSrc); ?>" alt="<?php echo e($student['full_name']); ?>" style="width:100px;height:100px;border-radius:50%;object-fit:cover;<?php echo $photoSrc ? '' : 'display:none'; ?>">
                 <div id="photoInitial" class="avatar" style="width:100px;height:100px;font-size:36px;margin:0 auto;<?php echo $photoSrc ? 'display:none' : ''; ?>"><?php echo strtoupper(substr($student['full_name'],0,1)); ?></div>
             </div>
 
