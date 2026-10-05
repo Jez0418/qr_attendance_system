@@ -69,7 +69,7 @@ function validate_student_import_rows(PDO $pdo, array $rows): array {
         if (strlen($password) < 6) $errors[] = 'password is too short (min 6 characters; blank uses the student number)';
         if (!in_array($type, ['regular', 'irregular'], true)) $errors[] = 'student_type must be regular or irregular';
         if (strlen($r['contact_number'] ?? '') > 20) $errors[] = 'contact_number is too long (max 20)';
-        if (!preg_match('/^[A-Z][A-Z0-9]{0,4}$/', $section)) $errors[] = 'section must be a letter like A, B, C';
+        if (!is_valid_section_letters($section)) $errors[] = 'section must be a letter like A, B, C';
 
         $instId = $institutions[strtoupper($r['institution_code'] ?? '')] ?? null;
         $prog = null;
@@ -100,7 +100,7 @@ function validate_student_import_rows(PDO $pdo, array $rows): array {
                 'student_number' => $num, 'full_name' => $name, 'email' => $email, 'username' => $username,
                 'password' => $password, 'institution_id' => $instId, 'department_id' => (int) $prog['department_id'],
                 'program_id' => (int) $prog['program_id'], 'year_level' => $year,
-                'section' => $year . $section, 'student_type' => $type, 'contact_number' => $r['contact_number'] ?? '',
+                'section' => build_section($year, $section), 'student_type' => $type, 'contact_number' => $r['contact_number'] ?? '',
             ];
         }
         $out[] = $entry;
