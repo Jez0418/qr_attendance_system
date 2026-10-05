@@ -188,7 +188,7 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
     btn.disabled = false; btn.innerHTML = 'Save Teacher';
 });
 async function deleteTeacher(id) {
-    if (!confirmDelete('Delete this teacher? Their class assignments will also be removed.')) return;
+    if (!confirmDelete('Delete this teacher? This cannot be undone.')) return;
     const res = await ajaxPost('ajax_teachers.php', { action: 'delete', teacher_id: id });
     if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 700); }
     else showToast('error', res.message);

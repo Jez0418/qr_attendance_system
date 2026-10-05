@@ -90,6 +90,13 @@ try {
         $row = $find->fetch();
         if (!$row) throw new Exception('Teacher not found.');
 
+        $used = $pdo->prepare('SELECT COUNT(*) FROM teacher_subjects WHERE teacher_id = ?');
+        $used->execute([$teacherId]);
+        $count = (int) $used->fetchColumn();
+        if ($count > 0) {
+            throw new Exception("This teacher has $count class assignment(s). Set their account to Inactive instead of deleting it.");
+        }
+
         $del = $pdo->prepare('DELETE FROM users WHERE user_id = ?');
         $del->execute([$row['user_id']]);
 

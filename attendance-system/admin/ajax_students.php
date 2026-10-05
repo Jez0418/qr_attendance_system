@@ -146,6 +146,13 @@ try {
         $row = $find->fetch();
         if (!$row) throw new Exception('Student not found.');
 
+        $used = $pdo->prepare("SELECT COUNT(*) FROM enrollments WHERE student_id = ? AND status = 'enrolled'");
+        $used->execute([$studentId]);
+        $count = (int) $used->fetchColumn();
+        if ($count > 0) {
+            throw new Exception("This student is enrolled in $count class(es). Set their account to Inactive instead of deleting it.");
+        }
+
         // Deleting the user cascades to students, enrollments, attendance_records via FK
         $del = $pdo->prepare('DELETE FROM users WHERE user_id = ?');
         $del->execute([$row['user_id']]);

@@ -327,7 +327,7 @@ document.getElementById('studentForm').addEventListener('submit', async (e) => {
 });
 
 async function deleteStudent(id) {
-    if (!confirmDelete('Delete this student? Their attendance history will also be removed.')) return;
+    if (!confirmDelete('Delete this student? This cannot be undone.')) return;
     const res = await ajaxPost('ajax_students.php', { action: 'delete', student_id: id });
     if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 700); }
     else showToast('error', res.message);
