@@ -27,6 +27,17 @@ $stmt = $pdo->prepare("
 $stmt->execute($params);
 $teachers = $stmt->fetchAll();
 
+$deptRows = $pdo->query("
+    SELECT d.department_name, i.institution_code
+    FROM departments d JOIN institutions i ON i.institution_id = d.institution_id
+    WHERE d.status = 'active' AND i.status = 'active'
+    ORDER BY i.institution_code, d.department_name
+")->fetchAll();
+$deptGroups = [];
+foreach ($deptRows as $d) {
+    $deptGroups[$d['institution_code']][] = $d['department_name'];
+}
+
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
@@ -85,7 +96,16 @@ require_once __DIR__ . '/../includes/header.php';
                     <div class="form-group"><label>Full Name *</label><input type="text" name="full_name" id="full_name" class="form-control" required></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Department</label><input type="text" name="department" id="department" class="form-control"></div>
+                    <div class="form-group"><label>Department</label>
+                        <select name="department" id="department" class="form-control">
+                            <option value="">Select department</option>
+                            <?php foreach ($deptGroups as $instCode => $names): ?>
+                                <optgroup label="<?php echo e($instCode); ?>">
+                                    <?php foreach ($names as $name): ?><option value="<?php echo e($name); ?>"><?php echo e($name); ?></option><?php endforeach; ?>
+                                </optgroup>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     <div class="form-group"><label>Contact Number</label><input type="text" name="contact_number" id="contact_number" class="form-control"></div>
                 </div>
                 <div class="form-row">
@@ -116,6 +136,7 @@ require_once __DIR__ . '/../includes/header.php';
 function openAddModal() {
     document.getElementById('teacherForm').reset();
     document.getElementById('teacher_id').value = '';
+    setDepartment('');
     document.getElementById('teacherModalTitle').textContent = 'Add Teacher';
     document.getElementById('passwordLabel').textContent = 'Password *';
     document.getElementById('password').required = true;
@@ -126,12 +147,24 @@ document.getElementById('employee_number').addEventListener('input', (e) => {
         document.getElementById('password').value = e.target.value;
     }
 });
+// Teachers saved before the dropdown may have a typed-in department that isn't in the list;
+// keep it selectable so editing them doesn't silently clear it.
+function setDepartment(value) {
+    const sel = document.getElementById('department');
+    sel.querySelectorAll('option[data-legacy]').forEach(o => o.remove());
+    if (value && ![...sel.options].some(o => o.value === value)) {
+        const opt = new Option(value + ' (not in list)', value);
+        opt.dataset.legacy = '1';
+        sel.add(opt, 1);
+    }
+    sel.value = value;
+}
 function openEditModal(t) {
     document.getElementById('teacherForm').reset();
     document.getElementById('teacher_id').value = t.teacher_id;
     document.getElementById('employee_number').value = t.employee_number;
     document.getElementById('full_name').value = t.full_name;
-    document.getElementById('department').value = t.department || '';
+    setDepartment(t.department || '');
     document.getElementById('contact_number').value = t.contact_number || '';
     document.getElementById('email').value = t.email;
     document.getElementById('username').value = t.username;
