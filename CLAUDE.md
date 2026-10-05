@@ -50,6 +50,12 @@ don't break the Vercel + Supabase connection. (No secrets belong in this file.)
 - Old MySQL files (`schema.sql`, `migration_v*.sql`, `database/*.php` helpers) are legacy and don't work on Postgres.
 - Demo logins (seed data): admin / tcruz / jsantos / s2023001-s2023004, password `password`. Change in production.
 
+## Enrollment rules
+- Regular students may only request classes in their own institution, program, year level and section
+  (`student_eligible_for_class()` + `section_key()` in `includes/functions.php`). Irregular students may request
+  any active class, including other programs and institutions (e.g. an MCNP student taking ISAP subjects).
+  Every request still needs teacher/admin approval; direct enrollment by a teacher/admin skips these rules.
+
 ## Workflow rules
 - UI: `assets/css/style.css` (colors in `:root` variables), `includes/header.php`,
   `includes/sidebar.php`, `includes/footer.php`, `login.php`, per-page files in `admin/`, `teacher/`, `student/`.

@@ -171,9 +171,9 @@ function normalize_time($time) {
  *
  * Regular students may only request classes matching their own
  *   institution + program + year level + section.
- * Irregular students may request classes from other year levels or
- * sections, but still only within their own institution + program,
- * and every request still requires teacher/admin approval.
+ * Irregular students may request ANY active class: other year levels,
+ * sections, programs and institutions (e.g. an MCNP student who also
+ * takes ISAP subjects). Every request still requires teacher/admin approval.
  *
  * Fields a class leaves empty (legacy rows) are treated as "no
  * restriction" so older data keeps working.
@@ -188,14 +188,14 @@ function section_key($section): string {
 }
 
 function student_eligible_for_class(array $student, array $class) {
-    if (!empty($class['institution_id']) && (int) $class['institution_id'] !== (int) $student['institution_id']) {
-        return [false, 'This subject belongs to a different institution.'];
-    }
-    if (!empty($class['program_id']) && (int) $class['program_id'] !== (int) $student['program_id']) {
-        return [false, 'This subject is not offered for your course/program.'];
-    }
     if (($student['student_type'] ?? 'regular') === 'irregular') {
         return [true, ''];
+    }
+    if (!empty($class['institution_id']) && (int) $class['institution_id'] !== (int) $student['institution_id']) {
+        return [false, 'This subject belongs to a different institution. Only irregular students may request it.'];
+    }
+    if (!empty($class['program_id']) && (int) $class['program_id'] !== (int) $student['program_id']) {
+        return [false, 'This subject is not offered for your course/program. Only irregular students may request it.'];
     }
     if (!empty($class['year_level']) && (int) $class['year_level'] !== (int) $student['year_level']) {
         return [false, 'This subject is for a different year level. Only irregular students may request it.'];

@@ -8,13 +8,11 @@
  * Eligibility (re-checked again server-side on submit in
  * ajax_request_enrollment.php — this page's filtering is a UX
  * convenience, not the security boundary):
- *   - A class tied to a specific institution/program only shows to
- *     students in that same institution/program, regardless of type.
- *   - REGULAR students additionally only see classes matching their
- *     own year level and section.
- *   - IRREGULAR students see every class in their institution/program
- *     regardless of year/section, clearly labeled as such — every
- *     request still requires approval either way.
+ *   - REGULAR students only see classes matching their own institution,
+ *     program, year level and section.
+ *   - IRREGULAR students see every active class (any institution,
+ *     program, year level or section), with off-cohort classes labeled —
+ *     every request still requires approval either way.
  */
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/schedule.php';
@@ -37,15 +35,12 @@ $search = clean($_GET['search'] ?? '');
 $where = ['ts.status = "active"'];
 $params = [];
 
-// Institution/program boundary applies to every student, regular or not —
-// a class scoped to one institution/program simply isn't offered to
-// students outside it.
-$where[] = '(ts.institution_id IS NULL OR ts.institution_id = ?)';
-$params[] = $me['institution_id'];
-$where[] = '(ts.program_id IS NULL OR ts.program_id = ?)';
-$params[] = $me['program_id'];
-
 if (!$isIrregular) {
+    // Regular students stay inside their own institution/program (irregular students may cross both).
+    $where[] = '(ts.institution_id IS NULL OR ts.institution_id = ?)';
+    $params[] = $me['institution_id'];
+    $where[] = '(ts.program_id IS NULL OR ts.program_id = ?)';
+    $params[] = $me['program_id'];
     $where[] = '(ts.year_level IS NULL OR ts.year_level = ?)';
     $params[] = $me['year_level'];
     if ($mySection !== '') {
@@ -90,7 +85,7 @@ require_once __DIR__ . '/../includes/header.php';
             Requests are reviewed by the subject's teacher, or by an administrator.
             <?php if ($isIrregular): ?>
                 <span class="badge badge-late" style="margin-left:6px">Irregular Student</span>
-                — you can see subjects from other year levels/sections in your program.
+                — you can see subjects from other year levels, sections, programs and institutions.
             <?php endif; ?>
         </p>
         <form method="GET" class="toolbar">
@@ -110,13 +105,17 @@ require_once __DIR__ . '/../includes/header.php';
     $isFull = $slotsLeft <= 0;
     $isEnrolled = $c['my_enrollment_status'] === 'enrolled';
     $isPending = !empty($c['my_pending_request']);
-    $offCohort = $isIrregular && ((int) $c['year_level'] !== (int) $me['year_level'] || section_key($c['section']) !== $mySection);
+    $offCohort = $isIrregular && (
+        (!empty($c['institution_id']) && (int) $c['institution_id'] !== (int) $me['institution_id'])
+        || (!empty($c['program_id']) && (int) $c['program_id'] !== (int) $me['program_id'])
+        || (int) $c['year_level'] !== (int) $me['year_level']
+        || section_key($c['section']) !== $mySection);
 ?>
     <div class="card">
         <div class="card-body">
             <div class="flex-between" style="align-items:flex-start">
                 <h3 style="margin:0 0 4px"><?php echo e($c['subject_code']); ?></h3>
-                <?php if ($offCohort): ?><span class="badge badge-late" style="font-size:10px">Different Year/Section</span><?php endif; ?>
+                <?php if ($offCohort): ?><span class="badge badge-late" style="font-size:10px">Different Cohort</span><?php endif; ?>
             </div>
             <p style="margin:0 0 12px;color:var(--slate-600)"><?php echo e($c['subject_name']); ?></p>
             <div style="font-size:13.5px;color:var(--slate-700);line-height:1.9">
