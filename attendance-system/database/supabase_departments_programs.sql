@@ -1,6 +1,6 @@
 -- ============================================================
 -- Departments + programs for ISAP and MCNP (PostgreSQL / Supabase)
--- Converted from insert_departments.php and insert_programs.php.
+-- Converted from the old insert_departments.php and insert_programs.php scripts (now deleted).
 -- Run AFTER supabase_schema.sql (SQL Editor -> paste -> Run).
 -- Safe to re-run: existing rows are updated, not duplicated.
 -- ============================================================
