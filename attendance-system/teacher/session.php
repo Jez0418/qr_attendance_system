@@ -5,8 +5,8 @@
  * substitute for). Attendance opens by itself: whenever a meeting is
  * ACTIVE, ensure_session_for_occurrence() (qr/session_manager.php) makes
  * sure it has a session with a fresh one-time QR token that expires at
- * the meeting's end. The teacher can close it early; nothing is opened
- * by hand. The page reloads itself at the next start/end time so the QR
+ * the meeting's end. The teacher can close it early and reopen it (same
+ * QR code) while the meeting is still in progress. The page reloads itself at the next start/end time so the QR
  * appears and disappears on schedule.
  *
  * Late logic: a scan more than late_grace_minutes (Admin > Settings)
@@ -34,6 +34,7 @@ if (!$selected && $meetings) $selected = $meetings[0];
 $occ = $selected['occurrence'] ?? null;
 $session = $selected['session'] ?? null;
 $sessionOpen = $session && (int) $session['is_active'] === 1;
+$canReopen = $session && !$sessionOpen && $selected['status'] === OCCURRENCE_ACTIVE;
 
 $reloadIn = seconds_until_next_change(array_column($meetings, 'occurrence'), $now);
 
@@ -85,6 +86,8 @@ require_once __DIR__ . '/../includes/header.php';
                 <span style="font-size:13px;font-weight:600;color:<?php echo $sessionOpen ? 'var(--green-600)' : 'var(--slate-500)'; ?>"><?php echo e(attendance_state_label($selected)); ?></span>
                 <?php if ($sessionOpen): ?>
                     <button class="btn btn-danger btn-sm" id="closeBtn" onclick="closeAttendance()"><i class="fa-solid fa-stop"></i> Close attendance</button>
+                <?php elseif ($canReopen): ?>
+                    <button class="btn btn-success btn-sm" id="reopenBtn" onclick="reopenAttendance()"><i class="fa-solid fa-play"></i> Reopen attendance</button>
                 <?php endif; ?>
             </div>
         </div>
@@ -158,11 +161,20 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function closeAttendance() {
-    if (!confirm('Close attendance now? Students will no longer be able to check in, and it will not reopen for this class meeting.')) return;
+    if (!confirm('Close attendance now? Students will no longer be able to check in until you reopen it.')) return;
     const btn = document.getElementById('closeBtn');
     btn.disabled = true;
     const res = await ajaxPost('ajax_session.php', { action: 'close', session_id: SESSION_ID });
     if (res.success) { showToast('success', res.message); clearInterval(pollTimer); setTimeout(() => location.reload(), 400); }
+    else { showToast('error', res.message); btn.disabled = false; }
+}
+
+async function reopenAttendance() {
+    if (!confirm('Reopen attendance? The same QR code will work again until the class ends.')) return;
+    const btn = document.getElementById('reopenBtn');
+    btn.disabled = true;
+    const res = await ajaxPost('ajax_session.php', { action: 'reopen', session_id: SESSION_ID });
+    if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 400); }
     else { showToast('error', res.message); btn.disabled = false; }
 }
 

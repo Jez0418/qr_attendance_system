@@ -11,8 +11,9 @@
  * looks while the meeting is ACTIVE, with a fresh random QR token and
  * session_end (the session's "expires at") = the meeting's end time.
  * Nobody opens attendance by hand any more; a teacher or admin can
- * still close it early, and a closed session is never re-opened for
- * that meeting.
+ * close it early and reopen it again (same QR token, so a QR code that
+ * is already on screen works again) as long as the meeting is still
+ * ACTIVE. Once the meeting has ended or been cancelled it stays closed.
  *
  * Automatically created sessions have created_by_user_id = NULL and
  * activated_by = the teacher of that meeting (a substitute if one was
@@ -128,11 +129,48 @@ function seconds_until_next_change(array $occurrences, $now = null): ?int {
     return $next ? $next->getTimestamp() - $now->getTimestamp() : null;
 }
 
-/** Close a session early (teacher or admin). A closed session is never re-opened. */
+/** Close a session early (teacher or admin). It can be reopened while its meeting is still ACTIVE. */
 function deactivate_attendance_session_by_id(PDO $pdo, $sessionId) {
     $upd = $pdo->prepare('UPDATE attendance_sessions SET is_active = 0, deactivated_at = NOW() WHERE session_id = ? AND is_active = 1');
     $upd->execute([$sessionId]);
     return $upd->rowCount() > 0;
+}
+
+/** The scheduled meeting a session belongs to (null if it is no longer on the schedule). */
+function find_occurrence_for_session(PDO $pdo, array $session): ?array {
+    foreach (get_occurrences($pdo, $session['session_date'], $session['session_date'], ['teacher_subject_id' => $session['teacher_subject_id']]) as $o) {
+        if ($o['starts_at'] === substr($session['scheduled_start'], 0, 19)) return $o;
+    }
+    return null;
+}
+
+/** True when a closed session may be reopened: its meeting is still ACTIVE (not over, not cancelled). */
+function can_reopen_session(PDO $pdo, array $session, $now = null): bool {
+    if ((int) $session['is_active'] === 1) return false;
+    $occ = find_occurrence_for_session($pdo, $session);
+    return $occ && get_occurrence_status($occ, $now) === OCCURRENCE_ACTIVE;
+}
+
+/**
+ * Reopen a closed session (teacher or admin) while its meeting is still ACTIVE.
+ * The QR token is kept, so the code already shown to students works again.
+ * Throws an Exception with a user-facing reason when it can't be reopened.
+ */
+function reactivate_attendance_session_by_id(PDO $pdo, $sessionId, $now = null): void {
+    $stmt = $pdo->prepare('SELECT * FROM attendance_sessions WHERE session_id = ?');
+    $stmt->execute([$sessionId]);
+    $session = $stmt->fetch();
+    if (!$session) throw new Exception('Session not found.');
+    if ((int) $session['is_active'] === 1) throw new Exception('This session is already open.');
+
+    $occ = find_occurrence_for_session($pdo, $session);
+    $status = $occ ? get_occurrence_status($occ, $now) : null;
+    if ($status === OCCURRENCE_CANCELLED) throw new Exception('This class meeting was cancelled, so attendance cannot be reopened.');
+    if ($status !== OCCURRENCE_ACTIVE) throw new Exception('This class meeting has already ended, so attendance cannot be reopened.');
+
+    $upd = $pdo->prepare('UPDATE attendance_sessions SET is_active = 1, deactivated_at = NULL WHERE session_id = ? AND is_active = 0 AND session_end > NOW()');
+    $upd->execute([$sessionId]);
+    if ($upd->rowCount() === 0) throw new Exception('This class meeting has already ended, so attendance cannot be reopened.');
 }
 
 /** Badge label + CSS class for each occurrence status. */

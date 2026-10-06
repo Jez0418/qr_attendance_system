@@ -20,7 +20,7 @@ Plain PHP (no framework, no Composer) + vanilla JavaScript, **PostgreSQL on Supa
    `UPCOMING` -> `ACTIVE` (start <= now < end) -> `EXPIRED`, or `CANCELLED` / rescheduled by a
    per-date **schedule exception**.
 3. When a meeting is ACTIVE, an attendance session opens automatically with a fresh random QR token.
-   It closes at the meeting's end time (or when closed manually) and is never reopened.
+   It closes at the meeting's end time (or when closed manually); a manually closed session can be reopened, with the same QR code, while the meeting is still in progress.
 4. A student scans the QR (`student/ajax_scan.php`). The server checks, in order: logged in ->
    QR signature -> session active and not expired -> student enrolled in that class -> meeting is
    today and inside its time window -> GPS available and accurate enough -> inside the laboratory's

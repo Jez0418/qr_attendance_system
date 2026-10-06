@@ -5,8 +5,8 @@
  * automatically when a meeting becomes ACTIVE (ensure_session_for_occurrence()
  * in qr/session_manager.php, called here for every meeting today) and expire
  * at the meeting's end, each with a fresh one-time QR token. The admin can
- * close a session early; there is no manual activation. The page reloads
- * itself at the next start/end time.
+ * close a session early and reopen it (same QR code) while its meeting is
+ * still in progress. The page reloads itself at the next start/end time.
  */
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../qr/session_manager.php';
@@ -35,6 +35,11 @@ $recentSessions = $pdo->query('
     WHERE s.is_active = 0
     ORDER BY s.deactivated_at DESC NULLS LAST LIMIT 10
 ')->fetchAll();
+foreach ($recentSessions as &$rs) {
+    // Only sessions whose end time hasn't passed are worth checking against the schedule.
+    $rs['can_reopen'] = new DateTimeImmutable($rs['session_end'], schedule_tz()) > $now && can_reopen_session($pdo, $rs, $now);
+}
+unset($rs);
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -42,7 +47,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="alert alert-info">
     <i class="fa-solid fa-shield-halved"></i>
     Attendance opens automatically when a class starts and closes when it ends, each time with a new one-time QR code.
-    You can close a session early; cancelled classes never open.
+    You can close a session early and reopen it while the class is still in progress (the same QR code works again); cancelled classes never open.
 </div>
 
 <div class="card">
@@ -60,6 +65,7 @@ require_once __DIR__ . '/../includes/header.php';
                 $o = $m['occurrence'];
                 [$label, $cls] = OCCURRENCE_BADGES[$m['status']];
                 $open = $m['session'] && (int) $m['session']['is_active'] === 1;
+                $reopenable = $m['session'] && !$open && $m['status'] === OCCURRENCE_ACTIVE;
             ?>
                 <tr>
                     <td style="white-space:nowrap"><?php echo e(format_time_range($o['start_time'], $o['end_time'])); ?></td>
@@ -71,6 +77,8 @@ require_once __DIR__ . '/../includes/header.php';
                     <td>
                         <?php if ($open): ?>
                             <button class="btn btn-danger btn-sm" onclick="closeSession(<?php echo (int) $m['session']['session_id']; ?>, <?php echo e(json_encode($o['subject_code'] . ' (' . $o['section'] . ')')); ?>)"><i class="fa-solid fa-stop"></i> Close</button>
+                        <?php elseif ($reopenable): ?>
+                            <button class="btn btn-success btn-sm" onclick="reopenSession(<?php echo (int) $m['session']['session_id']; ?>, <?php echo e(json_encode($o['subject_code'] . ' (' . $o['section'] . ')')); ?>)"><i class="fa-solid fa-play"></i> Reopen</button>
                         <?php else: ?>
                             <span class="text-muted">—</span>
                         <?php endif; ?>
@@ -109,10 +117,10 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="card-header"><h3>Recently Closed Sessions</h3></div>
     <div class="table-wrapper">
         <table class="data-table">
-            <thead><tr><th>Subject</th><th>Teacher</th><th>Date</th><th>Time</th><th>Scans</th><th>Closed At</th></tr></thead>
+            <thead><tr><th>Subject</th><th>Teacher</th><th>Date</th><th>Time</th><th>Scans</th><th>Closed At</th><th>Actions</th></tr></thead>
             <tbody>
             <?php if (empty($recentSessions)): ?>
-                <tr><td colspan="6" class="text-center text-muted">No closed sessions yet.</td></tr>
+                <tr><td colspan="7" class="text-center text-muted">No closed sessions yet.</td></tr>
             <?php else: foreach ($recentSessions as $s): ?>
                 <tr>
                     <td><?php echo e($s['subject_code'] . ' - ' . $s['subject_name']); ?></td>
@@ -121,6 +129,13 @@ require_once __DIR__ . '/../includes/header.php';
                     <td><?php echo e(format_time_range(substr($s['scheduled_start'], 11, 8), substr($s['session_end'], 11, 8))); ?></td>
                     <td><?php echo (int) $s['scans']; ?></td>
                     <td><?php echo format_datetime($s['deactivated_at']); ?></td>
+                    <td>
+                        <?php if ($s['can_reopen']): ?>
+                            <button class="btn btn-success btn-sm" onclick="reopenSession(<?php echo (int) $s['session_id']; ?>, <?php echo e(json_encode($s['subject_code'])); ?>)"><i class="fa-solid fa-play"></i> Reopen</button>
+                        <?php else: ?>
+                            <span class="text-muted">—</span>
+                        <?php endif; ?>
+                    </td>
                 </tr>
             <?php endforeach; endif; ?>
             </tbody>
@@ -141,8 +156,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function closeSession(sessionId, label) {
-    if (!confirm('Close attendance for ' + label + ' now? Students will no longer be able to check in, and it will not reopen for this class meeting.')) return;
+    if (!confirm('Close attendance for ' + label + ' now? Students will no longer be able to check in until it is reopened.')) return;
     const res = await ajaxPost('ajax_qr_deactivate.php', { session_id: sessionId });
+    if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 500); }
+    else showToast('error', res.message);
+}
+
+async function reopenSession(sessionId, label) {
+    if (!confirm('Reopen attendance for ' + label + '? The same QR code will work again until the class ends.')) return;
+    const res = await ajaxPost('ajax_qr_reactivate.php', { session_id: sessionId });
     if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 500); }
     else showToast('error', res.message);
 }

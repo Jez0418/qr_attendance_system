@@ -44,8 +44,8 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   `php attendance-system/tests/schedule_test.php` (add `--db` with DB_* env vars; it rolls back). `tests/` is not deployed.
 - Attendance sessions are automatic: `qr/session_manager.php` `ensure_session_for_occurrence()` opens one session per
   ACTIVE meeting (session_date = occurrence date, scheduled_start = its start, session_end = its end, fresh qr_token),
-  called from teacher/session.php, admin/qr_management.php and student/ajax_scan.php. No manual activate; manual close
-  only, and a closed session is never reopened. Late = scan after start + settings `late_grace_minutes` (default 15).
+  called from teacher/session.php, admin/qr_management.php and student/ajax_scan.php. No manual activate; a teacher/admin can close a
+  session early and reopen it (`reactivate_attendance_session_by_id()`, same qr_token) only while its meeting is still ACTIVE. Late = scan after start + settings `late_grace_minutes` (default 15).
 - Any new table/column: write the SQL as a new file in `database/` AND run it in Supabase
   (SQL Editor: click in editor, Ctrl+A, Run so the whole script runs). Run SQL before pushing code that needs it.
 - The old MySQL files (`schema.sql`, `migration_v*.sql`) and the `database/*.php` helper scripts were deleted (they are in git history only); never recreate them: they do not work on Postgres and `reset_passwords_to_id.php` could reset every password.
