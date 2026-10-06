@@ -15,6 +15,10 @@
  * is already on screen works again) as long as the meeting is still
  * ACTIVE. Once the meeting has ended or been cancelled it stays closed.
  *
+ * An open session's geofence radius follows its laboratory's current
+ * allowed_radius_meters (synced on every look); a closed session keeps
+ * the radius it had, as a record of what applied.
+ *
  * Automatically created sessions have created_by_user_id = NULL and
  * activated_by = the teacher of that meeting (a substitute if one was
  * set by a schedule exception).
@@ -49,11 +53,20 @@ function ensure_session_for_occurrence(PDO $pdo, array $occ, $now = null): ?arra
     if (get_occurrence_status($occ, $now) !== OCCURRENCE_ACTIVE) {
         return find_session_for_occurrence($pdo, $occ);
     }
-    if ($existing = find_session_for_occurrence($pdo, $occ)) return $existing;
-
     $lab = $pdo->prepare('SELECT latitude, longitude, allowed_radius_meters FROM laboratories WHERE lab_id = ?');
     $lab->execute([$occ['lab_id']]);
     $lab = $lab->fetch();
+
+    if ($existing = find_session_for_occurrence($pdo, $occ)) {
+        // An open session follows its laboratory's current radius, so editing the lab applies immediately.
+        if ($lab && (int) $existing['is_active'] === 1 && (int) $existing['allowed_radius_meters'] !== (int) $lab['allowed_radius_meters']) {
+            $pdo->prepare('UPDATE attendance_sessions SET allowed_radius_meters = ? WHERE session_id = ? AND is_active = 1')
+                ->execute([(int) $lab['allowed_radius_meters'], $existing['session_id']]);
+            $existing['allowed_radius_meters'] = (int) $lab['allowed_radius_meters'];
+        }
+        return $existing;
+    }
+
     if (!$lab || $lab['latitude'] === null || $lab['longitude'] === null) return null;
 
     // Serialise creation per meeting so two simultaneous requests can't both insert.
