@@ -2,9 +2,11 @@
 /**
  * teacher/history.php
  * Attendance history across all of the teacher's classes, filterable
- * by class and date range, with pagination.
+ * by class and date range, with pagination. ?export=pdf|excel exports
+ * every row matching the current filters (includes/export.php).
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/export.php';
 require_role('teacher');
 $pageTitle = 'Attendance History';
 
@@ -31,6 +33,27 @@ $baseQuery = "
     JOIN laboratories lab ON lab.lab_id = ts.lab_id
     $whereSql
 ";
+
+if ($format = requested_export_format()) {
+    $stmt = $pdo->prepare("
+        SELECT ar.time_in, ar.status, st.full_name, st.student_number, sub.subject_code, sub.subject_name, ts.section, lab.lab_name
+        $baseQuery ORDER BY ar.time_in DESC
+    ");
+    $stmt->execute($params);
+    $rows = array_map(fn($r) => [$r['full_name'], $r['student_number'], $r['subject_code'] . ' - ' . $r['subject_name'], $r['section'], $r['lab_name'], format_datetime($r['time_in']), $r['status']], $stmt->fetchAll());
+
+    $classLabel = 'All Classes';
+    if ($classId !== '') {
+        $c = $pdo->prepare('SELECT sub.subject_code, sub.subject_name, ts.section FROM teacher_subjects ts JOIN subjects sub ON sub.subject_id = ts.subject_id WHERE ts.teacher_subject_id = ? AND ts.teacher_id = ?');
+        $c->execute([$classId, $teacherId]);
+        if ($c = $c->fetch()) $classLabel = $c['subject_code'] . ' - ' . $c['subject_name'] . ' (' . $c['section'] . ')';
+    }
+    $meta = ['Teacher' => $_SESSION['full_name'] ?? '', 'Class' => $classLabel,
+             'Period' => ($dateFrom ?: 'Start') . ' to ' . ($dateTo ?: 'Today')];
+    if ($search !== '') $meta['Search'] = $search;
+    send_attendance_export($format, 'Attendance History', $meta,
+        ['Student', 'Student No.', 'Subject', 'Section', 'Laboratory', 'Time In', 'Status'], $rows, 'attendance_history');
+}
 
 $countStmt = $pdo->prepare("SELECT COUNT(*) $baseQuery");
 $countStmt->execute($params);
@@ -64,6 +87,9 @@ require_once __DIR__ . '/../includes/header.php';
             <input type="date" name="date_to" class="form-control" style="max-width:160px" value="<?php echo e($dateTo); ?>">
             <button class="btn btn-outline btn-sm" type="submit">Filter</button>
             <a href="history.php" class="btn btn-outline btn-sm">Reset</a>
+            <div class="toolbar-spacer"></div>
+            <a class="btn btn-outline btn-sm" target="_blank" href="history.php?<?php echo e(export_query('pdf')); ?>"><i class="fa-solid fa-file-pdf"></i> Export PDF</a>
+            <a class="btn btn-outline btn-sm" href="history.php?<?php echo e(export_query('excel')); ?>"><i class="fa-solid fa-file-excel"></i> Export Excel</a>
         </form>
         <div class="table-wrapper">
             <table class="data-table">

@@ -2,8 +2,11 @@
 /**
  * student/history.php
  * The student's own attendance history, filterable by subject/date.
+ * ?export=pdf|excel exports every row matching the current filters
+ * (includes/export.php).
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/export.php';
 require_role('student');
 $pageTitle = 'Attendance History';
 
@@ -28,6 +31,29 @@ $baseQuery = "
     JOIN teachers tch ON tch.teacher_id = ts.teacher_id
     $whereSql
 ";
+
+if ($format = requested_export_format()) {
+    $stmt = $pdo->prepare("
+        SELECT ar.time_in, ar.status, sub.subject_code, sub.subject_name, lab.lab_name, tch.full_name AS teacher_name
+        $baseQuery ORDER BY ar.time_in DESC
+    ");
+    $stmt->execute($params);
+    $rows = array_map(fn($r) => [$r['subject_code'] . ' - ' . $r['subject_name'], $r['lab_name'], $r['teacher_name'], format_datetime($r['time_in']), $r['status']], $stmt->fetchAll());
+
+    $me = $pdo->prepare('SELECT full_name, student_number FROM students WHERE student_id = ?');
+    $me->execute([$studentId]);
+    $me = $me->fetch() ?: ['full_name' => '', 'student_number' => ''];
+    $subjectLabel = 'All Subjects';
+    if ($subjectId !== '') {
+        $sn = $pdo->prepare('SELECT subject_code, subject_name FROM subjects WHERE subject_id = ?');
+        $sn->execute([$subjectId]);
+        if ($sn = $sn->fetch()) $subjectLabel = $sn['subject_code'] . ' - ' . $sn['subject_name'];
+    }
+    send_attendance_export($format, 'My Attendance History', [
+        'Student' => $me['full_name'] . ' (' . $me['student_number'] . ')', 'Subject' => $subjectLabel,
+        'Period' => ($dateFrom ?: 'Start') . ' to ' . ($dateTo ?: 'Today'),
+    ], ['Subject', 'Laboratory', 'Teacher', 'Time In', 'Status'], $rows, 'my_attendance_' . $me['student_number']);
+}
 
 $countStmt = $pdo->prepare("SELECT COUNT(*) $baseQuery");
 $countStmt->execute($params);
@@ -64,6 +90,9 @@ require_once __DIR__ . '/../includes/header.php';
             <input type="date" name="date_to" class="form-control" style="max-width:160px" value="<?php echo e($dateTo); ?>">
             <button class="btn btn-outline btn-sm" type="submit">Filter</button>
             <a href="history.php" class="btn btn-outline btn-sm">Reset</a>
+            <div class="toolbar-spacer"></div>
+            <a class="btn btn-outline btn-sm" target="_blank" href="history.php?<?php echo e(export_query('pdf')); ?>"><i class="fa-solid fa-file-pdf"></i> Export PDF</a>
+            <a class="btn btn-outline btn-sm" href="history.php?<?php echo e(export_query('excel')); ?>"><i class="fa-solid fa-file-excel"></i> Export Excel</a>
         </form>
         <div class="table-wrapper">
             <table class="data-table">
