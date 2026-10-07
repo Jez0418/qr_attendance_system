@@ -121,6 +121,13 @@ function format_datetime($datetime) {
     return date('M d, Y h:i A', strtotime($datetime));
 }
 
+/** Time shown for an attendance record: the check-in time, or "no check-in" for an Absent record
+  * (its time_in is just the end of the meeting, see includes/absences.php). */
+function format_record_time(array $r) {
+    if (($r['status'] ?? '') === 'Absent') return format_date($r['time_in']) . ' · no check-in';
+    return format_datetime($r['time_in']);
+}
+
 function format_date($date) {
     if (!$date) return '—';
     return date('M d, Y', strtotime($date));

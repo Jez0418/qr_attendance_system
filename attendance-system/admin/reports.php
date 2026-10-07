@@ -116,7 +116,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <td><?php echo e($r['subject_name']); ?></td>
                     <td><?php echo e($r['lab_name']); ?></td>
                     <td><?php echo e($r['teacher_name']); ?></td>
-                    <td><?php echo format_datetime($r['time_in']); ?></td>
+                    <td><?php echo format_record_time($r); ?></td>
                     <td><span class="badge badge-<?php echo strtolower($r['status']); ?>"><?php echo $r['status']; ?></span></td>
                 </tr>
             <?php endforeach; endif; ?>

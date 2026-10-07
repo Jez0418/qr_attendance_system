@@ -62,7 +62,7 @@ $requests = $requests->fetchAll();
 $roster = $pdo->prepare('
     SELECT s.student_id, s.student_number, s.full_name, s.year_level, pr.program_code, e.enrollment_id, e.enrolled_at,
         (SELECT COUNT(*) FROM attendance_records ar JOIN attendance_sessions ses ON ses.session_id = ar.session_id
-            WHERE ses.teacher_subject_id = ? AND ar.student_id = s.student_id) AS attended_count
+            WHERE ses.teacher_subject_id = ? AND ar.student_id = s.student_id AND ar.status <> "Absent") AS attended_count
     FROM enrollments e
     JOIN students s ON s.student_id = e.student_id
     LEFT JOIN programs pr ON pr.program_id = s.program_id

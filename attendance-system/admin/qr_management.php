@@ -27,7 +27,7 @@ foreach ($pdo->query('SELECT lab_id, CASE WHEN latitude IS NOT NULL AND longitud
 
 $recentSessions = $pdo->query('
     SELECT s.*, t.full_name AS teacher_name, sub.subject_name, sub.subject_code,
-        (SELECT COUNT(*) FROM attendance_records ar WHERE ar.session_id = s.session_id) AS scans
+        (SELECT COUNT(*) FROM attendance_records ar WHERE ar.session_id = s.session_id AND ar.status <> "Absent") AS scans
     FROM attendance_sessions s
     JOIN teacher_subjects ts ON ts.teacher_subject_id = s.teacher_subject_id
     JOIN teachers t ON t.teacher_id = s.activated_by

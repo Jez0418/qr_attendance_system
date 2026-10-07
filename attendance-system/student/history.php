@@ -38,7 +38,7 @@ if ($format = requested_export_format()) {
         $baseQuery ORDER BY ar.time_in DESC
     ");
     $stmt->execute($params);
-    $rows = array_map(fn($r) => [$r['subject_code'] . ' - ' . $r['subject_name'], $r['lab_name'], $r['teacher_name'], format_datetime($r['time_in']), $r['status']], $stmt->fetchAll());
+    $rows = array_map(fn($r) => [$r['subject_code'] . ' - ' . $r['subject_name'], $r['lab_name'], $r['teacher_name'], format_record_time($r), $r['status']], $stmt->fetchAll());
 
     $me = $pdo->prepare('SELECT full_name, student_number FROM students WHERE student_id = ?');
     $me->execute([$studentId]);
@@ -105,7 +105,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><?php echo e($r['subject_name']); ?></td>
                         <td><?php echo e($r['lab_name']); ?></td>
                         <td><?php echo e($r['teacher_name']); ?></td>
-                        <td><?php echo format_datetime($r['time_in']); ?></td>
+                        <td><?php echo format_record_time($r); ?></td>
                         <td><span class="badge badge-<?php echo strtolower($r['status']); ?>"><?php echo $r['status']; ?></span></td>
                     </tr>
                 <?php endforeach; endif; ?>

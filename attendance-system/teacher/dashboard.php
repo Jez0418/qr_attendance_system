@@ -37,7 +37,7 @@ $todayScans = $pdo->prepare('
     SELECT COUNT(*) FROM attendance_records ar
     JOIN attendance_sessions s ON s.session_id = ar.session_id
     JOIN teacher_subjects ts ON ts.teacher_subject_id = s.teacher_subject_id
-    WHERE ts.teacher_id = ? AND DATE(ar.time_in) = CURDATE()
+    WHERE ts.teacher_id = ? AND DATE(ar.time_in) = CURDATE() AND ar.status <> "Absent"
 ');
 $todayScans->execute([$teacherId]);
 $todayScans = (int) $todayScans->fetchColumn();

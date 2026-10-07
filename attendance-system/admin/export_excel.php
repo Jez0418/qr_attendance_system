@@ -49,7 +49,7 @@ header('Content-Disposition: attachment; filename="' . $filename . '"');
         <td><?php echo e($r['subject_name']); ?></td>
         <td><?php echo e($r['lab_name']); ?></td>
         <td><?php echo e($r['teacher_name']); ?></td>
-        <td><?php echo format_datetime($r['time_in']); ?></td>
+        <td><?php echo format_record_time($r); ?></td>
         <td><?php echo e($r['status']); ?></td>
     </tr>
     <?php endforeach; ?>

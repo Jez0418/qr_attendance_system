@@ -15,7 +15,7 @@ $stmt = $pdo->prepare('
     SELECT e.enrolled_at, ts.*, sub.subject_code, sub.subject_name, t.full_name AS teacher_name, lab.lab_name,
         (SELECT COUNT(*) FROM attendance_records ar
             JOIN attendance_sessions s ON s.session_id = ar.session_id
-            WHERE s.teacher_subject_id = ts.teacher_subject_id AND ar.student_id = e.student_id) AS times_attended
+            WHERE s.teacher_subject_id = ts.teacher_subject_id AND ar.student_id = e.student_id AND ar.status <> "Absent") AS times_attended
     FROM enrollments e
     JOIN teacher_subjects ts ON ts.teacher_subject_id = e.teacher_subject_id
     JOIN subjects sub ON sub.subject_id = ts.subject_id

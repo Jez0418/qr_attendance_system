@@ -46,6 +46,11 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   ACTIVE meeting (session_date = occurrence date, scheduled_start = its start, session_end = its end, fresh qr_token),
   called from teacher/session.php, admin/qr_management.php and student/ajax_scan.php. No manual activate; a teacher/admin can close a
   session early and reopen it (`reactivate_attendance_session_by_id()`, same qr_token) only while its meeting is still ACTIVE. Late = scan after start + settings `late_grace_minutes` (default 15).
+- Absences: when a session's `session_end` passes, enrolled students with no record get an `Absent` attendance record
+  (`includes/absences.php`, run lazily from `require_login()` at most once a minute; watermark = settings row `absence_processed_until`,
+  first run only starts the clock, no back-fill). Only meetings that HAD a session are marked (no QR = nothing to scan). Absent rows use
+  the meeting's end as `time_in`, so show them with `format_record_time()` and exclude them (`status <> 'Absent'`) from any count of
+  check-ins/scans. Test: `php attendance-system/tests/absence_test.php`.
 - Any new table/column: write the SQL as a new file in `database/` AND run it in Supabase
   (SQL Editor: click in editor, Ctrl+A, Run so the whole script runs). Run SQL before pushing code that needs it.
 - The old MySQL files (`schema.sql`, `migration_v*.sql`) and the `database/*.php` helper scripts were deleted (they are in git history only); never recreate them: they do not work on Postgres and `reset_passwords_to_id.php` could reset every password.

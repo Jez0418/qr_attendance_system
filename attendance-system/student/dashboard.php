@@ -64,7 +64,7 @@ require_once __DIR__ . '/../includes/header.php';
             <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--slate-100)">
                 <div style="flex:1;min-width:0;overflow-wrap:anywhere">
                     <div style="font-size:13.5px;font-weight:600;color:var(--slate-900)"><?php echo e($r['subject_name']); ?></div>
-                    <div style="font-size:12px;color:var(--slate-500);margin-top:2px"><?php echo format_datetime($r['time_in']); ?> · <?php echo e($r['lab_name']); ?></div>
+                    <div style="font-size:12px;color:var(--slate-500);margin-top:2px"><?php echo format_record_time($r); ?> · <?php echo e($r['lab_name']); ?></div>
                 </div>
                 <span class="badge badge-<?php echo strtolower($r['status']); ?>"><?php echo $r['status']; ?></span>
             </div>

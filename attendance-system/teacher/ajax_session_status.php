@@ -32,20 +32,20 @@ try {
         JOIN students s ON s.student_id = e.student_id
         LEFT JOIN attendance_records ar ON ar.student_id = s.student_id AND ar.session_id = ?
         WHERE e.teacher_subject_id = ? AND e.status = "enrolled"
-        ORDER BY (ar.time_in IS NULL), ar.time_in DESC, s.full_name ASC
+        ORDER BY (ar.time_in IS NULL OR ar.status = "Absent"), ar.time_in DESC, s.full_name ASC
     ');
     $stmt->execute([$sessionId, $classId]);
     $records = array_map(function ($r) {
         return [
             'full_name' => $r['full_name'],
             'student_number' => $r['student_number'],
-            'time_in' => $r['time_in'] ? date('h:i A', strtotime($r['time_in'])) : '—',
+            'time_in' => ($r['time_in'] && $r['status'] !== 'Absent') ? date('h:i A', strtotime($r['time_in'])) : '—',
             'status' => $r['status'] ?? 'Pending',
             'distance' => $r['distance_from_location'] !== null ? round((float) $r['distance_from_location']) : null,
         ];
     }, $stmt->fetchAll());
 
-    $scannedCount = count(array_filter($records, fn($r) => $r['status'] !== 'Pending'));
+    $scannedCount = count(array_filter($records, fn($r) => !in_array($r['status'], ['Pending', 'Absent'], true)));
 
     // Rejected scans (outside the radius, class closed, ...) with the student's distance, newest first.
     $attempts = [];

@@ -83,7 +83,7 @@ if ($subjectId) { $s = $pdo->prepare('SELECT subject_name FROM subjects WHERE su
                 <td><?php echo e($r['subject_name']); ?></td>
                 <td><?php echo e($r['lab_name']); ?></td>
                 <td><?php echo e($r['teacher_name']); ?></td>
-                <td><?php echo format_datetime($r['time_in']); ?></td>
+                <td><?php echo format_record_time($r); ?></td>
                 <td class="status-<?php echo $r['status']; ?>"><?php echo $r['status']; ?></td>
             </tr>
         <?php endforeach; endif; ?>

@@ -25,6 +25,12 @@ function require_login() {
         redirect('login.php');
     }
     csrf_guard();   // every POST from a logged-in user must carry the CSRF token
+    // Mark students absent for meetings that just ended (at most once a minute; see includes/absences.php).
+    // Skipped for the AJAX endpoints so a scan or a live poll never pays for it.
+    if (strpos(basename($_SERVER['SCRIPT_NAME'] ?? ''), 'ajax_') !== 0) {
+        require_once __DIR__ . '/absences.php';
+        mark_absent_for_ended_sessions($GLOBALS['pdo']);
+    }
 }
 
 /**
