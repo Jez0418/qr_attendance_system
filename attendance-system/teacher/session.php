@@ -133,13 +133,28 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="card-header"><h3><?php echo e($occ['subject_code'] . ' - ' . $occ['subject_name']); ?></h3></div>
     <div class="table-wrapper">
         <table class="data-table">
-            <thead><tr><th>Student Name</th><th>ID</th><th>Check-in Time</th><th>Status</th></tr></thead>
+            <thead><tr><th>Student Name</th><th>ID</th><th>Check-in Time</th><th>Distance</th><th>Status</th></tr></thead>
             <tbody id="liveScanBody">
-                <tr><td colspan="4" class="text-center text-muted"><?php echo $session ? 'Loading roster…' : 'The roster appears once attendance opens.'; ?></td></tr>
+                <tr><td colspan="5" class="text-center text-muted"><?php echo $session ? 'Loading roster…' : 'The roster appears once attendance opens.'; ?></td></tr>
             </tbody>
         </table>
     </div>
 </div>
+
+<?php if ($session): ?>
+<div class="card" style="margin-top:20px">
+    <div class="card-header"><h3>Rejected Scans</h3></div>
+    <div class="card-body" style="padding-bottom:0"><p class="text-muted" style="font-size:13px;margin:0">Scans that were refused, such as a student outside the laboratory radius, with how far away they were.</p></div>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>Student Name</th><th>ID</th><th>Time</th><th>Distance</th><th>Reason</th></tr></thead>
+            <tbody id="rejectedScanBody">
+                <tr><td colspan="5" class="text-center text-muted">No rejected scans.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php endif; ?>
 <?php endif; ?>
 
 <script>
@@ -181,7 +196,24 @@ async function reopenAttendance() {
 function initials(name) {
     return name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
 }
+function fmtDistance(m) { return m === null || m === undefined ? '—' : (m >= 1000 ? (m / 1000).toFixed(1) + ' km' : m + ' m'); }
 function td(text) { const c = document.createElement('td'); c.textContent = text; return c; }
+
+function renderRejected(attempts) {
+    const body = document.getElementById('rejectedScanBody');
+    if (!body) return;
+    body.replaceChildren();
+    if (attempts.length === 0) {
+        const tr = document.createElement('tr'), c = td('No rejected scans.');
+        c.colSpan = 5; c.className = 'text-center text-muted'; tr.appendChild(c); body.appendChild(tr);
+        return;
+    }
+    for (const a of attempts) {
+        const tr = document.createElement('tr');
+        tr.append(td(a.full_name), td(a.student_number), td(a.time), td(fmtDistance(a.distance)), td(a.reason));
+        body.appendChild(tr);
+    }
+}
 
 async function fetchLiveScans() {
     try {
@@ -193,7 +225,8 @@ async function fetchLiveScans() {
         body.replaceChildren();
         if (res.records.length === 0) {
             const tr = document.createElement('tr'), c = td('No students enrolled in this class yet.');
-            c.colSpan = 4; c.className = 'text-center text-muted'; tr.appendChild(c); body.appendChild(tr);
+            c.colSpan = 5; c.className = 'text-center text-muted'; tr.appendChild(c); body.appendChild(tr);
+            renderRejected(res.attempts || []);
             return;
         }
         for (const r of res.records) {
@@ -203,9 +236,10 @@ async function fetchLiveScans() {
             wrap.append(av, ' ' + r.full_name); nameCell.appendChild(wrap);
             const st = document.createElement('td'), b = document.createElement('span');
             b.className = 'badge badge-' + r.status.toLowerCase(); b.textContent = r.status; st.appendChild(b);
-            tr.append(nameCell, td(r.student_number), td(r.time_in), st);
+            tr.append(nameCell, td(r.student_number), td(r.time_in), td(fmtDistance(r.distance)), st);
             body.appendChild(tr);
         }
+        renderRejected(res.attempts || []);
     } catch (err) { /* will retry on the next poll */ }
 }
 </script>

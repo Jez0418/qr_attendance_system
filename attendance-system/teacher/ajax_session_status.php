@@ -27,7 +27,7 @@ try {
     // Full enrolled roster, LEFT JOINed against this session's scan records
     // so students who haven't scanned yet still appear with status "Pending".
     $stmt = $pdo->prepare('
-        SELECT s.full_name, s.student_number, ar.time_in, ar.status
+        SELECT s.full_name, s.student_number, ar.time_in, ar.status, ar.distance_from_location
         FROM enrollments e
         JOIN students s ON s.student_id = e.student_id
         LEFT JOIN attendance_records ar ON ar.student_id = s.student_id AND ar.session_id = ?
@@ -41,11 +41,38 @@ try {
             'student_number' => $r['student_number'],
             'time_in' => $r['time_in'] ? date('h:i A', strtotime($r['time_in'])) : '—',
             'status' => $r['status'] ?? 'Pending',
+            'distance' => $r['distance_from_location'] !== null ? round((float) $r['distance_from_location']) : null,
         ];
     }, $stmt->fetchAll());
 
     $scannedCount = count(array_filter($records, fn($r) => $r['status'] !== 'Pending'));
-    echo json_encode(['success' => true, 'records' => $records, 'scanned_count' => $scannedCount, 'total_count' => count($records)]);
+
+    // Rejected scans (outside the radius, class closed, ...) with the student's distance, newest first.
+    $attempts = [];
+    try {
+        $a = $pdo->prepare('
+            SELECT s.full_name, s.student_number, sa.attempted_at, sa.reason, sa.distance_from_location
+            FROM scan_attempts sa
+            JOIN students s ON s.student_id = sa.student_id
+            WHERE sa.session_id = ?
+            ORDER BY sa.attempted_at DESC, sa.attempt_id DESC
+            LIMIT 100
+        ');
+        $a->execute([$sessionId]);
+        foreach ($a->fetchAll() as $r) {
+            $attempts[] = [
+                'full_name' => $r['full_name'],
+                'student_number' => $r['student_number'],
+                'time' => date('h:i:s A', strtotime($r['attempted_at'])),
+                'reason' => $r['reason'],
+                'distance' => $r['distance_from_location'] !== null ? round((float) $r['distance_from_location']) : null,
+            ];
+        }
+    } catch (PDOException $e) {
+        error_log('scan_attempts (read): ' . $e->getMessage());   // table not created yet: just show none
+    }
+
+    echo json_encode(['success' => true, 'records' => $records, 'attempts' => $attempts, 'scanned_count' => $scannedCount, 'total_count' => count($records)]);
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => safe_error_message($e)]);
 }

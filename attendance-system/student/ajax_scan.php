@@ -21,6 +21,10 @@
  *                                                  server-side Haversine
  *   9.  Not already recorded?
  *
+ * Every rejected scan that got as far as a valid QR (step 3) is also saved in
+ * `scan_attempts` with the student's distance from the laboratory, so the teacher
+ * can see who tried to check in from where (database/supabase_scan_attempts.sql).
+ *
  * Late: a scan more than late_grace_minutes (settings, default 15) after
  * the meeting's start is "Late", otherwise "Present". The insert runs in a
  * transaction so a failure never leaves a partial record.
@@ -36,6 +40,34 @@ auto_expire_sessions($pdo);
 
 $studentId = (int) $_SESSION['profile_id'];
 const INVALID_QR = 'This QR code is invalid or has expired.';
+const ALREADY_RECORDED = 'You have already recorded attendance for this class.';
+const MAX_ATTEMPTS_PER_STUDENT = 30;   // per session, so a spammed scan can't fill the table
+
+/** Save a rejected scan for the teacher to see. Never throws: logging must not break the scan response. */
+function log_scan_attempt(PDO $pdo, int $sessionId, int $studentId, string $reason, $lat, $lon, $accuracy, $distance): void {
+    try {
+        $n = $pdo->prepare('SELECT COUNT(*) FROM scan_attempts WHERE session_id = ? AND student_id = ?');
+        $n->execute([$sessionId, $studentId]);
+        if ((int) $n->fetchColumn() >= MAX_ATTEMPTS_PER_STUDENT) return;
+        $hasPos = is_numeric($lat) && is_numeric($lon) && abs((float) $lat) <= 90 && abs((float) $lon) <= 180;
+        $pdo->prepare('
+            INSERT INTO scan_attempts (session_id, student_id, reason, latitude, longitude, location_accuracy, distance_from_location)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ')->execute([
+            $sessionId, $studentId, mb_substr($reason, 0, 255),
+            $hasPos ? (float) $lat : null, $hasPos ? (float) $lon : null,
+            (is_numeric($accuracy) && (float) $accuracy < 100000) ? (float) $accuracy : null,
+            $distance,
+        ]);
+    } catch (Throwable $e) {
+        error_log('scan_attempts: ' . $e->getMessage());
+    }
+}
+
+$session = null; $occ = null; $lab = null; $distance = null; $attemptSessionId = null;
+$lat = $_POST['latitude'] ?? null;
+$lon = $_POST['longitude'] ?? null;
+$accuracy = $_POST['accuracy'] ?? null;
 
 try {
     // ---- 2. QR payload well-formed? ----
@@ -57,6 +89,7 @@ try {
     if (!$session || empty($session['qr_token']) || !hash_equals((string) $session['qr_token'], (string) $parsed['token'])) {
         throw new Exception(INVALID_QR);
     }
+    $attemptSessionId = (int) $session['session_id'];   // a genuine QR: from here on a rejection is logged
 
     // ---- 4. Recompute the meeting's status from the schedule, server-side ----
     $now = schedule_now();
@@ -65,6 +98,15 @@ try {
         if ($o['starts_at'] === substr($session['scheduled_start'], 0, 19)) { $occ = $o; break; }
     }
     if (!$occ) throw new Exception('This class is not scheduled at this time.');
+
+    // Where is the student relative to the meeting's lab? Worked out now (best effort) so that even a
+    // scan rejected for another reason records the distance.
+    $labStmt = $pdo->prepare('SELECT latitude, longitude FROM laboratories WHERE lab_id = ?');   // the meeting's lab (may be a rescheduled room)
+    $labStmt->execute([$occ['lab_id']]);
+    $lab = $labStmt->fetch();
+    if ($lab && $lab['latitude'] !== null && $lab['longitude'] !== null && is_numeric($lat) && is_numeric($lon)) {
+        $distance = round(haversine_distance_meters((float) $lat, (float) $lon, (float) $lab['latitude'], (float) $lab['longitude']), 2);
+    }
     $status = get_occurrence_status($occ, $now);
     if ($status === OCCURRENCE_CANCELLED) {
         throw new Exception('This class has been cancelled' . ($occ['exception_reason'] ? ': ' . $occ['exception_reason'] : '.'));
@@ -95,9 +137,6 @@ try {
     }
 
     // ---- 8. GPS: location present, accurate enough, inside the meeting's lab radius ----
-    $lat = $_POST['latitude'] ?? null;
-    $lon = $_POST['longitude'] ?? null;
-    $accuracy = $_POST['accuracy'] ?? null;
     if ($lat === null || $lon === null || $lat === '' || $lon === '' || !is_numeric($lat) || !is_numeric($lon)) {
         throw new Exception('Location access is required to verify attendance.');
     }
@@ -105,9 +144,6 @@ try {
     if ($accuracy !== null && $accuracy !== '' && is_numeric($accuracy) && (float) $accuracy > $maxAccuracy) {
         throw new Exception('Your location accuracy is too low. Please enable high-accuracy location services and try again.');
     }
-    $lab = $pdo->prepare('SELECT latitude, longitude FROM laboratories WHERE lab_id = ?');   // the meeting's lab (may be a rescheduled room)
-    $lab->execute([$occ['lab_id']]);
-    $lab = $lab->fetch();
     if (!$lab || $lab['latitude'] === null || $lab['longitude'] === null) {
         throw new Exception('This laboratory has no GPS coordinates configured. Please contact your administrator.');
     }
@@ -120,7 +156,7 @@ try {
     $dupCheck = $pdo->prepare('SELECT COUNT(*) FROM attendance_records WHERE session_id = ? AND student_id = ?');
     $dupCheck->execute([$current['session_id'], $studentId]);
     if ($dupCheck->fetchColumn() > 0) {
-        throw new Exception('You have already recorded attendance for this class.');
+        throw new Exception(ALREADY_RECORDED);
     }
 
     // ---- Late logic: start + late_grace_minutes ----
@@ -158,11 +194,15 @@ try {
 } catch (PDOException $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     if (in_array($e->getCode(), ['23505', '23000'], true)) {   // unique (session_id, student_id)
-        echo json_encode(['success' => false, 'message' => 'You have already recorded attendance for this class.']);
+        echo json_encode(['success' => false, 'message' => ALREADY_RECORDED]);
     } else {
         echo json_encode(['success' => false, 'message' => safe_error_message($e)]);
     }
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
-    echo json_encode(['success' => false, 'message' => safe_error_message($e)]);
+    $message = safe_error_message($e);
+    if ($attemptSessionId && $message !== ALREADY_RECORDED) {
+        log_scan_attempt($pdo, $attemptSessionId, $studentId, $message, $lat, $lon, $accuracy, $distance);
+    }
+    echo json_encode(['success' => false, 'message' => $message]);
 }
