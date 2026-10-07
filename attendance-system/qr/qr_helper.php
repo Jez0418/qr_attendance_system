@@ -26,9 +26,16 @@ require_once __DIR__ . '/../includes/config.php';   // DB_* constants (used for 
 // Secret key used only for signing QR payloads. Set the QR_SECRET_KEY environment variable
 // (a long random string) in Vercel. If it is missing, a key is derived from the database
 // credentials so it is still private (never a value published in the repository).
-define('QR_SECRET_KEY', (function () {
+/** True when QR_SECRET_KEY is set (16+ chars). Otherwise the signing key is derived from the DB credentials. */
+function qr_key_is_configured(): bool {
     $key = getenv('QR_SECRET_KEY');
-    if ($key !== false && strlen($key) >= 16) return $key;
+    return $key !== false && strlen($key) >= 16;
+}
+
+define('QR_SECRET_KEY', (function () {
+    if (qr_key_is_configured()) return getenv('QR_SECRET_KEY');
+    // The fallback key changes whenever the DB password or host changes, which silently breaks every QR on screen.
+    if (getenv('VERCEL')) error_log('WARNING: QR_SECRET_KEY is not set; QR codes are signed with a key derived from the DB credentials. Set QR_SECRET_KEY in Vercel.');
     return hash_hmac('sha256', 'qr-payload-signing-v1', DB_USER . '|' . DB_PASS . '|' . DB_HOST);
 })());
 

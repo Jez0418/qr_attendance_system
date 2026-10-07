@@ -6,6 +6,7 @@
  * Expects $pageTitle to be set before include.
  * ------------------------------------------------------------
  */
+require_once __DIR__ . '/../qr/qr_helper.php';   // qr_key_is_configured() for the admin warning below
 $unreadCount = isset($_SESSION['user_id']) ? unread_notification_count($pdo, $_SESSION['user_id']) : 0;
 $flash = get_flash();
 $roleHome = [
@@ -93,3 +94,6 @@ if ($photoTable && !empty($_SESSION['profile_id'])) {
         </header>
         <?php endif; ?>
         <main class="page-content">
+        <?php if (($_SESSION['role'] ?? '') === 'admin' && !qr_key_is_configured()): ?>
+        <div class="alert alert-error"><strong>QR_SECRET_KEY is not set.</strong> QR codes are signed with a key derived from the database credentials, so changing the database password would break every QR code. Set <code>QR_SECRET_KEY</code> (a long random string) in Vercel and redeploy. See the README.</div>
+        <?php endif; ?>

@@ -38,6 +38,11 @@ define('BASE_URL', getenv('VERCEL') ? '/' : '/attendance-system/');
 define('UPLOAD_DIR', __DIR__ . '/../uploads/photos/');
 define('UPLOAD_URL', BASE_URL . 'uploads/photos/');
 
+// ---- Browser security headers (CSP, frame blocking, nosniff, HSTS over HTTPS) ----
+require_once __DIR__ . '/security_headers.php';
+send_security_headers((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+
 // ---- Start session (needed for auth / role checks) ----
 // Serverless instances have no shared disk, so on Vercel sessions are
 // stored in the database (see includes/session_db.php).

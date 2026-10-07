@@ -76,6 +76,10 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
 - Never return `$e->getMessage()` of a database error to the browser: use `safe_error_message($e)` (`includes/functions.php`);
   PDOExceptions are logged with `error_log()` (Vercel runtime logs) and the user sees a generic message.
   `php attendance-system/tests/security_test.php` fails if an endpoint echoes raw exception text again.
+- Security headers (CSP, X-Frame-Options, nosniff, Permissions-Policy, HSTS over HTTPS) are sent from `includes/security_headers.php`
+  via `config.php`. If a page needs a new external script/style/font host (or camera/location elsewhere), add it there. Test:
+  `php attendance-system/tests/security_headers_test.php`. `QR_SECRET_KEY` unset = warning in the Vercel log + red banner for admins
+  (it still works with a key derived from the DB credentials, but a DB password change would then break every QR).
 - Demo logins are never shown on the login page unless `SHOW_DEMO_LOGINS=1`.
 - CSRF: `require_login()`/`require_role()` call `csrf_guard()`, so every POST of a logged-in user needs the session token.
   `ajaxPost()` (assets/js/app.js) sends it automatically (from `<meta name="csrf-token">` in header.php); every new
