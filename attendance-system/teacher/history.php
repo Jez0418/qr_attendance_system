@@ -11,9 +11,9 @@ require_role('teacher');
 $pageTitle = 'Attendance History';
 
 $teacherId = $_SESSION['profile_id'];
-$classId = clean($_GET['class'] ?? '');
-$dateFrom = clean($_GET['date_from'] ?? '');
-$dateTo = clean($_GET['date_to'] ?? '');
+$classId = ctype_digit((string) ($_GET['class'] ?? '')) ? (string) (int) $_GET['class'] : '';   // a non-number would make Postgres fail
+$dateFrom = valid_ymd($_GET['date_from'] ?? '');
+$dateTo = valid_ymd($_GET['date_to'] ?? '');
 $search = clean($_GET['search'] ?? '');
 
 $where = ['ts.teacher_id = ?'];

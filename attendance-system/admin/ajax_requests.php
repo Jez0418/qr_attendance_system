@@ -47,7 +47,7 @@ try {
         $existing->execute([$request['student_id'], $request['teacher_subject_id']]);
         $existingRow = $existing->fetch();
         if ($existingRow) {
-            $pdo->prepare('UPDATE enrollments SET status = "enrolled" WHERE enrollment_id = ?')->execute([$existingRow['enrollment_id']]);
+            $pdo->prepare("UPDATE enrollments SET status = 'enrolled', enrolled_at = CASE WHEN status = 'dropped' THEN NOW() ELSE enrolled_at END WHERE enrollment_id = ?")->execute([$existingRow['enrollment_id']]);
         } else {
             $pdo->prepare('INSERT INTO enrollments (student_id, teacher_subject_id) VALUES (?, ?)')->execute([$request['student_id'], $request['teacher_subject_id']]);
         }
@@ -64,6 +64,7 @@ try {
     } elseif ($action === 'reject') {
         $reason = clean($_POST['rejection_reason'] ?? '');
         if ($reason === '') throw new Exception('A rejection reason is required.');
+        if (mb_strlen($reason) > 500) throw new Exception('The rejection reason must be at most 500 characters.');
 
         $pdo->prepare('UPDATE enrollment_requests SET status = "rejected", rejection_reason = ?, reviewed_by_role = "admin", reviewed_by_user_id = ?, reviewed_at = NOW() WHERE request_id = ?')
             ->execute([$reason, $_SESSION['user_id'], $requestId]);

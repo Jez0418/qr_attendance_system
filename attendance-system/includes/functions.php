@@ -68,6 +68,13 @@ function js_attr_json($data): string {
     return json_encode($data, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
 }
 
+/** A real calendar date as 'YYYY-MM-DD', or '' (so a hand-edited ?date_from=abc can't reach the database and crash the page). */
+function valid_ymd($value): string {
+    $v = trim((string) $value);
+    if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $v, $m) || !checkdate((int) $m[2], (int) $m[3], (int) $m[1])) return '';
+    return $v;
+}
+
 /** Escape output to prevent XSS */
 function e($value) {
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');

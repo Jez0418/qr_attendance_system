@@ -17,7 +17,7 @@ try {
     if (!$studentId || !$classId) throw new Exception('Invalid request.');
 
     // Ownership check: this class must belong to the logged-in teacher
-    $own = $pdo->prepare('SELECT institution_id, program_id, year_level, section FROM teacher_subjects WHERE teacher_subject_id = ? AND teacher_id = ?');
+    $own = $pdo->prepare('SELECT institution_id, program_id, year_level, section, max_students FROM teacher_subjects WHERE teacher_subject_id = ? AND teacher_id = ?');
     $own->execute([$classId, $teacherId]);
     $class = $own->fetch();
     if (!$class) throw new Exception('You do not have access to this class.');
@@ -35,8 +35,16 @@ try {
         $check->execute([$studentId, $classId]);
         $existing = $check->fetch();
 
+        if ($existing && $existing['status'] === 'enrolled') throw new Exception('This student is already enrolled in the class.');
+
+        // Class capacity (the request/approve flow and the CSV import already enforce it)
+        $count = $pdo->prepare('SELECT COUNT(*) FROM enrollments WHERE teacher_subject_id = ? AND status = "enrolled"');
+        $count->execute([$classId]);
+        if ((int) $count->fetchColumn() >= (int) $class['max_students']) throw new Exception('This class is full (' . (int) $class['max_students'] . ' students).');
+
         if ($existing) {
-            $upd = $pdo->prepare('UPDATE enrollments SET status = "enrolled" WHERE enrollment_id = ?');
+            // Re-enrolling a dropped student: the enrolled date restarts (it also decides which meetings can count them absent).
+            $upd = $pdo->prepare('UPDATE enrollments SET status = "enrolled", enrolled_at = NOW() WHERE enrollment_id = ?');
             $upd->execute([$existing['enrollment_id']]);
         } else {
             $ins = $pdo->prepare('INSERT INTO enrollments (student_id, teacher_subject_id) VALUES (?, ?)');

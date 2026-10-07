@@ -70,7 +70,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><?php echo e($t['email']); ?></td>
                         <td><span class="badge badge-<?php echo $t['status'] === 'active' ? 'active' : 'inactive'; ?>"><?php echo ucfirst($t['status']); ?></span></td>
                         <td>
-                            <button class="btn btn-outline btn-sm" onclick='openEditModal(<?php echo json_encode($t); ?>)'><i class="fa-solid fa-pen"></i></button>
+                            <button class="btn btn-outline btn-sm" onclick='openEditModal(<?php echo js_attr_json($t); ?>)'><i class="fa-solid fa-pen"></i></button>
                             <button class="btn btn-danger btn-sm" onclick="deleteTeacher(<?php echo $t['teacher_id']; ?>)"><i class="fa-solid fa-trash"></i></button>
                         </td>
                     </tr>

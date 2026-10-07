@@ -56,7 +56,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><span class="badge badge-<?php echo $s['status'] === 'active' ? 'active' : 'inactive'; ?>"><?php echo ucfirst($s['status']); ?></span></td>
                         <td>
                             <div style="display:flex;gap:8px">
-                                <button class="btn btn-outline btn-sm" style="width:40px;height:40px;padding:0" title="Edit subject" aria-label="Edit subject" onclick='openEditModal(<?php echo json_encode($s); ?>)'><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn btn-outline btn-sm" style="width:40px;height:40px;padding:0" title="Edit subject" aria-label="Edit subject" onclick='openEditModal(<?php echo js_attr_json($s); ?>)'><i class="fa-solid fa-pen"></i></button>
                                 <button class="btn btn-danger btn-sm" style="width:40px;height:40px;padding:0" title="Delete subject" aria-label="Delete subject" onclick="deleteSubject(<?php echo $s['subject_id']; ?>)"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </td>

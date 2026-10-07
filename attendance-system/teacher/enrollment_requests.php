@@ -68,7 +68,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <?php else: ?><span class="badge badge-absent">Rejected</span><?php endif; ?>
                         </td>
                         <td>
-                            <button class="btn btn-outline btn-sm" onclick='viewRequest(<?php echo json_encode($r); ?>)'><i class="fa-solid fa-eye"></i> View</button>
+                            <button class="btn btn-outline btn-sm" onclick='viewRequest(<?php echo js_attr_json($r); ?>)'><i class="fa-solid fa-eye"></i> View</button>
                         </td>
                     </tr>
                 <?php endforeach; endif; ?>

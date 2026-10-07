@@ -9,8 +9,8 @@ require_role('teacher');
 $pageTitle = 'Late Students';
 
 $teacherId = $_SESSION['profile_id'];
-$dateFrom = clean($_GET['date_from'] ?? date('Y-m-01'));
-$dateTo = clean($_GET['date_to'] ?? date('Y-m-d'));
+$dateFrom = valid_ymd($_GET['date_from'] ?? date('Y-m-01')) ?: date('Y-m-01');
+$dateTo = valid_ymd($_GET['date_to'] ?? date('Y-m-d')) ?: date('Y-m-d');
 
 $stmt = $pdo->prepare('
     SELECT st.student_id, st.full_name, st.student_number, sub.subject_name, COUNT(*) AS late_count, MAX(ar.time_in) AS last_late
