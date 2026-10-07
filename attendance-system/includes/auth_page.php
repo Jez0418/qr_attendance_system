@@ -6,6 +6,7 @@
  */
 function auth_page_start(string $title): void {
     require_once __DIR__ . '/theme.php';
+    require_once __DIR__ . '/pwa.php';
     header('Cache-Control: no-store');
     header('Referrer-Policy: no-referrer');   // the reset token is in the URL: never leak it in a Referer header
     ?>
@@ -21,6 +22,7 @@ function auth_page_start(string $title): void {
 <link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>assets/img/school-emblem-96.png">
 <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css">
 <?php echo theme_head_tags(); ?>
+<?php echo pwa_head_tags(); ?>
 </head>
 <body class="lg-body">
 <div class="theme-float"><?php echo theme_switcher(); ?></div>

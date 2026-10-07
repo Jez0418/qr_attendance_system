@@ -117,6 +117,7 @@ CREATE TABLE teacher_subjects (
     lab_id INT NOT NULL REFERENCES laboratories(lab_id) ON DELETE CASCADE,
     section VARCHAR(50) NOT NULL,
     max_students INT NOT NULL DEFAULT 40,
+    late_grace_minutes SMALLINT NULL CHECK (late_grace_minutes IS NULL OR late_grace_minutes BETWEEN 0 AND 180),  -- NULL = settings default
     schedule_day VARCHAR(30) NULL,   -- display summary only; see class_schedules
     meeting_date DATE NULL,          -- deprecated (replaced by class_schedules)
     start_time TIME NULL,            -- display summary only (first slot)
@@ -267,6 +268,8 @@ INSERT INTO settings (setting_key, setting_value) VALUES
     ('max_gps_accuracy_meters', '100'),
     ('default_allowed_radius_meters', '50'),
     ('late_grace_minutes', '15'),
+    ('absence_limit', '3'),
+    ('min_attendance_rate', '80'),
     ('qr_mode', 'session');
 
 INSERT INTO institutions (institution_code, institution_name) VALUES

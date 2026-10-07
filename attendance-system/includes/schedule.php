@@ -129,7 +129,7 @@ function get_occurrences(PDO $pdo, $from, $to, array $filters = []): array {
 
     $stmt = $pdo->prepare("
         SELECT ts.teacher_subject_id, ts.teacher_id, ts.lab_id, ts.subject_id, ts.section, ts.year_level,
-               ts.program_id, ts.institution_id, ts.department_id, ts.max_students, ts.status,
+               ts.program_id, ts.institution_id, ts.department_id, ts.max_students, ts.status, ts.late_grace_minutes,
                sub.subject_code, sub.subject_name, t.full_name AS teacher_name, lab.lab_name, pr.program_code
         FROM teacher_subjects ts
         JOIN subjects sub ON sub.subject_id = ts.subject_id
@@ -273,6 +273,7 @@ function schedule_build_occurrence(array $a, array $rule, string $date, $start, 
         'institution_id'      => $a['institution_id'] !== null ? (int) $a['institution_id'] : null,
         'department_id'       => $a['department_id'] !== null ? (int) $a['department_id'] : null,
         'max_students'        => (int) $a['max_students'],
+        'late_grace_minutes'  => isset($a['late_grace_minutes']) ? (int) $a['late_grace_minutes'] : null,   // null = settings default
         'assignment_status'   => $a['status'],
         'is_cancelled'        => $x !== null && $x['exception_type'] === 'CANCELLED',
         'is_rescheduled'      => $rescheduled,

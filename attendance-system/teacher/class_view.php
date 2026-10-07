@@ -12,6 +12,8 @@
  */
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/schedule.php';
+require_once __DIR__ . '/../includes/attendance_stats.php';
+require_once __DIR__ . '/../qr/session_manager.php';   // get_late_grace_minutes()
 require_role('teacher');
 
 $teacherId = $_SESSION['profile_id'];
@@ -73,6 +75,10 @@ $roster->execute([$classId, $classId]);
 $roster = $roster->fetchAll();
 
 $enrolledCount = count($roster);
+// Absences and attendance rate per student in this class (includes/attendance_stats.php)
+$limits = attendance_limits($pdo);
+$standings = class_student_standings($pdo, $classId, $limits);
+$graceMinutes = get_late_grace_minutes($pdo, $class['late_grace_minutes'] ?? null);
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -97,6 +103,7 @@ require_once __DIR__ . '/../includes/header.php';
             </div></div>
             <div><div class="text-muted" style="font-size:12px">Next Class</div><div style="font-weight:700"><?php echo e($sum['next_label']); ?><?php if ($sum['next']): ?><div class="text-muted" style="font-size:11.5px;font-weight:500"><?php echo e($sum['next']['lab_name']); ?><?php echo $sum['next']['is_rescheduled'] ? ' · Rescheduled' : ''; ?></div><?php endif; ?></div></div>
             <div><div class="text-muted" style="font-size:12px">Enrollment</div><div style="font-weight:700"><?php echo $enrolledCount; ?>/<?php echo (int) $class['max_students']; ?> students</div></div>
+            <div><div class="text-muted" style="font-size:12px">Late After</div><div style="font-weight:700"><?php echo $graceMinutes; ?> min from the start<?php if ($class['late_grace_minutes'] === null): ?><div class="text-muted" style="font-size:11.5px;font-weight:500">School default</div><?php endif; ?></div></div>
         </div>
         <span class="badge <?php echo $sum['badge'][1]; ?>" style="margin-top:14px;display:inline-block"><?php echo $sum['badge'][0]; ?></span>
     </div>
@@ -160,17 +167,19 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
     <div class="table-wrapper">
         <table class="data-table">
-            <thead><tr><th>Student ID</th><th>Name</th><th>Course</th><th>Year</th><th>Attended</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Student ID</th><th>Name</th><th>Course</th><th>Year</th><th>Attended</th><th>Absences</th><th>Attendance</th><th>Actions</th></tr></thead>
             <tbody>
             <?php if (empty($roster)): ?>
-                <tr><td colspan="6" class="text-center text-muted">No students enrolled in this class yet.</td></tr>
-            <?php else: foreach ($roster as $s): ?>
+                <tr><td colspan="8" class="text-center text-muted">No students enrolled in this class yet.</td></tr>
+            <?php else: foreach ($roster as $s): $st = $standings[(int) $s['student_id']] ?? attendance_standing(0, 0, $limits); ?>
                 <tr>
                     <td><?php echo e($s['student_number']); ?></td>
                     <td><?php echo e($s['full_name']); ?></td>
                     <td><?php echo e($s['program_code'] ?? '—'); ?></td>
                     <td><?php echo e($s['year_level']); ?></td>
                     <td><?php echo (int) $s['attended_count']; ?>x</td>
+                    <td class="rate-cell"><?php echo $st['absent']; ?><?php echo $limits['absence_limit'] ? ' / ' . $limits['absence_limit'] : ''; ?></td>
+                    <td class="rate-cell"><?php if ($st['rate'] === null): ?><span class="text-muted">—</span><?php else: ?><?php echo $st['rate']; ?>%<?php if ($st['level'] !== STANDING_OK): ?><span class="badge <?php echo $st['badge']; ?>"><?php echo e($st['label']); ?></span><?php endif; ?><?php endif; ?></td>
                     <td>
                         <a href="history.php?class=<?php echo $classId; ?>&search=<?php echo urlencode($s['student_number']); ?>" class="btn btn-outline btn-sm" title="View Attendance"><i class="fa-solid fa-clock-rotate-left"></i></a>
                         <button class="btn btn-danger btn-sm" title="Unenroll" onclick="unenroll(<?php echo $s['student_id']; ?>, '<?php echo e(addslashes($s['full_name'])); ?>')"><i class="fa-solid fa-user-minus"></i></button>

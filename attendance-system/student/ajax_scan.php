@@ -25,7 +25,7 @@
  * `scan_attempts` with the student's distance from the laboratory, so the teacher
  * can see who tried to check in from where (database/supabase_scan_attempts.sql).
  *
- * Late: a scan more than late_grace_minutes (settings, default 15) after
+ * Late: a scan more than the class's late grace (Admin > Class Assignments, else settings default 15) after
  * the meeting's start is "Late", otherwise "Present". The insert runs in a
  * transaction so a failure never leaves a partial record.
  * ============================================================
@@ -159,8 +159,8 @@ try {
         throw new Exception(ALREADY_RECORDED);
     }
 
-    // ---- Late logic: start + late_grace_minutes ----
-    $lateAfter = (new DateTimeImmutable($occ['starts_at'], schedule_tz()))->modify('+' . get_late_grace_minutes($pdo) . ' minutes');
+    // ---- Late logic: start + the class's late grace (or the settings default) ----
+    $lateAfter = (new DateTimeImmutable($occ['starts_at'], schedule_tz()))->modify('+' . get_late_grace_minutes($pdo, $occ['late_grace_minutes'] ?? null) . ' minutes');
     $recordStatus = $now > $lateAfter ? 'Late' : 'Present';
 
     $pdo->beginTransaction();

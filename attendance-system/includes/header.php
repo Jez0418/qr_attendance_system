@@ -7,6 +7,7 @@
  * ------------------------------------------------------------
  */
 require_once __DIR__ . '/theme.php';
+require_once __DIR__ . '/pwa.php';
 require_once __DIR__ . '/../qr/qr_helper.php';   // qr_key_is_configured() for the admin warning below
 $unreadCount = isset($_SESSION['user_id']) ? unread_notification_count($pdo, $_SESSION['user_id']) : 0;
 $flash = get_flash();
@@ -35,7 +36,7 @@ $subtitleMap = [
         'attendance_monitoring.php' => 'Review every attendance record',
         'enrollment_requests.php' => 'Review student enrollment requests',
         'reports.php' => 'Attendance totals by subject, status and date',
-        'settings.php' => 'Late grace period and geofencing',
+        'settings.php' => 'Late grace, absence limits and geofencing',
         'notifications.php' => 'Your alerts and announcements',
     ],
     'teacher' => [
@@ -62,19 +63,10 @@ $subtitleMap = [
 ];
 $pageSubtitleText = $pageSubtitle ?? ($subtitleMap[$_SESSION['role'] ?? ''][basename($_SERVER['PHP_SELF'])] ?? '');
 
-// Top-right avatar photo. Read from the DB on every request (not cached in $_SESSION) so a photo
-// saved or removed on the profile page shows immediately. Admins have no photo column.
-$headerPhotoSrc = '';
-$photoTable = ['student' => ['students', 'student_id'], 'teacher' => ['teachers', 'teacher_id']][$_SESSION['role'] ?? ''] ?? null;
-if ($photoTable && !empty($_SESSION['profile_id'])) {
-    $photoStmt = $pdo->prepare("SELECT photo FROM {$photoTable[0]} WHERE {$photoTable[1]} = ?");
-    $photoStmt->execute([$_SESSION['profile_id']]);
-    $headerPhoto = (string) $photoStmt->fetchColumn();
-    if ($headerPhoto !== '') {
-        // Same rule as student/profile.php: data URI as-is, older rows hold a filename under uploads/photos/
-        $headerPhotoSrc = strpos($headerPhoto, 'data:image/') === 0 ? $headerPhoto : UPLOAD_URL . $headerPhoto;
-    }
-}
+// Top-right avatar photo: a browser-cached avatar.php?v=<hash> link, the hash kept in $_SESSION
+// (includes/avatar.php), so pages no longer read or inline the photo. Admins have no photo column.
+require_once __DIR__ . '/avatar.php';
+$headerPhotoSrc = is_logged_in() ? current_photo_url($pdo) : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -89,6 +81,7 @@ if ($photoTable && !empty($_SESSION['profile_id'])) {
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css">
 <?php echo theme_head_tags(); ?>
+<?php echo pwa_head_tags(); ?>
 </head>
 <body class="<?php echo ($_SESSION['role'] ?? '') === 'student' ? 'has-bottom-nav' : ''; ?>">
 

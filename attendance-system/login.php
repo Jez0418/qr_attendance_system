@@ -9,6 +9,7 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/login_throttle.php';
 require_once __DIR__ . '/includes/theme.php';
+require_once __DIR__ . '/includes/pwa.php';
 
 // Already logged in? Send to dashboard.
 if (is_logged_in()) {
@@ -54,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>assets/img/school-emblem-96.png">
 <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css">
 <?php echo theme_head_tags(); ?>
+<?php echo pwa_head_tags(); ?>
 </head>
 <body class="lg-body">
 <div class="theme-float"><?php echo theme_switcher(); ?></div>

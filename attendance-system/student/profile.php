@@ -5,6 +5,7 @@
  * photo, and password. Student number/name/program are managed by admin.
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/avatar.php';
 require_role('student');
 $pageTitle = 'My Profile';
 
@@ -55,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'profi
             if ($newPhoto !== null || $removePhoto) {
                 $pdo->prepare('UPDATE students SET photo = ? WHERE student_id = ?')
                     ->execute([$newPhoto, $studentId]);
+                forget_photo_cache();   // new avatar.php?v= hash on the next page
             }
             $success = 'Profile updated successfully.';
         } catch (PDOException $ex) {
@@ -92,11 +94,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'passw
     }
 }
 
-// Stored photos are data URIs; older rows may still hold a filename under uploads/photos/ (local only).
-$photoSrc = '';
-if (!empty($student['photo'])) {
-    $photoSrc = strpos($student['photo'], 'data:image/') === 0 ? $student['photo'] : UPLOAD_URL . $student['photo'];
-}
+// The browser-cached avatar.php link (includes/avatar.php), not the inline data URI.
+$photoSrc = current_photo_url($pdo);
 
 require_once __DIR__ . '/../includes/header.php';
 ?>

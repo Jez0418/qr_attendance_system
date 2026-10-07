@@ -79,6 +79,12 @@ function validate_assignment_input($pdo) {
     $programId = (int) ($_POST['program_id'] ?? 0);
     $yearLevel = ($_POST['year_level'] ?? '') !== '' ? (int) $_POST['year_level'] : null;
     $maxStudents = (int) ($_POST['max_students'] ?? 40);
+    // Blank = use the default late grace from Admin > Settings (stored as NULL).
+    $graceInput = trim((string) ($_POST['late_grace_minutes'] ?? ''));
+    $lateGrace = $graceInput === '' ? null : (ctype_digit($graceInput) ? (int) $graceInput : -1);
+    if ($lateGrace !== null && ($lateGrace < 0 || $lateGrace > 180)) {
+        throw new FieldError('late_grace_minutes', 'Late grace must be a whole number from 0 to 180 minutes, or blank for the default.');
+    }
 
     if ($sectionLetter === '') {
         throw new FieldError('section_letter', 'Enter the section letter, e.g. A.');
@@ -116,6 +122,7 @@ function validate_assignment_input($pdo) {
         'teacher_id' => $teacherId, 'subject_id' => $subjectId, 'lab_id' => $labId, 'section' => $section,
         'status' => $status, 'institution_id' => $institutionId, 'department_id' => $departmentId,
         'program_id' => $programId, 'year_level' => $yearLevel, 'max_students' => $maxStudents,
+        'late_grace_minutes' => $lateGrace,
         'schedules' => validate_schedule_input(),
     ];
 }
@@ -198,12 +205,12 @@ try {
         $pdo->beginTransaction();
         $stmt = $pdo->prepare('
             INSERT INTO teacher_subjects
-                (teacher_id, subject_id, lab_id, section, status, institution_id, department_id, program_id, year_level, max_students)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (teacher_id, subject_id, lab_id, section, status, institution_id, department_id, program_id, year_level, max_students, late_grace_minutes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING teacher_subject_id
         ');
         $stmt->execute([$a['teacher_id'], $a['subject_id'], $a['lab_id'], $a['section'], $a['status'],
-            $a['institution_id'], $a['department_id'], $a['program_id'], $a['year_level'], $a['max_students']]);
+            $a['institution_id'], $a['department_id'], $a['program_id'], $a['year_level'], $a['max_students'], $a['late_grace_minutes']]);
         $id = (int) $stmt->fetchColumn();
         save_schedules($pdo, $id, $a['schedules']);
         $pdo->commit();
@@ -229,11 +236,11 @@ try {
         $stmt = $pdo->prepare('
             UPDATE teacher_subjects SET
                 teacher_id=?, subject_id=?, lab_id=?, section=?, status=?,
-                institution_id=?, department_id=?, program_id=?, year_level=?, max_students=?
+                institution_id=?, department_id=?, program_id=?, year_level=?, max_students=?, late_grace_minutes=?
             WHERE teacher_subject_id=?
         ');
         $stmt->execute([$a['teacher_id'], $a['subject_id'], $a['lab_id'], $a['section'], $a['status'],
-            $a['institution_id'], $a['department_id'], $a['program_id'], $a['year_level'], $a['max_students'], $id]);
+            $a['institution_id'], $a['department_id'], $a['program_id'], $a['year_level'], $a['max_students'], $a['late_grace_minutes'], $id]);
         if ($stmt->rowCount() === 0) throw new Exception('Assignment not found.');
         save_schedules($pdo, $id, $a['schedules']);
         $pdo->commit();

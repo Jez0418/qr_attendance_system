@@ -27,9 +27,15 @@
 require_once __DIR__ . '/qr_helper.php';
 require_once __DIR__ . '/../includes/schedule.php';
 
-/** Minutes after the start time before a scan counts as Late (settings.late_grace_minutes, default 15). */
-function get_late_grace_minutes(PDO $pdo): int {
-    return max(0, min(180, get_setting_int($pdo, 'late_grace_minutes', 15)));
+/**
+ * Minutes after the start time before a scan counts as Late: the class's own value
+ * (teacher_subjects.late_grace_minutes, Admin > Class Assignments) or, when that is empty,
+ * the default from Admin > Settings (settings.late_grace_minutes, 15 if unset).
+ * Pass the meeting's 'late_grace_minutes' (from includes/schedule.php) as $classGrace.
+ */
+function get_late_grace_minutes(PDO $pdo, $classGrace = null): int {
+    $minutes = ($classGrace !== null && $classGrace !== '') ? (int) $classGrace : get_setting_int($pdo, 'late_grace_minutes', 15);
+    return max(0, min(180, $minutes));
 }
 
 /** The session (open or closed) for this meeting, or null. */
@@ -58,11 +64,15 @@ function ensure_session_for_occurrence(PDO $pdo, array $occ, $now = null): ?arra
     $lab = $lab->fetch();
 
     if ($existing = find_session_for_occurrence($pdo, $occ)) {
-        // An open session follows its laboratory's current radius, so editing the lab applies immediately.
-        if ($lab && (int) $existing['is_active'] === 1 && (int) $existing['allowed_radius_meters'] !== (int) $lab['allowed_radius_meters']) {
-            $pdo->prepare('UPDATE attendance_sessions SET allowed_radius_meters = ? WHERE session_id = ? AND is_active = 1')
-                ->execute([(int) $lab['allowed_radius_meters'], $existing['session_id']]);
+        // An open session follows its laboratory's current radius and its class's current late grace,
+        // so editing the lab or the class applies immediately (a closed session keeps what applied).
+        $grace = get_late_grace_minutes($pdo, $occ['late_grace_minutes'] ?? null);
+        if ($lab && (int) $existing['is_active'] === 1
+            && ((int) $existing['allowed_radius_meters'] !== (int) $lab['allowed_radius_meters'] || (int) $existing['late_threshold_minutes'] !== $grace)) {
+            $pdo->prepare('UPDATE attendance_sessions SET allowed_radius_meters = ?, late_threshold_minutes = ? WHERE session_id = ? AND is_active = 1')
+                ->execute([(int) $lab['allowed_radius_meters'], $grace, $existing['session_id']]);
             $existing['allowed_radius_meters'] = (int) $lab['allowed_radius_meters'];
+            $existing['late_threshold_minutes'] = $grace;
         }
         return $existing;
     }
@@ -87,7 +97,7 @@ function ensure_session_for_occurrence(PDO $pdo, array $occ, $now = null): ?arra
             $ins->execute([
                 $occ['teacher_subject_id'], $occ['date'], bin2hex(random_bytes(24)),
                 $occ['starts_at'], $occ['ends_at'],
-                get_late_grace_minutes($pdo), (int) $lab['allowed_radius_meters'], $occ['teacher_id'],
+                get_late_grace_minutes($pdo, $occ['late_grace_minutes'] ?? null), (int) $lab['allowed_radius_meters'], $occ['teacher_id'],
             ]);
             $session = $ins->fetch();
             $created = true;

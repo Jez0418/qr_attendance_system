@@ -73,6 +73,7 @@ $summaries = get_class_schedule_summaries($pdo, array_column($assignments, 'teac
 $teachers = $pdo->query('SELECT teacher_id, full_name FROM teachers ORDER BY full_name')->fetchAll();
 $subjects = $pdo->query('SELECT subject_id, subject_code, subject_name FROM subjects WHERE status="active" ORDER BY subject_code')->fetchAll();
 $labs = $pdo->query('SELECT lab_id, lab_name FROM laboratories WHERE status="active" ORDER BY lab_name')->fetchAll();
+$defaultGrace = get_setting_int($pdo, 'late_grace_minutes', 15);   // placeholder for the per-class Late Grace field
 $institutions = $pdo->query('SELECT institution_id, institution_code, institution_name FROM institutions WHERE status="active" ORDER BY institution_name')->fetchAll();
 $departments = $pdo->query('SELECT department_id, institution_id, department_name FROM departments WHERE status="active" ORDER BY department_name')->fetchAll();
 $programs = $pdo->query('SELECT program_id, institution_id, department_id, program_code, program_name, duration_years FROM programs WHERE status="active" ORDER BY program_code')->fetchAll();
@@ -259,6 +260,13 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>Maximum Students *</label><input type="number" name="max_students" id="max_students" class="form-control" value="40" min="1" max="200" required></div>
+                    <div class="form-group"><label for="late_grace_minutes">Late Grace (minutes)</label>
+                        <input type="number" name="late_grace_minutes" id="late_grace_minutes" class="form-control" min="0" max="180" placeholder="Default: <?php echo (int) $defaultGrace; ?>" aria-describedby="late_grace_hint err_late_grace_minutes">
+                        <small class="text-muted" id="late_grace_hint">Scans this long after the start count as Late. Leave blank to use the default from Settings.</small>
+                        <p class="field-error" id="err_late_grace_minutes" hidden></p>
+                    </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group"><label for="enabled">Status</label>
                         <div class="toggle-row" style="justify-content:flex-start;min-height:38px">
                             <label class="toggle-switch"><input type="checkbox" id="enabled" checked aria-describedby="enabledLabel" onchange="updateEnabledLabel()"><span class="toggle-slider"></span></label>
@@ -477,6 +485,7 @@ function openEditModal(a) {
     // Drop the program prefix and year digit from a stored section ("BSIT-3A", "BSIT 3A" or "3A" -> "A").
     document.getElementById('section_letter').value = (a.section || '').replace(/^.*[- ]/, '').replace(/^\s*\d+/, '').toUpperCase();
     document.getElementById('max_students').value = a.max_students || 40;
+    document.getElementById('late_grace_minutes').value = a.late_grace_minutes ?? '';
     document.getElementById('enabled').checked = a.status === 'active';
     updateEnabledLabel();
     clearFieldErrors();
@@ -485,7 +494,7 @@ function openEditModal(a) {
     openModal('assignModal');
 }
 /* Field errors: red text under the field (ids err_<field>), mirrored by the server's "field" key. */
-const FIELD_INPUT = { days: null, section_letter: 'section_letter', start_time: 'start_time', end_time: 'end_time', starts_on: 'starts_on', ends_on: 'ends_on' };
+const FIELD_INPUT = { days: null, late_grace_minutes: 'late_grace_minutes', section_letter: 'section_letter', start_time: 'start_time', end_time: 'end_time', starts_on: 'starts_on', ends_on: 'ends_on' };
 function showFieldError(field, msg) {
     const el = document.getElementById('err_' + field);
     if (!el) return false;

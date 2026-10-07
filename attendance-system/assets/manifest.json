@@ -1,0 +1,30 @@
+{
+  "name": "MCNP-ISAP QR Laboratory Attendance",
+  "short_name": "Attendance",
+  "description": "Scan the laboratory QR code to check in to class.",
+  "id": "../index.php?source=pwa",
+  "start_url": "../index.php?source=pwa",
+  "scope": "../",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef4ff",
+  "theme_color": "#1d6bf3",
+  "icons": [
+    { "src": "img/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "img/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Scan Attendance",
+      "short_name": "Scan",
+      "url": "../student/scanner.php",
+      "icons": [{ "src": "img/app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "My Attendance History",
+      "short_name": "History",
+      "url": "../student/history.php",
+      "icons": [{ "src": "img/app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

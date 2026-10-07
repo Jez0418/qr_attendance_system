@@ -9,7 +9,7 @@
  * QR code) while the meeting is still in progress. The page reloads itself at the next start/end time so the QR
  * appears and disappears on schedule.
  *
- * Late logic: a scan more than late_grace_minutes (Admin > Settings)
+ * Late logic: a scan more than the class's late grace (Admin > Class Assignments, else Admin > Settings)
  * after the meeting's start is marked "Late".
  */
 require_once __DIR__ . '/../includes/auth.php';
@@ -22,7 +22,6 @@ auto_expire_sessions($pdo);
 $teacherId = (int) $_SESSION['profile_id'];
 $now = schedule_now();
 $meetings = ensure_sessions_for_today($pdo, ['teacher_id' => $teacherId], $now);
-$graceMinutes = get_late_grace_minutes($pdo);
 
 // Selected meeting: ?occ=<key>, else the one in progress, else the next one, else the first.
 $selected = null;
@@ -33,6 +32,7 @@ if (!$selected && $meetings) $selected = $meetings[0];
 
 $occ = $selected['occurrence'] ?? null;
 $session = $selected['session'] ?? null;
+$graceMinutes = get_late_grace_minutes($pdo, $occ['late_grace_minutes'] ?? null);
 $sessionOpen = $session && (int) $session['is_active'] === 1;
 $canReopen = $session && !$sessionOpen && $selected['status'] === OCCURRENCE_ACTIVE;
 

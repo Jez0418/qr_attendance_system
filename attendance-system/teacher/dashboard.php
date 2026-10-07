@@ -6,6 +6,7 @@
  */
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/schedule.php';
+require_once __DIR__ . '/../includes/attendance_stats.php';
 require_role('teacher');
 $pageTitle = 'Dashboard';
 
@@ -65,6 +66,10 @@ $myClasses = $myClasses->fetchAll();
 $summaries = get_class_schedule_summaries($pdo, array_column($myClasses, 'teacher_subject_id'),
     array_column(array_map(fn($c) => [(int) $c['teacher_subject_id'], $c['status'] === 'active'], $myClasses), 1, 0));
 
+// Students at or one away from the absence limit, or below the minimum rate (includes/attendance_stats.php)
+$limits = attendance_limits($pdo);
+$atRisk = teacher_students_at_risk($pdo, (int) $teacherId, $limits);
+
 // Fetch department for the greeting subtitle
 $deptStmt = $pdo->prepare('SELECT department FROM teachers WHERE teacher_id = ?');
 $deptStmt->execute([$teacherId]);
@@ -95,6 +100,31 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="stat-card"><div class="stat-icon amber"><i class="fa-solid fa-qrcode"></i></div><div><div class="stat-value"><?php echo $todayScans; ?></div><div class="stat-label">Scans Today</div></div></div>
     <div class="stat-card"><div class="stat-icon red"><i class="fa-solid fa-user-clock"></i></div><div><div class="stat-value"><?php echo $todayLate; ?></div><div class="stat-label">Late Today</div></div></div>
 </div>
+
+<?php if ($atRisk): ?>
+<div class="card" style="margin-bottom:20px">
+    <div class="card-header">
+        <h3>Attendance Watchlist</h3>
+        <span class="text-muted card-header-note"><?php echo count($atRisk); ?> <?php echo count($atRisk) === 1 ? 'student' : 'students'; ?> at or near the limit<?php echo $limits['absence_limit'] ? ' of ' . $limits['absence_limit'] . ' absences' : ''; ?></span>
+    </div>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>Student</th><th>Class</th><th>Absences</th><th>Attendance</th><th></th></tr></thead>
+            <tbody>
+            <?php foreach ($atRisk as $r): $st = $r['standing']; ?>
+                <tr>
+                    <td><div style="font-weight:600"><?php echo e($r['full_name']); ?></div><div class="text-muted" style="font-size:12px"><?php echo e($r['student_number']); ?></div></td>
+                    <td><?php echo e($r['subject_code']); ?> <span class="text-muted">· <?php echo e($r['section']); ?></span></td>
+                    <td class="rate-cell"><?php echo $st['absent']; ?><?php echo $limits['absence_limit'] ? ' / ' . $limits['absence_limit'] : ''; ?></td>
+                    <td class="rate-cell"><?php echo $st['rate']; ?>%<span class="badge <?php echo $st['badge']; ?>"><?php echo e($st['label']); ?></span></td>
+                    <td><a href="history.php?class=<?php echo (int) $r['teacher_subject_id']; ?>&amp;search=<?php echo urlencode($r['student_number']); ?>" class="btn btn-outline btn-sm" title="View attendance records" aria-label="View attendance records for <?php echo e($r['full_name']); ?>"><i class="fa-solid fa-clock-rotate-left"></i></a></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php endif; ?>
 
 <div class="card">
     <div class="card-header">

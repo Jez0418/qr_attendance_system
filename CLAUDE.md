@@ -21,7 +21,13 @@ don't break the Vercel + Supabase connection. (No secrets belong in this file.)
 - `BASE_URL` is `/` on Vercel and `/attendance-system/` locally (see `includes/config.php`).
 - PHP sessions are stored in the DB table `php_sessions` (`includes/session_db.php`)
   because Vercel has no shared disk.
-- File uploads (`uploads/photos/`) do NOT persist on Vercel; they need object storage.
+- File uploads (`uploads/photos/`) do NOT persist on Vercel; they need object storage. Profile photos are data URIs in the DB,
+  served by `avatar.php?v=<hash>` (browser-cached a year, private); the hash is kept in `$_SESSION` (`includes/avatar.php`), so
+  pages never select or inline the photo column. Code that changes a photo must call `forget_photo_cache()`.
+- Installable app (PWA): `assets/manifest.json` (relative URLs), service worker `sw.php` at the app root (so its scope covers the
+  whole app on Vercel and locally; never caches pages, offline fallback `assets/offline.html`), head tags + install card in
+  `includes/pwa.php`, logic in `assets/js/pwa.js`. A new full-page shell must call `pwa_head_tags()` too. `index.php?source=pwa`
+  (the start URL) sends students to the scanner. Icons: `assets/img/app-icon-{180,192,512}.png`.
 
 ## Configuration (environment variables — set in Vercel, never commit)
 `DB_HOST`, `DB_PORT` (5432 session pooler / 6543 transaction pooler), `DB_NAME` (postgres),
@@ -45,12 +51,21 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
 - Attendance sessions are automatic: `qr/session_manager.php` `ensure_session_for_occurrence()` opens one session per
   ACTIVE meeting (session_date = occurrence date, scheduled_start = its start, session_end = its end, fresh qr_token),
   called from teacher/session.php, admin/qr_management.php and student/ajax_scan.php. No manual activate; a teacher/admin can close a
-  session early and reopen it (`reactivate_attendance_session_by_id()`, same qr_token) only while its meeting is still ACTIVE. Late = scan after start + settings `late_grace_minutes` (default 15).
+  session early and reopen it (`reactivate_attendance_session_by_id()`, same qr_token) only while its meeting is still ACTIVE. Late = scan after start + the class's late grace (else settings `late_grace_minutes`, default 15).
 - Absences: when a session's `session_end` passes, enrolled students with no record get an `Absent` attendance record
   (`includes/absences.php`, run lazily from `require_login()` at most once a minute; watermark = settings row `absence_processed_until`,
   first run only starts the clock, no back-fill). Only meetings that HAD a session are marked (no QR = nothing to scan). Absent rows use
   the meeting's end as `time_in`, so show them with `format_record_time()` and exclude them (`status <> 'Absent'`) from any count of
-  check-ins/scans. Test: `php attendance-system/tests/absence_test.php`.
+  check-ins/scans. Test: `php attendance-system/tests/absence_test.php`. After marking, `notify_new_absences()` notifies each student
+  ("Marked Absent", with their count for that class) and the teacher once when a student reaches the absence limit.
+- Attendance warnings (`includes/attendance_stats.php`): per student per class, rate = (Present+Late)/(records). Settings
+  `absence_limit` (default 3) and `min_attendance_rate` (default 80, applies after 5 meetings); 0 turns either off (Admin > Settings).
+  Shown on the student dashboard ("Attendance by Class" + alert), the teacher dashboard ("Attendance Watchlist", only when non-empty)
+  and the roster in `teacher/class_view.php`. `attendance_standing()` is pure; reuse it rather than re-deriving the rules.
+- Late grace per class: `teacher_subjects.late_grace_minutes` (NULL = settings `late_grace_minutes`, from
+  `database/supabase_attendance_insights.sql`, set in Admin > Class Assignments). Always call `get_late_grace_minutes($pdo, $occ['late_grace_minutes'])`
+  with the meeting from `includes/schedule.php`; an open session's `late_threshold_minutes` is synced like its radius.
+  Test for these three: `php attendance-system/tests/attendance_insights_test.php`.
 - Teacher override (Absent -> Present only, own classes, reason required): button on `teacher/history.php` -> `teacher/ajax_attendance_override.php`
   (`includes/attendance_override.php`; columns `marked_by_user_id/marked_at/override_reason` from `database/supabase_attendance_override.sql`).
   A manual Present has no GPS data and is shown as "marked by teacher" via `format_record_time()` (selects must include `ar.marked_by_user_id`).

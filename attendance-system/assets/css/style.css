@@ -748,6 +748,55 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 /* School emblem in the sidebar */
 .sidebar-brand .brand-emblem{width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px var(--line)}
 
+/* ================= ATTENDANCE STANDING (student dashboard, teacher watchlist / roster) =================
+   Per-class rate + absence-limit warning (includes/attendance_stats.php). Colour follows the status
+   rule: green good standing, orange one absence from the limit, red past it. */
+.alert-warning{background:var(--amber-100);color:var(--amber-fg)}
+.alert > span{min-width:0}
+.stat-value.bad{color:var(--red-fg)}
+.card-header-note{font-size:12.5px;font-weight:600}
+img.greeting-avatar-photo{object-fit:cover;background:var(--slate-100);flex-shrink:0}
+.dashboard-split{align-items:start}
+.standing-body{padding:4px 24px 12px}
+.standing-list{list-style:none;margin:0;padding:0}
+.standing-row{display:flex;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid var(--line)}
+.standing-row:last-child{border-bottom:0}
+.standing-main{flex:1;min-width:0}
+.standing-title{font-size:14px;font-weight:700;color:var(--slate-900);overflow-wrap:anywhere}
+.standing-name{font-weight:500;color:var(--slate-600);margin-left:2px}
+.standing-meta{font-size:12.5px;color:var(--slate-500);margin-top:3px;font-variant-numeric:tabular-nums}
+.standing-bar{height:6px;border-radius:var(--radius-pill);background:var(--slate-100);margin-top:10px;overflow:hidden;max-width:420px}
+.standing-bar span{display:block;height:100%;border-radius:inherit;background:var(--green-600);transition:width .6s cubic-bezier(.16,1,.3,1)}
+.lvl-warning .standing-bar span{background:var(--amber-600)}
+.lvl-over .standing-bar span{background:var(--red-600)}
+.standing-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;text-align:right}
+.standing-rate{font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums;color:var(--slate-900)}
+.lvl-warning .standing-rate{color:var(--amber-fg)}
+.lvl-over .standing-rate{color:var(--red-fg)}
+.rate-cell{white-space:nowrap;font-variant-numeric:tabular-nums}
+.rate-cell .badge{margin-left:6px}
+@media(max-width:600px){
+    .standing-body{padding:2px 16px 8px}
+    .standing-row{gap:12px}
+    .standing-rate{font-size:17px}
+}
+
+/* ================= INSTALL CARD (PWA, student dashboard; includes/pwa.php + assets/js/pwa.js) ================= */
+.install-card{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);
+    padding:14px 18px;margin-bottom:20px;box-shadow:var(--shadow-md)}
+.install-card[hidden]{display:none}
+.install-card-icon{width:48px;height:48px;border-radius:12px;flex-shrink:0;object-fit:cover}
+.install-card-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:13px;line-height:1.45;color:var(--slate-600)}
+.install-card-text > strong{color:var(--slate-900);font-size:14px}
+.install-card-actions{display:flex;gap:8px;flex-shrink:0}
+.install-card .install-when-ios{display:none}
+.install-card[data-mode="ios"] .install-when-ios{display:inline}
+.install-card[data-mode="ios"] .install-when-prompt{display:none}
+@media(max-width:600px){
+    .install-card{flex-wrap:wrap;padding:14px 16px}
+    .install-card-actions{width:100%;justify-content:flex-end}
+}
+
 /* ============================================================
    DARK THEME — <html data-theme="dark"> (set by assets/js/theme.js)
    Same design as light: deep-navy backdrop, panels and cards a step lighter, the same blue accent.

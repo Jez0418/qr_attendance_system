@@ -6,6 +6,7 @@
  * code change to adjust.
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/attendance_stats.php';
 require_role('admin');
 $pageTitle = 'Settings';
 
@@ -13,16 +14,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $maxAccuracy = (int) ($_POST['max_gps_accuracy_meters'] ?? 100);
     $defaultRadius = (int) ($_POST['default_allowed_radius_meters'] ?? 50);
     $lateGrace = (int) ($_POST['late_grace_minutes'] ?? 15);
+    $absenceLimit = (int) ($_POST['absence_limit'] ?? 3);
+    $minRate = (int) ($_POST['min_attendance_rate'] ?? 80);
 
     $errors = [];
     if ($maxAccuracy < 10 || $maxAccuracy > 1000) $errors[] = 'Maximum GPS accuracy must be between 10 and 1000 meters.';
     if ($defaultRadius < 5 || $defaultRadius > 1000) $errors[] = 'Default allowed radius must be between 5 and 1000 meters.';
     if ($lateGrace < 0 || $lateGrace > 180) $errors[] = 'Late grace period must be between 0 and 180 minutes.';
+    if ($absenceLimit < 0 || $absenceLimit > 50) $errors[] = 'Absence limit must be between 0 (off) and 50.';
+    if ($minRate < 0 || $minRate > 100) $errors[] = 'Minimum attendance rate must be between 0 (off) and 100%.';
 
     if (empty($errors)) {
         set_setting($pdo, 'max_gps_accuracy_meters', $maxAccuracy);
         set_setting($pdo, 'default_allowed_radius_meters', $defaultRadius);
         set_setting($pdo, 'late_grace_minutes', $lateGrace);
+        set_setting($pdo, 'absence_limit', $absenceLimit);
+        set_setting($pdo, 'min_attendance_rate', $minRate);
         log_activity($pdo, $_SESSION['user_id'], 'Updated system settings');
         set_flash('success', 'Settings updated successfully.');
     } else {
@@ -34,6 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $maxAccuracy = get_setting_int($pdo, 'max_gps_accuracy_meters', 100);
 $defaultRadius = get_setting_int($pdo, 'default_allowed_radius_meters', 50);
 $lateGrace = get_setting_int($pdo, 'late_grace_minutes', 15);
+$absenceLimit = get_setting_int($pdo, 'absence_limit', 3);
+$minRate = get_setting_int($pdo, 'min_attendance_rate', 80);
+$overriddenClasses = (int) $pdo->query('SELECT COUNT(*) FROM teacher_subjects WHERE late_grace_minutes IS NOT NULL')->fetchColumn();
 
 $missingGeoCount = $pdo->query('SELECT COUNT(*) FROM laboratories WHERE latitude IS NULL OR longitude IS NULL')->fetchColumn();
 
@@ -56,10 +66,22 @@ require_once __DIR__ . '/../includes/header.php';
                     <small class="text-muted">Used as the starting geofence radius when a new laboratory is created (each lab can still be customized individually).</small>
                 </div>
                 <div class="form-group">
-                    <label>Late Grace Period (minutes)</label>
+                    <label>Default Late Grace Period (minutes)</label>
                     <input type="number" name="late_grace_minutes" class="form-control" value="<?php echo e($lateGrace); ?>" min="0" max="180" required>
-                    <small class="text-muted">Students who scan more than this many minutes after a class starts are marked <strong>Late</strong>; earlier scans are <strong>Present</strong>. Attendance opens automatically at the start time and closes at the end time.</small>
+                    <small class="text-muted">Students who scan more than this many minutes after a class starts are marked <strong>Late</strong>; earlier scans are <strong>Present</strong>. A class can set its own value in <a href="assignments.php">Class Assignments</a><?php echo $overriddenClasses ? ' (' . $overriddenClasses . ' ' . ($overriddenClasses === 1 ? 'class does' : 'classes do') . ' now)' : ''; ?>. Attendance opens automatically at the start time and closes at the end time.</small>
                 </div>
+                <h4 class="form-section-title">Attendance Warnings</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="absence_limit">Absence Limit (per class)</label>
+                        <input type="number" name="absence_limit" id="absence_limit" class="form-control" value="<?php echo e($absenceLimit); ?>" min="0" max="50" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="min_attendance_rate">Minimum Attendance Rate (%)</label>
+                        <input type="number" name="min_attendance_rate" id="min_attendance_rate" class="form-control" value="<?php echo e($minRate); ?>" min="0" max="100" required>
+                    </div>
+                </div>
+                <small class="text-muted" style="display:block;margin:-6px 0 16px">A student who reaches the absence limit in a class, or falls below the minimum rate after <?php echo ATTENDANCE_RATE_MIN_MEETINGS; ?> meetings, is flagged on their dashboard and on the teacher's watchlist. Students are warned one absence before the limit. Set either value to 0 to turn it off.</small>
                 <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Settings</button>
             </form>
         </div>
