@@ -101,7 +101,7 @@ require_once __DIR__ . '/../includes/header.php';
             <?php if ($sessionOpen): ?>
                 <div id="qrcodeCanvas"></div>
                 <div class="qr-session-meta">
-                    <div>This code <strong>refreshes automatically</strong> every few seconds, so a photo of it stops working within about a minute. Keep this screen open and visible to the class. It also stops working when the class ends or attendance is closed.</div>
+                    <div>This code is <strong>temporary</strong> — generated for this meeting only. It stops working when the class ends or attendance is closed.</div>
                     <div style="margin-top:8px">Late after: <?php echo date('g:i A', strtotime($session['scheduled_start']) + $graceMinutes * 60); ?> · Expires: <?php echo date('g:i A', strtotime($session['session_end'])); ?></div>
                     <div>Geofence radius: <?php echo (int) $session['allowed_radius_meters']; ?>m</div>
                 </div>
@@ -150,16 +150,7 @@ let pollTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     <?php if ($sessionOpen): ?>
-    const qrEl = document.getElementById('qrcodeCanvas');
-    safeRenderQr(qrEl, <?php echo json_encode(qr_build_session_payload($session['session_id'], $session['qr_token'])); ?>, 200);
-    // The code rotates (qr/qr_helper.php): fetch a fresh one regularly so a photo of the screen goes stale.
-    setInterval(async () => {
-        if (document.hidden) return;
-        try {
-            const res = await ajaxGet('ajax_qr_payload.php?session_id=' + SESSION_ID);
-            if (res.success) safeRenderQr(qrEl, res.payload, 200);
-        } catch (err) { /* keep showing the current code; retry on the next tick */ }
-    }, <?php echo QR_REFRESH_SECONDS * 1000; ?>);
+    safeRenderQr(document.getElementById('qrcodeCanvas'), <?php echo json_encode(qr_build_session_payload($session['session_id'], $session['qr_token'])); ?>, 200);
     <?php endif; ?>
     if (SESSION_ID) {
         fetchLiveScans();

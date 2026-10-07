@@ -152,18 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const el = document.getElementById('qr-' + s.id);
         if (el) safeRenderQr(el, s.payload, 160);
     });
-    // The codes rotate (qr/qr_helper.php): fetch fresh ones regularly so a photo of the screen goes stale.
-    if (OPEN_SESSION_QRS.length) setInterval(async () => {
-        if (document.hidden) return;
-        try {
-            const res = await ajaxGet('ajax_qr_payload.php?ids=' + OPEN_SESSION_QRS.map(s => s.id).join(','));
-            if (!res.success) return;
-            OPEN_SESSION_QRS.forEach(s => {
-                const el = document.getElementById('qr-' + s.id);
-                if (el && res.payloads[s.id]) safeRenderQr(el, res.payloads[s.id], 160);
-            });
-        } catch (err) { /* keep showing the current codes; retry on the next tick */ }
-    }, <?php echo QR_REFRESH_SECONDS * 1000; ?>);
     if (RELOAD_IN !== null && RELOAD_IN < 86400) setTimeout(() => location.reload(), (RELOAD_IN + 2) * 1000);
 });
 

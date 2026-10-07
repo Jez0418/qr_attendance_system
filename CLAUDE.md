@@ -51,10 +51,6 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
 - The old MySQL files (`schema.sql`, `migration_v*.sql`) and the `database/*.php` helper scripts were deleted (they are in git history only); never recreate them: they do not work on Postgres and `reset_passwords_to_id.php` could reset every password.
 - Demo logins (seed data): admin / tcruz / jsantos / s2023001-s2023004, password `password`. Change in production.
 
-- The on-screen QR rotates: payload = session_id + token + signed 30 s window `w` (`qr/qr_helper.php`); a scan is valid for the
-  current window + 2 before it. teacher/session.php and admin/qr_management.php re-fetch a fresh code every 15 s from
-  `ajax_qr_payload.php`. Test: `php attendance-system/tests/qr_payload_test.php`.
-
 ## Section format
 - ONE format for students and classes: year level + letter(s), e.g. `3A` (`build_section()` / `is_valid_section_letters()` in
   `includes/functions.php`). The program is never part of the section. `database/supabase_normalize_sections.sql` converts old
