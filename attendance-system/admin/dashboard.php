@@ -39,14 +39,15 @@ $labStatus = $pdo->query('
 $trendStmt = $pdo->query('
     SELECT DATE(time_in) AS d,
            SUM(status = "Present") AS present,
-           SUM(status = "Late") AS late
+           SUM(status = "Late") AS late,
+           SUM(status = "Absent") AS absent
     FROM attendance_records
     WHERE time_in >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
     GROUP BY DATE(time_in)
     ORDER BY d ASC
 ');
 $trend = $trendStmt->fetchAll();
-$trendLabels = []; $trendPresent = []; $trendLate = [];
+$trendLabels = []; $trendPresent = []; $trendLate = []; $trendAbsent = [];
 for ($i = 6; $i >= 0; $i--) {
     $d = date('Y-m-d', strtotime("-$i day"));
     $trendLabels[] = date('M d', strtotime($d));
@@ -54,6 +55,7 @@ for ($i = 6; $i >= 0; $i--) {
     foreach ($trend as $row) if ($row['d'] === $d) $found = $row;
     $trendPresent[] = $found ? (int) $found['present'] : 0;
     $trendLate[] = $found ? (int) $found['late'] : 0;
+    $trendAbsent[] = $found ? (int) $found['absent'] : 0;
 }
 
 // ---- Status distribution (all-time) ----
@@ -67,7 +69,7 @@ $labUsage = $pdo->query('
     FROM laboratories l
     LEFT JOIN teacher_subjects ts ON ts.lab_id = l.lab_id
     LEFT JOIN attendance_sessions s ON s.teacher_subject_id = ts.teacher_subject_id AND DATE(s.session_date) = CURDATE()
-    LEFT JOIN attendance_records ar ON ar.session_id = s.session_id
+    LEFT JOIN attendance_records ar ON ar.session_id = s.session_id AND ar.status <> "Absent"
     GROUP BY l.lab_id ORDER BY l.lab_name
 ')->fetchAll();
 
@@ -76,14 +78,13 @@ $todaysClasses = todays_classes_payload($pdo);
 
 // ---- Recent activity ----
 $recent = $pdo->query('
-    SELECT ar.time_in, ar.status, st.full_name, sub.subject_name, lab.lab_name
+    SELECT ar.time_in, ar.status, ar.marked_by_user_id, st.full_name, sub.subject_name, lab.lab_name
     FROM attendance_records ar
     JOIN students st ON st.student_id = ar.student_id
     JOIN attendance_sessions ses ON ses.session_id = ar.session_id
     JOIN teacher_subjects ts ON ts.teacher_subject_id = ses.teacher_subject_id
     JOIN subjects sub ON sub.subject_id = ts.subject_id
     JOIN laboratories lab ON lab.lab_id = ts.lab_id
-    WHERE ar.status <> "Absent"
     ORDER BY ar.time_in DESC LIMIT 8
 ')->fetchAll();
 
@@ -166,8 +167,12 @@ require_once __DIR__ . '/../includes/header.php';
                 <p class="text-muted text-center" style="padding:20px 0">No attendance records yet.</p>
             <?php else: foreach ($recent as $r): ?>
                 <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--slate-100);font-size:13px">
-                    <span class="dot <?php echo $r['status'] === 'Late' ? 'dot-red' : 'dot-green'; ?>" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>
-                    <span style="flex:1"><?php echo e($r['full_name']); ?> checked in at <?php echo e($r['lab_name']); ?> · <?php echo date('h:i A', strtotime($r['time_in'])); ?></span>
+                    <span class="dot <?php echo ['Late' => 'dot-amber', 'Absent' => 'dot-red'][$r['status']] ?? 'dot-green'; ?>" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>
+                    <?php if ($r['status'] === 'Absent'): ?>
+                    <span style="flex:1"><?php echo e($r['full_name']); ?> was absent from <?php echo e($r['subject_name']); ?> · <?php echo date('M d', strtotime($r['time_in'])); ?></span>
+                    <?php else: ?>
+                    <span style="flex:1"><?php echo e($r['full_name']); ?> <?php echo !empty($r['marked_by_user_id']) ? 'was marked present by the teacher at' : 'checked in at'; ?> <?php echo e($r['lab_name']); ?> · <?php echo date('h:i A', strtotime($r['time_in'])); ?></span>
+                    <?php endif; ?>
                     <span class="badge badge-<?php echo strtolower($r['status']); ?>"><?php echo $r['status']; ?></span>
                 </div>
             <?php endforeach; endif; ?>
@@ -294,38 +299,53 @@ require_once __DIR__ . '/../includes/header.php';
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
-const trendCtx = document.getElementById('trendChart');
-new Chart(trendCtx, {
-    type: 'line',
-    data: {
-        labels: <?php echo json_encode($trendLabels); ?>,
-        datasets: [
-            { label: 'Present', data: <?php echo json_encode($trendPresent); ?>, borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,.1)', tension:.35, fill:true },
-            { label: 'Late', data: <?php echo json_encode($trendLate); ?>, borderColor:'#d97706', backgroundColor:'rgba(217,119,6,.1)', tension:.35, fill:true }
-        ]
-    },
-    options: { responsive:true, plugins:{legend:{position:'bottom'}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} }
-});
+// Charts take their colours from the active theme (assets/js/theme.js) and are rebuilt when it changes.
+const trendData = {
+    labels: <?php echo json_encode($trendLabels); ?>,
+    present: <?php echo json_encode($trendPresent); ?>,
+    late: <?php echo json_encode($trendLate); ?>,
+    absent: <?php echo json_encode($trendAbsent); ?>
+};
+const statusData = [<?php echo $statusCounts['Present']; ?>, <?php echo $statusCounts['Late']; ?>, <?php echo $statusCounts['Absent']; ?>];
+const labData = {
+    labels: <?php echo json_encode(array_column($labUsage, 'lab_name')); ?>,
+    counts: <?php echo json_encode(array_map('intval', array_column($labUsage, 'cnt'))); ?>
+};
+let charts = [];
 
-const statusCtx = document.getElementById('statusChart');
-new Chart(statusCtx, {
-    type: 'doughnut',
-    data: {
-        labels: ['Present','Late','Absent'],
-        datasets: [{ data: [<?php echo $statusCounts['Present']; ?>, <?php echo $statusCounts['Late']; ?>, <?php echo $statusCounts['Absent']; ?>], backgroundColor:['#16a34a','#d97706','#dc2626'] }]
-    },
-    options: { responsive:true, plugins:{legend:{position:'bottom'}} }
-});
-
-const labCtx = document.getElementById('labChart');
-new Chart(labCtx, {
-    type: 'bar',
-    data: {
-        labels: <?php echo json_encode(array_column($labUsage, 'lab_name')); ?>,
-        datasets: [{ label:'Scans Today', data: <?php echo json_encode(array_map('intval', array_column($labUsage, 'cnt'))); ?>, backgroundColor:'#4f46e5', borderRadius:6 }]
-    },
-    options: { indexAxis:'y', responsive:true, plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true, ticks:{precision:0}}} }
-});
+function buildCharts() {
+    const c = themeChartDefaults();
+    charts.forEach(ch => ch.destroy());
+    charts = [
+        new Chart(document.getElementById('trendChart'), {
+            type: 'line',
+            data: {
+                labels: trendData.labels,
+                datasets: [
+                    { label: 'Present', data: trendData.present, borderColor: c.green, backgroundColor: c.greenFill, tension:.35, fill:true },
+                    { label: 'Late', data: trendData.late, borderColor: c.amber, backgroundColor: c.amberFill, tension:.35, fill:true },
+                    { label: 'Absent', data: trendData.absent, borderColor: c.red, backgroundColor: c.redFill, tension:.35, fill:true }
+                ]
+            },
+            options: { responsive:true, plugins:{legend:{position:'bottom'}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} }
+        }),
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Present','Late','Absent'],
+                datasets: [{ data: statusData, backgroundColor: [c.green, c.amber, c.red], borderColor: c.surface }]
+            },
+            options: { responsive:true, plugins:{legend:{position:'bottom'}} }
+        }),
+        new Chart(document.getElementById('labChart'), {
+            type: 'bar',
+            data: { labels: labData.labels, datasets: [{ label:'Scans Today', data: labData.counts, backgroundColor: c.accent, borderRadius:6 }] },
+            options: { indexAxis:'y', responsive:true, plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true, ticks:{precision:0}}} }
+        })
+    ];
+}
+buildCharts();
+window.addEventListener('themechange', buildCharts);
 </script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

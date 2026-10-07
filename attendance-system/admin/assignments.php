@@ -310,7 +310,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <style>
 /* Inline field errors for the assignment form (red text under the field). */
-#assignForm .field-error{margin:6px 0 0;font-size:12.5px;font-weight:500;color:#991b1b}
+#assignForm .field-error{margin:6px 0 0;font-size:12.5px;font-weight:500;color:var(--error-text)}
 #assignForm [aria-invalid="true"]{border-color:var(--red-600)}
 </style>
 <script>

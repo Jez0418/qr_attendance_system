@@ -162,8 +162,8 @@ async function onScanSuccess(decodedText) {
         if (res.success) {
             document.getElementById('attendanceStatusText').textContent = res.status.toUpperCase();
             resultDiv.innerHTML = `
-                <div class="scan-result" style="background:#dcfce7">
-                    <i class="fa-solid fa-circle-check" style="font-size:32px;color:#16a34a"></i>
+                <div class="scan-result scan-ok">
+                    <i class="fa-solid fa-circle-check" style="font-size:32px;color:var(--green-600)"></i>
                     <h3 style="margin:10px 0 14px">ATTENDANCE RECORDED</h3>
                     <div style="text-align:left;font-size:13.5px;line-height:2;max-width:280px;margin:0 auto">
                         <div><strong>Student:</strong> ${res.student_name}</div>
@@ -180,8 +180,8 @@ async function onScanSuccess(decodedText) {
             showToast('success', res.message);
         } else {
             document.getElementById('attendanceStatusText').textContent = 'Scan Rejected';
-            resultDiv.innerHTML = `<div class="scan-result" style="background:#fee2e2">
-                <i class="fa-solid fa-circle-exclamation" style="font-size:32px;color:#dc2626"></i>
+            resultDiv.innerHTML = `<div class="scan-result scan-bad">
+                <i class="fa-solid fa-circle-exclamation" style="font-size:32px;color:var(--red-600)"></i>
                 <h3 style="margin:10px 0 4px">SCAN REJECTED</h3><p style="margin:0">${res.message}</p></div>`;
             showToast('error', res.message);
         }

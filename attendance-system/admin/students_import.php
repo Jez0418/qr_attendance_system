@@ -110,7 +110,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <td><?php echo e($r['full_name'] ?? ''); ?></td>
                     <td><?php echo e($p['username']); ?></td>
                     <td><?php echo e(($r['institution_code'] ?? '') . ' ' . ($r['program_code'] ?? '') . ' Y' . ($r['year_level'] ?? '') . ' ' . ($r['section'] ?? '')); ?></td>
-                    <td><?php if ($p['ok']): ?><span class="badge badge-active">OK</span><?php else: ?><span class="badge badge-absent">Error</span> <span style="font-size:12.5px;color:#991b1b"><?php echo e(implode('; ', $p['errors'])); ?></span><?php endif; ?></td>
+                    <td><?php if ($p['ok']): ?><span class="badge badge-active">OK</span><?php else: ?><span class="badge badge-absent">Error</span> <span class="text-error" style="font-size:12.5px"><?php echo e(implode('; ', $p['errors'])); ?></span><?php endif; ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

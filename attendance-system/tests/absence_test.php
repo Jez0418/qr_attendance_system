@@ -41,6 +41,14 @@ foreach ($must as $file => $needle) {
     check("$file ignores Absent in its counts", strpos(file_get_contents(__DIR__ . '/../' . $file), $needle) !== false);
 }
 
+// Admin dashboard: absences appear in "Recent Attendance Activity" and in the attendance graph,
+// but "Laboratory Usage Today" counts scans only.
+$dash = file_get_contents(__DIR__ . '/../admin/dashboard.php');
+check('recent activity no longer hides Absent records', strpos($dash, 'WHERE ar.status <> "Absent"') === false);
+check('recent activity words an absence differently from a check-in', strpos($dash, 'was absent from') !== false);
+check('attendance graph counts Absent per day', strpos($dash, 'SUM(status = "Absent")') !== false && strpos($dash, "label: 'Absent'") !== false);
+check('laboratory usage counts scans only', strpos($dash, 'ar.session_id = s.session_id AND ar.status <> "Absent"') !== false);
+
 // A student enrolled after the meeting started (but before it ended) could still scan, so must still be
 // marked absent. Comparing against scheduled_start silently skipped them.
 $sql = file_get_contents(__DIR__ . '/../includes/absences.php');

@@ -110,6 +110,16 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   5 failures/15 min per username, 50/15 min per IP. Fails open if the table is missing. Unlock:
   `DELETE FROM login_attempts WHERE username_key = '...';`
 
+## Theme (Light / Dark / System)
+- `assets/js/theme.js` (loaded in `<head>` through `theme_head_tags()` in `includes/theme.php`) sets `<html data-theme="light|dark">` before first paint.
+  The choice (`light|dark|system`, default system) lives in `localStorage` per browser: no database. The switcher button comes from
+  `theme_switcher()` (top bar in `header.php`, floating on `login.php` / `auth_page.php`). Any new full-page shell must call both.
+- Colours: `style.css` `:root` tokens; `:root[data-theme="dark"]` at the end of the file flips the slate greys and tints. Use `var(--surface)`
+  for card/modal/input backgrounds (never `#fff`) and the variables for text colours; `tests/theme_test.php` fails on a hard-coded white surface.
+- Chart.js: build charts in a function that starts with `const c = themeChartDefaults();` and rebuild on `window` `themechange` (see `admin/dashboard.php`).
+- Admin dashboard: "Recent Attendance Activity" and the 7-day graph include Absent records ("was absent from <subject>"); "Laboratory Usage Today"
+  counts scans only (`ar.status <> "Absent"`).
+
 ## Workflow rules
 - UI: `assets/css/style.css` (colors in `:root` variables), `includes/header.php`,
   `includes/sidebar.php`, `includes/footer.php`, `login.php`, per-page files in `admin/`, `teacher/`, `student/`.

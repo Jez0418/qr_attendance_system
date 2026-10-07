@@ -201,7 +201,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <td><?php
                         if ($p['status'] === 'ok') echo '<span class="badge badge-active">Enroll</span>';
                         elseif ($p['status'] === 'skip') echo '<span class="badge badge-inactive">Skip</span> <span style="font-size:12.5px">' . e($p['note']) . '</span>';
-                        else echo '<span class="badge badge-absent">Error</span> <span style="font-size:12.5px;color:#991b1b">' . e($p['note']) . '</span>'; ?></td>
+                        else echo '<span class="badge badge-absent">Error</span> <span class="text-error" style="font-size:12.5px">' . e($p['note']) . '</span>'; ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

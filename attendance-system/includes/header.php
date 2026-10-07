@@ -6,6 +6,7 @@
  * Expects $pageTitle to be set before include.
  * ------------------------------------------------------------
  */
+require_once __DIR__ . '/theme.php';
 require_once __DIR__ . '/../qr/qr_helper.php';   // qr_key_is_configured() for the admin warning below
 $unreadCount = isset($_SESSION['user_id']) ? unread_notification_count($pdo, $_SESSION['user_id']) : 0;
 $flash = get_flash();
@@ -46,6 +47,7 @@ if ($photoTable && !empty($_SESSION['profile_id'])) {
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css">
+<?php echo theme_head_tags(); ?>
 </head>
 <body class="<?php echo ($_SESSION['role'] ?? '') === 'student' ? 'has-bottom-nav' : ''; ?>">
 
@@ -72,6 +74,7 @@ if ($photoTable && !empty($_SESSION['profile_id'])) {
                 <span class="page-subtitle"><?php echo date('l, F j, Y'); ?></span>
             </div>
             <div class="topbar-right">
+                <?php echo theme_switcher(); ?>
                 <div class="notif-wrapper">
                     <a href="<?php echo BASE_URL . $notifPage; ?>" class="icon-btn notif-link" id="notifBellBtn">
                         <i class="fa-solid fa-bell"></i>

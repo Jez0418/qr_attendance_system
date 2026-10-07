@@ -127,22 +127,40 @@ require_once __DIR__ . '/../includes/header.php';
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
-new Chart(document.getElementById('subjectChart'), {
-    type: 'bar',
-    data: {
-        labels: <?php echo json_encode(array_column($subjectRows, 'subject_name')); ?>,
-        datasets: [
-            { label:'Present', data:<?php echo json_encode(array_map('intval', array_column($subjectRows,'present'))); ?>, backgroundColor:'#16a34a' },
-            { label:'Late', data:<?php echo json_encode(array_map('intval', array_column($subjectRows,'late'))); ?>, backgroundColor:'#d97706' },
-            { label:'Absent', data:<?php echo json_encode(array_map('intval', array_column($subjectRows,'absent'))); ?>, backgroundColor:'#dc2626' }
-        ]
-    },
-    options: { responsive:true, plugins:{legend:{position:'bottom'}}, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}} }
-});
-new Chart(document.getElementById('shareChart'), {
-    type: 'pie',
-    data: { labels:['Present','Late','Absent'], datasets:[{ data:[<?php echo $counts['Present']; ?>,<?php echo $counts['Late']; ?>,<?php echo $counts['Absent']; ?>], backgroundColor:['#16a34a','#d97706','#dc2626'] }] },
-    options: { responsive:true, plugins:{legend:{position:'bottom'}} }
-});
+const subjectData = {
+    labels: <?php echo json_encode(array_column($subjectRows, 'subject_name')); ?>,
+    present: <?php echo json_encode(array_map('intval', array_column($subjectRows,'present'))); ?>,
+    late: <?php echo json_encode(array_map('intval', array_column($subjectRows,'late'))); ?>,
+    absent: <?php echo json_encode(array_map('intval', array_column($subjectRows,'absent'))); ?>
+};
+const shareData = [<?php echo $counts['Present']; ?>, <?php echo $counts['Late']; ?>, <?php echo $counts['Absent']; ?>];
+let charts = [];
+
+// Colours come from the active theme (assets/js/theme.js); the charts are rebuilt when it changes.
+function buildCharts() {
+    const c = themeChartDefaults();
+    charts.forEach(ch => ch.destroy());
+    charts = [
+        new Chart(document.getElementById('subjectChart'), {
+            type: 'bar',
+            data: {
+                labels: subjectData.labels,
+                datasets: [
+                    { label:'Present', data: subjectData.present, backgroundColor: c.green },
+                    { label:'Late', data: subjectData.late, backgroundColor: c.amber },
+                    { label:'Absent', data: subjectData.absent, backgroundColor: c.red }
+                ]
+            },
+            options: { responsive:true, plugins:{legend:{position:'bottom'}}, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}} }
+        }),
+        new Chart(document.getElementById('shareChart'), {
+            type: 'pie',
+            data: { labels:['Present','Late','Absent'], datasets:[{ data: shareData, backgroundColor:[c.green, c.amber, c.red], borderColor: c.surface }] },
+            options: { responsive:true, plugins:{legend:{position:'bottom'}} }
+        })
+    ];
+}
+buildCharts();
+window.addEventListener('themechange', buildCharts);
 </script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
