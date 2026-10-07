@@ -24,7 +24,7 @@ $counts = ['Present' => 0, 'Late' => 0, 'Absent' => 0];
 foreach ($statusCounts->fetchAll() as $row) $counts[$row['status']] = (int) $row['c'];
 
 $recent = $pdo->prepare('
-    SELECT ar.time_in, ar.status, sub.subject_name, lab.lab_name
+    SELECT ar.time_in, ar.status, ar.marked_by_user_id, sub.subject_name, lab.lab_name
     FROM attendance_records ar
     JOIN attendance_sessions s ON s.session_id = ar.session_id
     JOIN teacher_subjects ts ON ts.teacher_subject_id = s.teacher_subject_id

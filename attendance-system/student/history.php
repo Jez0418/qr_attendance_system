@@ -34,7 +34,7 @@ $baseQuery = "
 
 if ($format = requested_export_format()) {
     $stmt = $pdo->prepare("
-        SELECT ar.time_in, ar.status, sub.subject_code, sub.subject_name, lab.lab_name, tch.full_name AS teacher_name
+        SELECT ar.time_in, ar.status, ar.marked_by_user_id, sub.subject_code, sub.subject_name, lab.lab_name, tch.full_name AS teacher_name
         $baseQuery ORDER BY ar.time_in DESC
     ");
     $stmt->execute($params);

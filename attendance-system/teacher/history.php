@@ -36,7 +36,7 @@ $baseQuery = "
 
 if ($format = requested_export_format()) {
     $stmt = $pdo->prepare("
-        SELECT ar.time_in, ar.status, st.full_name, st.student_number, sub.subject_code, sub.subject_name, ts.section, lab.lab_name
+        SELECT ar.time_in, ar.status, ar.marked_by_user_id, st.full_name, st.student_number, sub.subject_code, sub.subject_name, ts.section, lab.lab_name
         $baseQuery ORDER BY ar.time_in DESC
     ");
     $stmt->execute($params);
@@ -93,10 +93,10 @@ require_once __DIR__ . '/../includes/header.php';
         </form>
         <div class="table-wrapper">
             <table class="data-table">
-                <thead><tr><th>Student</th><th>Student No.</th><th>Subject</th><th>Lab</th><th>Time In</th><th>Status</th></tr></thead>
+                <thead><tr><th>Student</th><th>Student No.</th><th>Subject</th><th>Lab</th><th>Time In</th><th>Status</th><th>Action</th></tr></thead>
                 <tbody>
                 <?php if (empty($records)): ?>
-                    <tr><td colspan="6" class="text-center text-muted">No records found.</td></tr>
+                    <tr><td colspan="7" class="text-center text-muted">No records found.</td></tr>
                 <?php else: foreach ($records as $r): ?>
                     <tr>
                         <td><?php echo e($r['full_name']); ?></td>
@@ -104,7 +104,12 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><?php echo e($r['subject_name']); ?></td>
                         <td><?php echo e($r['lab_name']); ?></td>
                         <td><?php echo format_record_time($r); ?></td>
-                        <td><span class="badge badge-<?php echo strtolower($r['status']); ?>"><?php echo $r['status']; ?></span></td>
+                        <td><span class="badge badge-<?php echo strtolower($r['status']); ?>"<?php if (!empty($r['marked_by_user_id'])): ?> title="<?php echo e('Marked by teacher: ' . $r['override_reason']); ?>"<?php endif; ?>><?php echo $r['status']; ?></span></td>
+                        <td>
+                            <?php if ($r['status'] === 'Absent'): ?>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="openOverride(<?php echo (int) $r['record_id']; ?>, <?php echo e(json_encode($r['full_name'] . ' - ' . $r['subject_name'] . ', ' . date('M d, Y', strtotime($r['time_in'])))); ?>)"><i class="fa-solid fa-check"></i> Mark present</button>
+                            <?php else: ?><span class="text-muted">—</span><?php endif; ?>
+                        </td>
                     </tr>
                 <?php endforeach; endif; ?>
                 </tbody>
@@ -113,4 +118,43 @@ require_once __DIR__ . '/../includes/header.php';
         <?php render_pagination($p['page'], $p['totalPages']); ?>
     </div>
 </div>
+
+<div class="modal-backdrop" id="overrideModal">
+    <div class="modal">
+        <div class="modal-header"><h3>Mark present</h3><button type="button" class="modal-close" onclick="closeModal('overrideModal')">&times;</button></div>
+        <div class="modal-body">
+            <p id="overrideWho" style="margin-top:0;font-weight:600"></p>
+            <p class="text-muted" style="font-size:13px">This changes the record from Absent to Present, tells the student, and is saved in the activity log with your name and this reason.</p>
+            <div class="form-group">
+                <label for="overrideReason">Reason *</label>
+                <textarea id="overrideReason" class="form-control" rows="3" maxlength="255" placeholder="e.g. Scanner problem, student was present in class"></textarea>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px">
+                <button type="button" class="btn btn-outline" onclick="closeModal('overrideModal')">Cancel</button>
+                <button type="button" class="btn btn-primary" id="overrideSubmit" onclick="submitOverride()">Mark present</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+let overrideRecordId = null;
+function openOverride(recordId, who) {
+    overrideRecordId = recordId;
+    document.getElementById('overrideWho').textContent = who;
+    document.getElementById('overrideReason').value = '';
+    openModal('overrideModal');
+    document.getElementById('overrideReason').focus();
+}
+async function submitOverride() {
+    const reason = document.getElementById('overrideReason').value.trim();
+    if (reason.length < 3) { showToast('error', 'Please enter a reason for the change.'); return; }
+    const btn = document.getElementById('overrideSubmit');
+    btn.disabled = true;
+    try {
+        const res = await ajaxPost('ajax_attendance_override.php', { record_id: overrideRecordId, reason });
+        if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 600); }
+        else { showToast('error', res.message); btn.disabled = false; }
+    } catch (err) { showToast('error', 'Something went wrong. Please try again.'); btn.disabled = false; }
+}
+</script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

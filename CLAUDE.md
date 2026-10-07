@@ -51,6 +51,10 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   first run only starts the clock, no back-fill). Only meetings that HAD a session are marked (no QR = nothing to scan). Absent rows use
   the meeting's end as `time_in`, so show them with `format_record_time()` and exclude them (`status <> 'Absent'`) from any count of
   check-ins/scans. Test: `php attendance-system/tests/absence_test.php`.
+- Teacher override (Absent -> Present only, own classes, reason required): button on `teacher/history.php` -> `teacher/ajax_attendance_override.php`
+  (`includes/attendance_override.php`; columns `marked_by_user_id/marked_at/override_reason` from `database/supabase_attendance_override.sql`).
+  A manual Present has no GPS data and is shown as "marked by teacher" via `format_record_time()` (selects must include `ar.marked_by_user_id`).
+  The student is notified and the activity log gets a line. Test: `php attendance-system/tests/attendance_override_test.php`.
 - Any new table/column: write the SQL as a new file in `database/` AND run it in Supabase
   (SQL Editor: click in editor, Ctrl+A, Run so the whole script runs). Run SQL before pushing code that needs it.
 - The old MySQL files (`schema.sql`, `migration_v*.sql`) and the `database/*.php` helper scripts were deleted (they are in git history only); never recreate them: they do not work on Postgres and `reset_passwords_to_id.php` could reset every password.

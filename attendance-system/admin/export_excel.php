@@ -20,7 +20,7 @@ if ($subjectId !== '') { $where[] = 'sub.subject_id = ?'; $params[] = $subjectId
 $whereSql = 'WHERE ' . implode(' AND ', $where);
 
 $stmt = $pdo->prepare("
-    SELECT ar.time_in, ar.status, st.full_name, st.student_number, sub.subject_name, lab.lab_name, tch.full_name AS teacher_name
+    SELECT ar.time_in, ar.status, ar.marked_by_user_id, st.full_name, st.student_number, sub.subject_name, lab.lab_name, tch.full_name AS teacher_name
     FROM attendance_records ar
     JOIN students st ON st.student_id = ar.student_id
     JOIN attendance_sessions ses ON ses.session_id = ar.session_id

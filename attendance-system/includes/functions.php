@@ -125,6 +125,7 @@ function format_datetime($datetime) {
   * (its time_in is just the end of the meeting, see includes/absences.php). */
 function format_record_time(array $r) {
     if (($r['status'] ?? '') === 'Absent') return format_date($r['time_in']) . ' · no check-in';
+    if (!empty($r['marked_by_user_id'])) return format_date($r['time_in']) . ' · marked by teacher';   // a teacher override, not a scan
     return format_datetime($r['time_in']);
 }
 

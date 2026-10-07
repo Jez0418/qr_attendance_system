@@ -48,7 +48,7 @@ $subjectRows = $bySubject->fetchAll();
 
 // Detail rows (for the table + export)
 $detailStmt = $pdo->prepare("
-    SELECT ar.time_in, ar.status, st.full_name, st.student_number, sub.subject_name, lab.lab_name, tch.full_name AS teacher_name
+    SELECT ar.time_in, ar.status, ar.marked_by_user_id, st.full_name, st.student_number, sub.subject_name, lab.lab_name, tch.full_name AS teacher_name
     $baseQuery ORDER BY ar.time_in DESC LIMIT 300
 ");
 $detailStmt->execute($params);
