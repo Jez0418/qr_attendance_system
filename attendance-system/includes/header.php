@@ -21,6 +21,47 @@ $notifPage = [
     'student' => 'student/notifications.php',
 ][$_SESSION['role'] ?? ''] ?? 'index.php';
 
+// Short muted line under the page title (a page can set $pageSubtitle itself to override).
+$subtitleMap = [
+    'admin' => [
+        'dashboard.php' => 'Attendance overview across all laboratories',
+        'students.php' => 'Create and manage student accounts',
+        'teachers.php' => 'Create and manage teacher accounts',
+        'subjects.php' => 'Manage the subjects offered',
+        'laboratories.php' => 'Manage laboratories and their GPS location',
+        'assignments.php' => 'Link subjects, teachers and laboratories to classes',
+        'schedule.php' => 'Weekly meetings, cancellations and reschedules',
+        'qr_management.php' => 'Open and close attendance sessions',
+        'attendance_monitoring.php' => 'Review every attendance record',
+        'enrollment_requests.php' => 'Review student enrollment requests',
+        'reports.php' => 'Attendance totals by subject, status and date',
+        'settings.php' => 'Late grace period and geofencing',
+        'notifications.php' => 'Your alerts and announcements',
+    ],
+    'teacher' => [
+        'dashboard.php' => "Your classes and today's attendance",
+        'subjects.php' => 'Subjects assigned to you',
+        'enrollment.php' => 'Enroll students in your classes',
+        'enrollment_requests.php' => 'Review requests to join your classes',
+        'session.php' => "Run attendance for today's classes",
+        'history.php' => 'Attendance records for your classes',
+        'late_students.php' => 'Students who arrived late',
+        'notifications.php' => 'Your alerts and announcements',
+        'class_view.php' => 'Class details and enrollment',
+    ],
+    'student' => [
+        'dashboard.php' => 'Your classes and recent attendance',
+        'browse_subjects.php' => 'Find classes you can join',
+        'my_requests.php' => 'Status of your enrollment requests',
+        'my_subjects.php' => 'Classes you are enrolled in',
+        'scanner.php' => 'Scan the QR code shown in the laboratory',
+        'history.php' => 'Your attendance records',
+        'profile.php' => 'Your account details',
+        'notifications.php' => 'Your alerts and announcements',
+    ],
+];
+$pageSubtitleText = $pageSubtitle ?? ($subtitleMap[$_SESSION['role'] ?? ''][basename($_SERVER['PHP_SELF'])] ?? '');
+
 // Top-right avatar photo. Read from the DB on every request (not cached in $_SESSION) so a photo
 // saved or removed on the profile page shows immediately. Admins have no photo column.
 $headerPhotoSrc = '';
@@ -44,7 +85,7 @@ if ($photoTable && !empty($_SESSION['profile_id'])) {
 <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
 <title><?php echo isset($pageTitle) ? e($pageTitle) . ' - ' . APP_NAME : APP_NAME; ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css">
 <?php echo theme_head_tags(); ?>
@@ -71,9 +112,10 @@ if ($photoTable && !empty($_SESSION['profile_id'])) {
             <button id="sidebarToggle" class="icon-btn" title="Toggle menu"><i class="fa-solid fa-bars"></i></button>
             <div class="topbar-title-block">
                 <h1 class="page-title"><?php echo e($pageTitle ?? ''); ?></h1>
-                <span class="page-subtitle"><?php echo date('l, F j, Y'); ?></span>
+                <?php if ($pageSubtitleText !== ''): ?><span class="page-subtitle"><?php echo e($pageSubtitleText); ?></span><?php endif; ?>
             </div>
             <div class="topbar-right">
+                <span class="date-chip"><i class="fa-regular fa-calendar" aria-hidden="true"></i> <?php echo date('D, M j, Y'); ?></span>
                 <?php echo theme_switcher(); ?>
                 <div class="notif-wrapper">
                     <a href="<?php echo BASE_URL . $notifPage; ?>" class="icon-btn notif-link" id="notifBellBtn">
@@ -92,7 +134,6 @@ if ($photoTable && !empty($_SESSION['profile_id'])) {
                         <span class="user-role"><?php echo e(ucfirst($_SESSION['role'] ?? '')); ?></span>
                     </div>
                 </div>
-                <a href="<?php echo BASE_URL; ?>logout.php" class="icon-btn" title="Logout" onclick="return confirm('Log out of your account?');"><i class="fa-solid fa-right-from-bracket"></i></a>
             </div>
         </header>
         <?php endif; ?>

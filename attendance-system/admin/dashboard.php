@@ -158,7 +158,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="grid-2">
     <div class="card">
         <div class="card-header"><h3>Attendance Graph</h3></div>
-        <div class="card-body"><canvas id="trendChart" height="120"></canvas></div>
+        <div class="card-body"><div class="chart-box"><canvas id="trendChart"></canvas></div></div>
     </div>
     <div class="card">
         <div class="card-header"><h3>Recent Attendance Activity</h3></div>
@@ -204,11 +204,11 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="grid-2" style="margin-top:20px">
     <div class="card">
         <div class="card-header"><h3>Overall Status Distribution</h3></div>
-        <div class="card-body"><canvas id="statusChart" height="140"></canvas></div>
+        <div class="card-body"><div class="chart-box"><canvas id="statusChart"></canvas></div><p class="text-muted text-center chart-empty" hidden>No attendance records yet.</p></div>
     </div>
     <div class="card">
         <div class="card-header"><h3>Laboratory Usage Today</h3></div>
-        <div class="card-body"><canvas id="labChart" height="140"></canvas></div>
+        <div class="card-body"><div class="chart-box"><canvas id="labChart"></canvas></div></div>
     </div>
 </div>
 
@@ -327,7 +327,7 @@ function buildCharts() {
                     { label: 'Absent', data: trendData.absent, borderColor: c.red, backgroundColor: c.redFill, tension:.35, fill:true }
                 ]
             },
-            options: { responsive:true, plugins:{legend:{position:'bottom'}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} }
+            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16}}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} }
         }),
         new Chart(document.getElementById('statusChart'), {
             type: 'doughnut',
@@ -335,14 +335,20 @@ function buildCharts() {
                 labels: ['Present','Late','Absent'],
                 datasets: [{ data: statusData, backgroundColor: [c.green, c.amber, c.red], borderColor: c.surface }]
             },
-            options: { responsive:true, plugins:{legend:{position:'bottom'}} }
+            options: { responsive:true, maintainAspectRatio:false, cutout:'68%', plugins:{legend:{position:'bottom', labels:{usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16}}} }
         }),
         new Chart(document.getElementById('labChart'), {
             type: 'bar',
             data: { labels: labData.labels, datasets: [{ label:'Scans Today', data: labData.counts, backgroundColor: c.accent, borderRadius:6 }] },
-            options: { indexAxis:'y', responsive:true, plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true, ticks:{precision:0}}} }
+            options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{left:6}}, plugins:{legend:{display:false}},
+                scales:{x:{beginAtZero:true, ticks:{precision:0}}, y:{ticks:{callback(v){ const l = this.getLabelForValue(v).replace(/ ?Laborator(y|ies)/, ''); return l.length > 18 ? l.slice(0, 17) + '\u2026' : l; }}}} }
         })
     ];
+}
+// Nothing recorded yet: say so instead of drawing an empty ring.
+if (statusData.every(n => n === 0)) {
+    const box = document.getElementById('statusChart').closest('.chart-box');
+    box.hidden = true; box.nextElementSibling.hidden = false;
 }
 buildCharts();
 window.addEventListener('themechange', buildCharts);

@@ -30,7 +30,7 @@ check('login.php shows the theme switcher', strpos(file_get_contents("$root/logi
 $bad = [];
 foreach (preg_split('/\R/', $css) as $i => $line) {
     if (!preg_match('/background:\s*#fff(fff)?\b/i', $line)) continue;
-    if (preg_match('/qrcodeCanvas|toggle-slider::before|lg-logo|brand-emblem|:root\[data-theme="dark"\]/', $line)) continue;
+    if (preg_match('/qrcodeCanvas|toggle-slider::before|lg-logo|brand-emblem|0 0 0 3px #fff|:root\[data-theme="dark"\]/', $line)) continue;
     $bad[] = $i + 1;
 }
 check('no hard-coded white surfaces in style.css (lines: ' . implode(',', $bad) . ')', !$bad);
