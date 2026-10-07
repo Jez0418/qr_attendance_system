@@ -9,11 +9,11 @@ require_role('admin');
 $pageTitle = 'Attendance Monitoring';
 
 $search    = clean($_GET['search'] ?? '');
-$labId     = clean($_GET['lab_id'] ?? '');
-$subjectId = clean($_GET['subject_id'] ?? '');
-$status    = clean($_GET['status'] ?? '');
-$dateFrom  = clean($_GET['date_from'] ?? '');
-$dateTo    = clean($_GET['date_to'] ?? '');
+$labId     = id_param($_GET['lab_id'] ?? '');       // hand-edited junk in the URL is ignored instead of crashing the query
+$subjectId = id_param($_GET['subject_id'] ?? '');
+$status    = in_array($_GET['status'] ?? '', ['Present', 'Late', 'Absent'], true) ? $_GET['status'] : '';
+$dateFrom  = valid_ymd($_GET['date_from'] ?? '');
+$dateTo    = valid_ymd($_GET['date_to'] ?? '');
 
 $where = [];
 $params = [];

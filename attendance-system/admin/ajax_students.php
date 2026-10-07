@@ -66,9 +66,15 @@ try {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new Exception('Please provide a valid email address.');
         }
+        check_lengths(['Student number' => [$studentNumber, 30], 'Full name' => [$fullName, 150], 'Email' => [$email, 100],
+                       'Contact number' => [$contact, 20], 'Username' => [$username, 50]]);
         [$institutionId, $departmentId, $programId, $yearLevel, $section, $studentType] = read_academic_fields($pdo);
 
         $pdo->beginTransaction();
+
+        $numCheck = $pdo->prepare('SELECT COUNT(*) FROM students WHERE student_number = ?');
+        $numCheck->execute([$studentNumber]);
+        if ($numCheck->fetchColumn() > 0) throw new Exception('That student number is already registered.');
 
         $check = $pdo->prepare('SELECT COUNT(*) FROM users WHERE username = ? OR email = ?');
         $check->execute([$username, $email]);
@@ -104,6 +110,9 @@ try {
         if (!$studentId || $studentNumber === '' || $fullName === '' || $email === '' || $username === '') {
             throw new Exception('Please fill in all required fields.');
         }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new Exception('Please provide a valid email address.');
+        check_lengths(['Student number' => [$studentNumber, 30], 'Full name' => [$fullName, 150], 'Email' => [$email, 100],
+                       'Contact number' => [$contact, 20], 'Username' => [$username, 50]]);
         [$institutionId, $departmentId, $programId, $yearLevel, $section, $studentType] = read_academic_fields($pdo);
 
         $find = $pdo->prepare('SELECT user_id FROM students WHERE student_id = ?');
@@ -114,6 +123,9 @@ try {
         $check = $pdo->prepare('SELECT COUNT(*) FROM users WHERE (username = ? OR email = ?) AND user_id != ?');
         $check->execute([$username, $email, $userId]);
         if ($check->fetchColumn() > 0) throw new Exception('Username or email already used by another account.');
+        $numCheck = $pdo->prepare('SELECT COUNT(*) FROM students WHERE student_number = ? AND student_id != ?');
+        $numCheck->execute([$studentNumber, $studentId]);
+        if ($numCheck->fetchColumn() > 0) throw new Exception('That student number belongs to another student.');
 
         $pdo->beginTransaction();
 
@@ -135,6 +147,8 @@ try {
 
         log_activity($pdo, $_SESSION['user_id'], "Updated student: $fullName");
         $pdo->commit();
+        // A deactivated account or a new password must end any login that is already open.
+        if ($status === 'inactive' || $password !== '') destroy_user_sessions($pdo, (int) $userId);
         echo json_encode(['success' => true, 'message' => 'Student updated successfully.']);
 
     } elseif ($action === 'delete') {
@@ -161,6 +175,7 @@ try {
         }
 
         // Deleting the user cascades to students, enrollments, attendance_records via FK
+        destroy_user_sessions($pdo, (int) $row['user_id']);
         $del = $pdo->prepare('DELETE FROM users WHERE user_id = ?');
         $del->execute([$row['user_id']]);
 

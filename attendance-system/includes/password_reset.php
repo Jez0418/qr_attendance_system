@@ -111,9 +111,7 @@ function pwreset_complete(PDO $pdo, array $reset, string $password): bool {
         if ($use->rowCount() !== 1) { $pdo->rollBack(); return false; }   // someone else used it first
         $pdo->prepare('UPDATE users SET password = ? WHERE user_id = ?')
             ->execute([password_hash($password, PASSWORD_BCRYPT), $reset['user_id']]);
-        $uid = (int) $reset['user_id'];
-        $pdo->prepare('DELETE FROM php_sessions WHERE data LIKE ? OR data LIKE ?')
-            ->execute(['%user_id|i:' . $uid . ';%', '%user_id|s:' . strlen((string) $uid) . ':"' . $uid . '";%']);
+        destroy_user_sessions($pdo, (int) $reset['user_id']);
         $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();

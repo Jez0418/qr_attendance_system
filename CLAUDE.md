@@ -92,6 +92,10 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
 - Data passed to an inline handler (`onclick='fn(...)'`) must go through `js_attr_json()` (`includes/functions.php`), never plain
   `json_encode()`: a name with an apostrophe (Women's Health, D'Souza) would end the attribute and break the button.
   A student's free-text remark in that attribute was a script-injection route into teacher/admin sessions. `tests/inline_handler_test.php` fails if it comes back.
+- Free text going into a VARCHAR column: `log_activity()` (255) and `create_notification()` (150/500) cut it with `fit_text()`; admin forms use
+  `check_lengths()` for friendly errors. Deactivating, deleting or changing the password of a user must call `destroy_user_sessions()`
+  (sessions are DB rows on Vercel and `require_login()` does not re-check the account status). Query-string filters go through `id_param()` /
+  `valid_ymd()` so a hand-edited URL can't crash a query. Test: `php attendance-system/tests/admin_helpers_test.php`.
 - Demo logins are never shown on the login page unless `SHOW_DEMO_LOGINS=1`.
 - CSRF: `require_login()`/`require_role()` call `csrf_guard()`, so every POST of a logged-in user needs the session token.
   `ajaxPost()` (assets/js/app.js) sends it automatically (from `<meta name="csrf-token">` in header.php); every new

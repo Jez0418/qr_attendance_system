@@ -8,10 +8,10 @@
 require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
 
-$labId     = clean($_GET['lab_id'] ?? '');
-$subjectId = clean($_GET['subject_id'] ?? '');
-$dateFrom  = clean($_GET['date_from'] ?? date('Y-m-01'));
-$dateTo    = clean($_GET['date_to'] ?? date('Y-m-d'));
+$labId     = id_param($_GET['lab_id'] ?? '');       // hand-edited junk in the URL is ignored instead of crashing the query
+$subjectId = id_param($_GET['subject_id'] ?? '');
+$dateFrom  = valid_ymd($_GET['date_from'] ?? date('Y-m-01')) ?: date('Y-m-01');
+$dateTo    = valid_ymd($_GET['date_to'] ?? date('Y-m-d')) ?: date('Y-m-d');
 
 $where = ['DATE(ar.time_in) BETWEEN ? AND ?'];
 $params = [$dateFrom, $dateTo];

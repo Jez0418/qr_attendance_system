@@ -11,9 +11,9 @@ require_role('student');
 $pageTitle = 'Attendance History';
 
 $studentId = $_SESSION['profile_id'];
-$subjectId = clean($_GET['subject_id'] ?? '');
-$dateFrom = clean($_GET['date_from'] ?? '');
-$dateTo = clean($_GET['date_to'] ?? '');
+$subjectId = id_param($_GET['subject_id'] ?? '');
+$dateFrom = valid_ymd($_GET['date_from'] ?? '');
+$dateTo = valid_ymd($_GET['date_to'] ?? '');
 
 $where = ['ar.student_id = ?'];
 $params = [$studentId];

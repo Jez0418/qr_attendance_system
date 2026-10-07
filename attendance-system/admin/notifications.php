@@ -15,16 +15,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'broad
 
     if ($title === '' || $message === '') {
         set_flash('error', 'Title and message are required.');
+    } elseif (mb_strlen($title) > 150 || mb_strlen($message) > 500) {
+        set_flash('error', 'The title can have at most 150 characters and the message at most 500.');
     } else {
         $roleFilter = match ($target) {
             'teachers' => "role = 'teacher'",
             'students' => "role = 'student'",
             default => "role IN ('teacher','student')",
         };
-        $users = $pdo->query("SELECT user_id FROM users WHERE $roleFilter AND status='active'")->fetchAll();
-        foreach ($users as $u) create_notification($pdo, $u['user_id'], $title, $message);
-        log_activity($pdo, $_SESSION['user_id'], "Broadcast notification to $target: $title");
-        set_flash('success', 'Notification sent to ' . count($users) . ' user(s).');
+        try {
+            // One statement for everybody: all-or-nothing, and one round trip instead of one per user.
+            $send = $pdo->prepare("INSERT INTO notifications (user_id, title, message) SELECT user_id, CAST(? AS varchar), CAST(? AS varchar) FROM users WHERE $roleFilter AND status = 'active'");
+            $send->execute([$title, $message]);
+            log_activity($pdo, $_SESSION['user_id'], "Broadcast notification to $target: $title");
+            set_flash('success', 'Notification sent to ' . $send->rowCount() . ' user(s).');
+        } catch (PDOException $e) {
+            error_log('broadcast: ' . $e->getMessage());
+            set_flash('error', safe_error_message($e));
+        }
     }
     redirect('admin/notifications.php');
 }

@@ -23,8 +23,13 @@ try {
             throw new Exception('Please fill in all required fields.');
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new Exception('Please provide a valid email address.');
+        check_lengths(['Employee number' => [$empNo, 30], 'Full name' => [$fullName, 150], 'Department' => [$dept, 100],
+                       'Contact number' => [$contact, 20], 'Email' => [$email, 100], 'Username' => [$username, 50]]);
 
         $pdo->beginTransaction();
+        $numCheck = $pdo->prepare('SELECT COUNT(*) FROM teachers WHERE employee_number = ?');
+        $numCheck->execute([$empNo]);
+        if ($numCheck->fetchColumn() > 0) throw new Exception('That employee number is already registered.');
         $check = $pdo->prepare('SELECT COUNT(*) FROM users WHERE username = ? OR email = ?');
         $check->execute([$username, $email]);
         if ($check->fetchColumn() > 0) throw new Exception('Username or email already in use.');
@@ -56,6 +61,9 @@ try {
         if (!$teacherId || $empNo === '' || $fullName === '' || $email === '' || $username === '') {
             throw new Exception('Please fill in all required fields.');
         }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new Exception('Please provide a valid email address.');
+        check_lengths(['Employee number' => [$empNo, 30], 'Full name' => [$fullName, 150], 'Department' => [$dept, 100],
+                       'Contact number' => [$contact, 20], 'Email' => [$email, 100], 'Username' => [$username, 50]]);
 
         $find = $pdo->prepare('SELECT user_id FROM teachers WHERE teacher_id = ?');
         $find->execute([$teacherId]);
@@ -65,6 +73,9 @@ try {
         $check = $pdo->prepare('SELECT COUNT(*) FROM users WHERE (username = ? OR email = ?) AND user_id != ?');
         $check->execute([$username, $email, $userId]);
         if ($check->fetchColumn() > 0) throw new Exception('Username or email already used by another account.');
+        $numCheck = $pdo->prepare('SELECT COUNT(*) FROM teachers WHERE employee_number = ? AND teacher_id != ?');
+        $numCheck->execute([$empNo, $teacherId]);
+        if ($numCheck->fetchColumn() > 0) throw new Exception('That employee number belongs to another teacher.');
 
         $pdo->beginTransaction();
         if ($password !== '') {
@@ -80,6 +91,8 @@ try {
 
         log_activity($pdo, $_SESSION['user_id'], "Updated teacher: $fullName");
         $pdo->commit();
+        // A deactivated account or a new password must end any login that is already open.
+        if ($status === 'inactive' || $password !== '') destroy_user_sessions($pdo, (int) $userId);
         echo json_encode(['success' => true, 'message' => 'Teacher updated successfully.']);
 
     } elseif ($action === 'delete') {
@@ -97,6 +110,7 @@ try {
             throw new Exception("This teacher has $count class assignment(s). Set their account to Inactive instead of deleting it.");
         }
 
+        destroy_user_sessions($pdo, (int) $row['user_id']);
         $del = $pdo->prepare('DELETE FROM users WHERE user_id = ?');
         $del->execute([$row['user_id']]);
 

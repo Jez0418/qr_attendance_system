@@ -8,10 +8,10 @@ require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
 $pageTitle = 'Reports & Analytics';
 
-$labId     = clean($_GET['lab_id'] ?? '');
-$subjectId = clean($_GET['subject_id'] ?? '');
-$dateFrom  = clean($_GET['date_from'] ?? date('Y-m-01'));
-$dateTo    = clean($_GET['date_to'] ?? date('Y-m-d'));
+$labId     = id_param($_GET['lab_id'] ?? '');       // hand-edited junk in the URL is ignored instead of crashing the query
+$subjectId = id_param($_GET['subject_id'] ?? '');
+$dateFrom  = valid_ymd($_GET['date_from'] ?? date('Y-m-01')) ?: date('Y-m-01');
+$dateTo    = valid_ymd($_GET['date_to'] ?? date('Y-m-d')) ?: date('Y-m-d');
 
 $where = ['DATE(ar.time_in) BETWEEN ? AND ?'];
 $params = [$dateFrom, $dateTo];
@@ -84,7 +84,7 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="stat-grid" style="margin-top:20px">
-    <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-list-check"></i></div><div><div class="stat-value"><?php echo $totalScans; ?></div><div class="stat-label">Total Scans</div></div></div>
+    <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-list-check"></i></div><div><div class="stat-value"><?php echo $totalScans; ?></div><div class="stat-label">Total Records</div></div></div>
     <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-check"></i></div><div><div class="stat-value"><?php echo $counts['Present']; ?></div><div class="stat-label">Present</div></div></div>
     <div class="stat-card"><div class="stat-icon amber"><i class="fa-solid fa-clock"></i></div><div><div class="stat-value"><?php echo $counts['Late']; ?></div><div class="stat-label">Late</div></div></div>
     <div class="stat-card"><div class="stat-icon red"><i class="fa-solid fa-xmark"></i></div><div><div class="stat-value"><?php echo $counts['Absent']; ?></div><div class="stat-label">Absent</div></div></div>

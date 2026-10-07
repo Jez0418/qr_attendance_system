@@ -75,6 +75,28 @@ function valid_ymd($value): string {
     return $v;
 }
 
+/** A positive whole number from a query string as a digit string, or '' (a hand-edited ?lab_id=abc would crash the query). */
+function id_param($value): string {
+    $v = trim((string) $value);
+    return ctype_digit($v) && strlen($v) <= 9 && (int) $v > 0 ? (string) (int) $v : '';
+}
+
+/** Throw a friendly error when a value is longer than its database column: ['Username' => [$username, 50], ...]. */
+function check_lengths(array $fields): void {
+    foreach ($fields as $label => [$value, $max]) {
+        if (mb_strlen((string) $value) > $max) throw new Exception("$label must be at most $max characters.");
+    }
+}
+
+/**
+ * Sign a user out everywhere (sessions live in the php_sessions table on Vercel). Call it when an account is
+ * deactivated, deleted or gets a new password, otherwise an existing login would keep working.
+ */
+function destroy_user_sessions(PDO $pdo, int $userId): void {
+    $pdo->prepare('DELETE FROM php_sessions WHERE data LIKE ? OR data LIKE ?')
+        ->execute(['%user_id|i:' . $userId . ';%', '%user_id|s:' . strlen((string) $userId) . ':"' . $userId . '";%']);
+}
+
 /** Escape output to prevent XSS */
 function e($value) {
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
@@ -111,10 +133,16 @@ function generate_token($length = 32) {
     return bin2hex(random_bytes($length / 2));
 }
 
-/** Insert a notification for a given user_id */
+/** Cut text to at most $max characters (ending in "…"), so a long free-text reason can't overflow a VARCHAR column. */
+function fit_text($text, int $max): string {
+    $text = (string) $text;
+    return mb_strlen($text) <= $max ? $text : mb_substr($text, 0, $max - 1) . '…';
+}
+
+/** Insert a notification for a given user_id (title column: 150 characters, message: 500) */
 function create_notification(PDO $pdo, $userId, $title, $message) {
     $stmt = $pdo->prepare('INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)');
-    $stmt->execute([$userId, $title, $message]);
+    $stmt->execute([$userId, fit_text($title, 150), fit_text($message, 500)]);
 }
 
 /** Count unread notifications for the currently logged-in user */
@@ -127,7 +155,7 @@ function unread_notification_count(PDO $pdo, $userId) {
 /** Log an action to activity_logs (simple audit trail) */
 function log_activity(PDO $pdo, $userId, $action) {
     $stmt = $pdo->prepare('INSERT INTO activity_logs (user_id, action) VALUES (?, ?)');
-    $stmt->execute([$userId, $action]);
+    $stmt->execute([$userId, fit_text($action, 255)]);   // the column holds 255 characters; a long reason must not make the action fail
 }
 
 /** Format a MySQL datetime nicely for display */
