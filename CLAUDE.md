@@ -114,8 +114,13 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
 - `assets/js/theme.js` (loaded in `<head>` through `theme_head_tags()` in `includes/theme.php`) sets `<html data-theme="light|dark">` before first paint.
   The choice (`light|dark|system`, default system) lives in `localStorage` per browser: no database. The switcher button comes from
   `theme_switcher()` (top bar in `header.php`, floating on `login.php` / `auth_page.php`). Any new full-page shell must call both.
-- Colours: `style.css` `:root` tokens; `:root[data-theme="dark"]` at the end of the file flips the slate greys and tints. Use `var(--surface)`
-  for card/modal/input backgrounds (never `#fff`) and the variables for text colours; `tests/theme_test.php` fails on a hard-coded white surface.
+- Colours: `style.css` `:root` tokens; `:root[data-theme="dark"]` at the end of the file redefines the tokens (backdrop `--bg-grad`, `--panel`,
+  `--canvas`, `--surface`, `--line`, the slate scale, status `--*-100` tints and `--*-fg` text colours). Use `var(--surface)` for card/modal/input
+  backgrounds (never `#fff`) and the variables for text colours; `tests/theme_test.php` fails on a hard-coded white surface.
+- Layout/look: a soft blue backdrop with two floating white panels (fixed sidebar, then the main panel = top bar + `--canvas` area holding white cards).
+  Sidebar links carry `.nav-label` section headings (labels only, same links). Shape rule: panels 24px, cards 20px, inputs 12px, buttons/badges/chips are
+  pills. Font: Plus Jakarta Sans (Google Fonts, already allowed by the CSP). Status colours: Present green, Late orange, Absent red.
+  The top-bar subtitle comes from `$pageSubtitle` or the map in `includes/header.php`. Chart.js needs a sized `.chart-box` and `maintainAspectRatio:false`.
 - Chart.js: build charts in a function that starts with `const c = themeChartDefaults();` and rebuild on `window` `themechange` (see `admin/dashboard.php`).
 - Admin dashboard: "Recent Attendance Activity" and the 7-day graph include Absent records ("was absent from <subject>"); "Laboratory Usage Today"
   counts scans only (`ar.status <> "Absent"`).

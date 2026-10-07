@@ -93,11 +93,11 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="grid-2">
     <div class="card">
         <div class="card-header"><h3>Attendance by Subject</h3></div>
-        <div class="card-body"><canvas id="subjectChart" height="140"></canvas></div>
+        <div class="card-body"><div class="chart-box"><canvas id="subjectChart"></canvas></div></div>
     </div>
     <div class="card">
         <div class="card-header"><h3>Status Share</h3></div>
-        <div class="card-body"><canvas id="shareChart" height="140"></canvas></div>
+        <div class="card-body"><div class="chart-box"><canvas id="shareChart"></canvas></div><p class="text-muted text-center chart-empty" hidden>No attendance records yet.</p></div>
     </div>
 </div>
 
@@ -151,14 +151,18 @@ function buildCharts() {
                     { label:'Absent', data: subjectData.absent, backgroundColor: c.red }
                 ]
             },
-            options: { responsive:true, plugins:{legend:{position:'bottom'}}, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}} }
+            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16}}}, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}} }
         }),
         new Chart(document.getElementById('shareChart'), {
             type: 'pie',
             data: { labels:['Present','Late','Absent'], datasets:[{ data: shareData, backgroundColor:[c.green, c.amber, c.red], borderColor: c.surface }] },
-            options: { responsive:true, plugins:{legend:{position:'bottom'}} }
+            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16}}} }
         })
     ];
+}
+if (shareData.every(n => n === 0)) {
+    const box = document.getElementById('shareChart').closest('.chart-box');
+    box.hidden = true; box.nextElementSibling.hidden = false;
 }
 buildCharts();
 window.addEventListener('themechange', buildCharts);
