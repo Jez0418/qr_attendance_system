@@ -5,7 +5,8 @@
  * Marks students ABSENT when a class meeting ends without them scanning.
  *
  * Who: when a session's session_end has passed, every student who was enrolled (status 'enrolled',
- * enrolled before the meeting started) and has no attendance record for that session gets an
+ * enrolled before the meeting ended, so one added a few minutes after the start still counts because
+ * they could still scan) and has no attendance record for that session gets an
  * 'Absent' record. Only meetings that had a session are touched: if nobody ever opened attendance
  * there was no QR to scan, so the class is not marked absent (meeting didn't run, lab had no GPS...).
  *
@@ -54,7 +55,7 @@ function mark_absent_for_ended_sessions(PDO $pdo): int {
                 FROM attendance_sessions s
                 JOIN enrollments e ON e.teacher_subject_id = s.teacher_subject_id
                 WHERE e.status = 'enrolled'
-                  AND (e.enrolled_at IS NULL OR e.enrolled_at <= COALESCE(s.scheduled_start, s.session_end))
+                  AND (e.enrolled_at IS NULL OR e.enrolled_at <= s.session_end)
                   AND s.session_end IS NOT NULL
                   AND s.session_end > CAST(? AS timestamp)
                   AND s.session_end <= CAST(? AS timestamp)

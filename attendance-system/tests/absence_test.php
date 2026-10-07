@@ -41,5 +41,11 @@ foreach ($must as $file => $needle) {
     check("$file ignores Absent in its counts", strpos(file_get_contents(__DIR__ . '/../' . $file), $needle) !== false);
 }
 
+// A student enrolled after the meeting started (but before it ended) could still scan, so must still be
+// marked absent. Comparing against scheduled_start silently skipped them.
+$sql = file_get_contents(__DIR__ . '/../includes/absences.php');
+check('absence marking counts students enrolled during the meeting', strpos($sql, 'e.enrolled_at <= s.session_end') !== false);
+check('absence marking does not require enrolment before the meeting start', strpos($sql, 'enrolled_at <= COALESCE(s.scheduled_start') === false);
+
 echo $fail ? "\n$fail FAILED\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);
