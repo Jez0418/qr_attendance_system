@@ -82,6 +82,8 @@ Optional: `SHOW_DEMO_LOGINS=1` shows demo logins on the login page (local testin
 | `DB_HOST`, `DB_PORT` | Supabase **Session pooler** host and port 5432 (6543 = transaction pooler) |
 | `DB_NAME` / `DB_USER` / `DB_PASS` | `postgres` / `postgres.<project-ref>` / your database password |
 | `DB_SSL` | `1` |
+| `MAIL_API_KEY`, `MAIL_FROM`, `MAIL_FROM_NAME` | Brevo API key and a sender address verified in Brevo; used by "Forgot password" (without them the reset page says email is not set up) |
+| `APP_URL` | optional, public address used in reset links (e.g. `https://yourapp.vercel.app`); defaults to Vercel's production URL |
 | `QR_SECRET_KEY` | long random string (`php -r "echo bin2hex(random_bytes(32));"`); if unset a key is derived from the DB credentials |
 
 After changing variables, redeploy. Never commit real values (`.env` is git-ignored).

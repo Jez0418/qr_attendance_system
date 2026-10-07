@@ -81,6 +81,11 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   `ajaxPost()` (assets/js/app.js) sends it automatically (from `<meta name="csrf-token">` in header.php); every new
   `<form method="POST">` MUST contain `<?php echo csrf_field(); ?>` (tests/security_test.php fails otherwise). Never
   call `fetch()` with POST directly: use `ajaxPost()`.
+- Forgot password (`forgot_password.php` -> emailed link -> `reset_password.php`, logic in `includes/password_reset.php`, table
+  `password_resets` from `database/supabase_password_resets.sql`): token = 32 random bytes, only its SHA-256 is stored, valid 1 h and
+  once, 3 links/account/h + 10/IP/h, same answer for unknown accounts. Email goes out through Brevo's HTTPS API (`includes/mailer.php`;
+  env `MAIL_API_KEY`, `MAIL_FROM`, optional `MAIL_FROM_NAME`, `APP_URL`). A reset signs the account out everywhere (deletes its
+  `php_sessions` rows). Accounts need a REAL email: seed/demo accounts have placeholders. Test: `php attendance-system/tests/password_reset_test.php`.
 - Login lockout (`includes/login_throttle.php`, table `login_attempts` from `database/supabase_login_attempts.sql`):
   5 failures/15 min per username, 50/15 min per IP. Fails open if the table is missing. Unlock:
   `DELETE FROM login_attempts WHERE username_key = '...';`

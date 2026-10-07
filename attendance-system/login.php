@@ -64,6 +64,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <section class="lg-card" aria-labelledby="lgTitle">
         <h2 id="lgTitle" class="lg-sr">Sign in</h2>
 
+        <?php if ($flash = get_flash()): ?>
+            <div class="lg-alert<?php echo $flash['type'] === 'success' ? ' ok' : ''; ?>" role="status"><i class="fa-solid fa-circle-<?php echo $flash['type'] === 'success' ? 'check' : 'exclamation'; ?>" aria-hidden="true"></i> <span><?php echo e($flash['message']); ?></span></div>
+        <?php endif; ?>
         <?php foreach ($errors as $err): ?>
             <div class="lg-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> <span><?php echo e($err); ?></span></div>
         <?php endforeach; ?>
@@ -89,6 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="lg-label-row">
                     <label for="password">Password</label>
                     <span class="lg-hint" id="pwHint"></span>
+                    <a class="lg-link" href="<?php echo BASE_URL; ?>forgot_password.php">Forgot password?</a>
                 </div>
                 <div class="lg-input">
                     <i class="fa-solid fa-lock" aria-hidden="true"></i>
