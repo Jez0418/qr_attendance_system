@@ -105,11 +105,8 @@ require_once __DIR__ . '/../includes/header.php';
     $isFull = $slotsLeft <= 0;
     $isEnrolled = $c['my_enrollment_status'] === 'enrolled';
     $isPending = !empty($c['my_pending_request']);
-    $offCohort = $isIrregular && (
-        (!empty($c['institution_id']) && (int) $c['institution_id'] !== (int) $me['institution_id'])
-        || (!empty($c['program_id']) && (int) $c['program_id'] !== (int) $me['program_id'])
-        || (int) $c['year_level'] !== (int) $me['year_level']
-        || section_key($c['section']) !== $mySection);
+    // Same rule the server uses (a regular student would be refused this class), so the badge never disagrees with it.
+    $offCohort = $isIrregular && class_cohort_mismatch(array_merge($me, ['student_type' => 'regular']), $c) !== '';
 ?>
     <div class="card">
         <div class="card-body">
@@ -134,7 +131,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php elseif ($isFull): ?>
                     <button class="btn btn-outline btn-block" disabled>Subject Full</button>
                 <?php else: ?>
-                    <button class="btn btn-primary btn-block" onclick='openRequestModal(<?php echo json_encode($c); ?>)'><i class="fa-solid fa-paper-plane"></i> Request Enrollment</button>
+                    <button class="btn btn-primary btn-block" onclick='openRequestModal(<?php echo js_attr_json(array_intersect_key($c, array_flip(['teacher_subject_id', 'subject_code', 'subject_name', 'teacher_name', 'lab_name', 'schedule_label']))); ?>)'><i class="fa-solid fa-paper-plane"></i> Request Enrollment</button>
                 <?php endif; ?>
             </div>
         </div>
@@ -166,7 +163,7 @@ require_once __DIR__ . '/../includes/header.php';
 
                 <div class="form-group" style="margin-top:16px">
                     <label>Reason / Remarks (optional)</label>
-                    <textarea name="remarks" id="req_remarks" class="form-control" rows="3" placeholder="e.g. This subject is part of my current semester schedule."></textarea>
+                    <textarea name="remarks" id="req_remarks" class="form-control" rows="3" maxlength="500" placeholder="e.g. This subject is part of my current semester schedule."></textarea>
                 </div>
 
                 <div class="alert alert-info" style="margin-bottom:0"><i class="fa-solid fa-circle-info"></i> Please verify that the information above is correct before submitting your enrollment request.</div>

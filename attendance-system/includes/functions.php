@@ -60,6 +60,14 @@ function csrf_guard(): void {
     die('<div style="font-family:sans-serif;padding:60px;text-align:center"><h1>Request blocked</h1><p>' . $msg . '</p><a href="javascript:history.back()">Go back</a></div>');
 }
 
+/**
+ * JSON for an inline handler such as onclick='fn(<?php echo js_attr_json($data); ?>)'. Plain json_encode()
+ * leaves ' and " alone, so a name like O'Brien ends the attribute early and breaks the button (or worse).
+ */
+function js_attr_json($data): string {
+    return json_encode($data, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
+}
+
 /** Escape output to prevent XSS */
 function e($value) {
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');

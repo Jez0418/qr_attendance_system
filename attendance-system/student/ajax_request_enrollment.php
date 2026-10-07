@@ -20,6 +20,7 @@ try {
     $classId = (int) ($_POST['teacher_subject_id'] ?? 0);
     $remarks = clean($_POST['remarks'] ?? '');
     if (!$classId) throw new Exception('Invalid subject.');
+    if (mb_strlen($remarks) > 500) throw new Exception('Remarks must be at most 500 characters.');
 
     $classStmt = $pdo->prepare('SELECT * FROM teacher_subjects WHERE teacher_subject_id = ? AND status = "active"');
     $classStmt->execute([$classId]);
@@ -35,6 +36,11 @@ try {
     $student = $studentStmt->fetch();
     [$eligible, $reason] = student_eligible_for_class($student, $class);
     if (!$eligible) throw new Exception($reason);
+
+    // One request at a time per student and class: the pending check and the insert below must not interleave
+    // with a second click or tab (the table has no unique index for this).
+    $pdo->beginTransaction();
+    $pdo->prepare('SELECT pg_advisory_xact_lock(hashtext(?))')->execute(['enroll-request:' . $studentId . ':' . $classId]);
 
     // Rule 2: already enrolled?
     $enrolledCheck = $pdo->prepare('SELECT COUNT(*) FROM enrollments WHERE student_id = ? AND teacher_subject_id = ? AND status = "enrolled"');
@@ -79,18 +85,18 @@ try {
     $ins->execute([$studentId, $classId, $remarks !== '' ? $remarks : null]);
 
     // Notify the teacher who owns this class
-    $teacherUser = $pdo->prepare('SELECT u.user_id FROM teachers t JOIN users u ON u.user_id = t.user_id WHERE t.teacher_id = ?');
-    $teacherUser->execute([$class['teacher_id']]);
-    $teacherUserId = $teacherUser->fetchColumn();
-    if ($teacherUserId) {
-        create_notification($pdo, $teacherUserId, 'New Enrollment Request', $_SESSION['full_name'] . ' has requested to enroll in one of your classes.');
+    $teacherUser = $pdo->prepare('SELECT u.user_id, sub.subject_code, sub.subject_name FROM teachers t JOIN users u ON u.user_id = t.user_id, subjects sub WHERE t.teacher_id = ? AND sub.subject_id = ?');
+    $teacherUser->execute([$class['teacher_id'], $class['subject_id']]);
+    if ($t = $teacherUser->fetch()) {
+        create_notification($pdo, $t['user_id'], 'New Enrollment Request',
+            $_SESSION['full_name'] . ' requested to enroll in ' . $t['subject_code'] . ' - ' . $t['subject_name'] . ' (' . $class['section'] . ').');
     }
 
     log_activity($pdo, $_SESSION['user_id'], "Requested enrollment in class #$classId");
+    $pdo->commit();
     echo json_encode(['success' => true, 'message' => 'Enrollment request submitted. You will be notified once the teacher reviews it.']);
 
-} catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => safe_error_message($e)]);
-} catch (PDOException $e) {
+} catch (Exception $e) {   // also catches PDOException (safe_error_message hides its details)
+    if ($pdo->inTransaction()) $pdo->rollBack();
     echo json_encode(['success' => false, 'message' => safe_error_message($e)]);
 }

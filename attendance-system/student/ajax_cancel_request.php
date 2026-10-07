@@ -21,7 +21,10 @@ try {
     if (!$row) throw new Exception('Request not found.');
     if ($row['status'] !== 'pending') throw new Exception('Only a pending request can be cancelled.');
 
-    $pdo->prepare('UPDATE enrollment_requests SET status = "cancelled", reviewed_at = NOW() WHERE request_id = ?')->execute([$requestId]);
+    // AND status = 'pending': if a teacher approved it a moment ago, this must not flip it to cancelled.
+    $cancel = $pdo->prepare("UPDATE enrollment_requests SET status = 'cancelled', reviewed_at = NOW() WHERE request_id = ? AND student_id = ? AND status = 'pending'");
+    $cancel->execute([$requestId, $studentId]);
+    if ($cancel->rowCount() !== 1) throw new Exception('This request was just reviewed, so it can no longer be cancelled. Reload the page.');
     log_activity($pdo, $_SESSION['user_id'], "Cancelled enrollment request #$requestId");
 
     echo json_encode(['success' => true, 'message' => 'Request cancelled.']);

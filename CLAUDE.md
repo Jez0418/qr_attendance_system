@@ -89,6 +89,8 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   via `config.php`. If a page needs a new external script/style/font host (or camera/location elsewhere), add it there. Test:
   `php attendance-system/tests/security_headers_test.php`. `QR_SECRET_KEY` unset = warning in the Vercel log + red banner for admins
   (it still works with a key derived from the DB credentials, but a DB password change would then break every QR).
+- Data passed to an inline handler (`onclick='fn(...)'`) must go through `js_attr_json()` (`includes/functions.php`), never plain
+  `json_encode()`: a name with an apostrophe (Women's Health, D'Souza) would end the attribute and break the button.
 - Demo logins are never shown on the login page unless `SHOW_DEMO_LOGINS=1`.
 - CSRF: `require_login()`/`require_role()` call `csrf_guard()`, so every POST of a logged-in user needs the session token.
   `ajaxPost()` (assets/js/app.js) sends it automatically (from `<meta name="csrf-token">` in header.php); every new
