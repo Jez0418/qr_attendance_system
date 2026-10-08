@@ -52,22 +52,7 @@ function mark_absent_for_ended_sessions(PDO $pdo): int {
             $from = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ?');
             $from->execute([ABSENCE_WATERMARK_KEY]);
             $until = (string) $pdo->query('SELECT NOW()::timestamp(0)')->fetchColumn();
-
-            $ins = $pdo->prepare("
-                INSERT INTO attendance_records (session_id, student_id, time_in, status)
-                SELECT s.session_id, e.student_id, s.session_end, 'Absent'
-                FROM attendance_sessions s
-                JOIN enrollments e ON e.teacher_subject_id = s.teacher_subject_id
-                WHERE e.status = 'enrolled'
-                  AND (e.enrolled_at IS NULL OR e.enrolled_at <= s.session_end)
-                  AND s.session_end IS NOT NULL
-                  AND s.session_end > CAST(? AS timestamp)
-                  AND s.session_end <= CAST(? AS timestamp)
-                ON CONFLICT (session_id, student_id) DO NOTHING
-                RETURNING session_id, student_id
-            ");
-            $ins->execute([(string) $from->fetchColumn(), $until]);
-            $added = $ins->fetchAll();
+            $added = insert_absent_records($pdo, (string) $from->fetchColumn(), $until);
 
             set_setting($pdo, ABSENCE_WATERMARK_KEY, $until);   // also refreshes updated_at (the once-a-minute throttle)
             $pdo->commit();
@@ -82,6 +67,37 @@ function mark_absent_for_ended_sessions(PDO $pdo): int {
         error_log('mark_absent_for_ended_sessions: ' . $e->getMessage());
         return 0;
     }
+}
+
+/**
+ * The rule itself: an Absent record for every student enrolled (by the meeting's end) with no record, in each
+ * session whose session_end is in ($after, $until]. Returns the inserted rows (session_id, student_id).
+ * $sessionIds / $studentIds narrow it further (tests/demo_seed.php replays past meetings one at a time).
+ */
+function insert_absent_records(PDO $pdo, string $after, string $until, array $sessionIds = [], array $studentIds = []): array {
+    $only = '';
+    $params = [$after, $until];
+    foreach (['s.session_id' => $sessionIds, 'e.student_id' => $studentIds] as $col => $ids) {
+        if (!$ids) continue;
+        $only .= " AND $col = ANY(CAST(? AS int[]))";
+        $params[] = '{' . implode(',', array_map('intval', $ids)) . '}';
+    }
+    $ins = $pdo->prepare("
+        INSERT INTO attendance_records (session_id, student_id, time_in, status)
+        SELECT s.session_id, e.student_id, s.session_end, 'Absent'
+        FROM attendance_sessions s
+        JOIN enrollments e ON e.teacher_subject_id = s.teacher_subject_id
+        WHERE e.status = 'enrolled'
+          AND (e.enrolled_at IS NULL OR e.enrolled_at <= s.session_end)
+          AND s.session_end IS NOT NULL
+          AND s.session_end > CAST(? AS timestamp)
+          AND s.session_end <= CAST(? AS timestamp)
+          $only
+        ON CONFLICT (session_id, student_id) DO NOTHING
+        RETURNING session_id, student_id
+    ");
+    $ins->execute($params);
+    return $ins->fetchAll();
 }
 
 /**
