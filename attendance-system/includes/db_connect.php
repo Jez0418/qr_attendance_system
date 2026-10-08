@@ -43,8 +43,8 @@ class AppPDO extends PDO {
     }
 }
 
-/** Open a connection (shared by the app and the DB session handler). */
-function app_connect() {
+/** Open a connection (shared by the app and the DB session handler). $class: an AppPDO subclass (tests/demo_common.php). */
+function app_connect(string $class = AppPDO::class) {
     $dsn = 'pgsql:host=' . DB_HOST . ';port=' . DB_PORT . ';dbname=' . DB_NAME
          . (DB_SSL ? ';sslmode=require' : '');
     $opts = [
@@ -54,7 +54,7 @@ function app_connect() {
         // support, so emulate them client-side in that case.
         PDO::ATTR_EMULATE_PREPARES   => (DB_PORT == 6543),
     ];
-    $pdo = new AppPDO($dsn, DB_USER, DB_PASS, $opts);
+    $pdo = new $class($dsn, DB_USER, DB_PASS, $opts);
     $pdo->exec("SET TIME ZONE 'Asia/Manila'"); // keep NOW()/CURRENT_DATE in the app's timezone
     return $pdo;
 }

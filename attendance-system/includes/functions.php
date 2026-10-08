@@ -191,17 +191,39 @@ function paginate($totalRows, $perPage = 10) {
     return ['offset' => $offset, 'limit' => $perPage, 'page' => $page, 'totalPages' => $totalPages];
 }
 
+/**
+ * The page numbers a pager shows: the first and last page and two either side of the current one, so a
+ * long list stays one short row. 0 marks a gap (shown as an ellipsis); a gap of a single page shows that page.
+ */
+function pagination_pages(int $page, int $totalPages): array {
+    $pages = [];
+    $last = 0;
+    for ($i = 1; $i <= $totalPages; $i++) {
+        if ($i !== 1 && $i !== $totalPages && abs($i - $page) > 2) continue;
+        if ($last && $i - $last === 2) $pages[] = $last + 1;
+        elseif ($last && $i - $last > 2) $pages[] = 0;
+        $pages[] = $i;
+        $last = $i;
+    }
+    return $pages;
+}
+
 /** Render pagination links (keeps existing query string filters) */
 function render_pagination($page, $totalPages) {
     if ($totalPages <= 1) return;
     $params = $_GET;
-    echo '<nav><ul class="pagination">';
-    for ($i = 1; $i <= $totalPages; $i++) {
-        $params['page'] = $i;
-        $qs = http_build_query($params);
-        $active = $i === $page ? 'active' : '';
-        echo "<li class=\"page-item $active\"><a class=\"page-link\" href=\"?$qs\">$i</a></li>";
+    $link = function (int $to, string $label, string $class = '', string $attrs = '') use ($params) {
+        $params['page'] = $to;
+        $href = e('?' . http_build_query($params));
+        echo "<li class=\"page-item $class\"><a class=\"page-link\" href=\"$href\"$attrs>$label</a></li>";
+    };
+    echo '<nav aria-label="Pages"><ul class="pagination">';
+    if ($page > 1) $link($page - 1, '&lsaquo;', '', ' aria-label="Previous page"');
+    foreach (pagination_pages($page, $totalPages) as $i) {
+        if ($i === 0) echo '<li class="page-item disabled"><span class="page-link">…</span></li>';
+        else $link($i, (string) $i, $i === $page ? 'active' : '', $i === $page ? ' aria-current="page"' : '');
     }
+    if ($page < $totalPages) $link($page + 1, '&rsaquo;', '', ' aria-label="Next page"');
     echo '</ul></nav>';
 }
 
