@@ -464,6 +464,8 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
     .mobile-bottom-nav a i{font-size:17px}
     .mobile-bottom-nav a.active{color:var(--indigo-600)}
     body.has-bottom-nav .page-content{padding-bottom:96px}
+    /* The open menu stops above the bottom nav so its Logout link isn't hidden behind it */
+    body.has-bottom-nav .sidebar{bottom:86px}
 }
 
 /* Mobile responsiveness */
