@@ -7,8 +7,13 @@
  * Who: when a session's session_end has passed, every student who was enrolled (status 'enrolled',
  * enrolled before the meeting ended, so one added a few minutes after the start still counts because
  * they could still scan) and has no attendance record for that session gets an
- * 'Absent' record. Only meetings that had a session are touched: if nobody ever opened attendance
- * there was no QR to scan, so the class is not marked absent (meeting didn't run, lab had no GPS...).
+ * 'Absent' record.
+ *
+ * Meetings nobody opened: a session is normally created when someone loads the teacher/admin QR page
+ * or scans during the meeting (qr/session_manager.php). If nobody did, create_missed_sessions() adds a
+ * CLOSED session for that scheduled meeting once it has ended, so its students are marked absent like
+ * any other meeting (the teacher can change Absent to Present). Not for cancelled meetings, inactive
+ * classes or labs without GPS coordinates (attendance can't run there at all).
  *
  * When: there is no cron job on Vercel, so it runs lazily from require_login() (includes/auth.php),
  * at most once a minute. The settings row `absence_processed_until` remembers how far it got. The
@@ -51,8 +56,10 @@ function mark_absent_for_ended_sessions(PDO $pdo): int {
 
             $from = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ?');
             $from->execute([ABSENCE_WATERMARK_KEY]);
+            $after = (string) $from->fetchColumn();
             $until = (string) $pdo->query('SELECT NOW()::timestamp(0)')->fetchColumn();
-            $added = insert_absent_records($pdo, (string) $from->fetchColumn(), $until);
+            create_missed_sessions($pdo, $after, $until);
+            $added = insert_absent_records($pdo, $after, $until);
 
             set_setting($pdo, ABSENCE_WATERMARK_KEY, $until);   // also refreshes updated_at (the once-a-minute throttle)
             $pdo->commit();
@@ -67,6 +74,77 @@ function mark_absent_for_ended_sessions(PDO $pdo): int {
         error_log('mark_absent_for_ended_sessions: ' . $e->getMessage());
         return 0;
     }
+}
+
+/**
+ * Pure (no database): the meetings that ended in ($after, $until] and still need a session.
+ * $occurrences come from get_occurrences(); $sessions = existing sessions (teacher_subject_id, scheduled_start,
+ * session_end): a session of the same class that overlaps the meeting counts as its session (older sessions
+ * were opened by hand at other times than the scheduled start); $labsWithGps = lab_id => true.
+ */
+function select_missed_meetings(array $occurrences, array $sessions, array $labsWithGps, string $after, string $until): array {
+    $after = new DateTimeImmutable($after, schedule_tz());
+    $until = new DateTimeImmutable($until, schedule_tz());
+    $taken = [];
+    foreach ($sessions as $s) {
+        if ($s['scheduled_start'] === null) continue;
+        $start = strtotime($s['scheduled_start']);
+        $taken[(int) $s['teacher_subject_id']][] = [$start, $s['session_end'] !== null ? strtotime($s['session_end']) : $start];
+    }
+    $out = [];
+    foreach ($occurrences as $occ) {
+        if (!empty($occ['is_cancelled']) || empty($labsWithGps[(int) $occ['lab_id']])) continue;
+        $end = new DateTimeImmutable($occ['ends_at'], schedule_tz());
+        if ($end <= $after || $end > $until) continue;
+        $class = (int) $occ['teacher_subject_id'];
+        $start = strtotime($occ['starts_at']);
+        $endTs = strtotime($occ['ends_at']);
+        foreach ($taken[$class] ?? [] as [$sStart, $sEnd]) {
+            if ($sStart === $start || ($sStart < $endTs && $start < $sEnd)) continue 2;
+        }
+        $taken[$class][] = [$start, $endTs];   // a meeting listed twice still gets one session
+        $out[] = $occ;
+    }
+    return $out;
+}
+
+/**
+ * For every scheduled meeting that ended in ($after, $until] without a session, insert a CLOSED one
+ * (is_active 0, closed at the meeting's end, fresh QR token, no "Attendance Open" notice: it is too late
+ * to scan). insert_absent_records() then marks its students absent. Returns the new session ids.
+ * Runs inside the caller's transaction and advisory lock (mark_absent_for_ended_sessions()).
+ */
+function create_missed_sessions(PDO $pdo, string $after, string $until): array {
+    require_once __DIR__ . '/../qr/session_manager.php';
+    $fromDate = schedule_now($after)->format('Y-m-d');
+    $toDate = schedule_now($until)->format('Y-m-d');
+    $occurrences = get_occurrences($pdo, $fromDate, $toDate, ['include_cancelled' => false]);
+    if (!$occurrences) return [];
+
+    $st = $pdo->prepare('SELECT teacher_subject_id, scheduled_start, session_end FROM attendance_sessions WHERE session_date BETWEEN ? AND ?');
+    $st->execute([$fromDate, $toDate]);
+    $existing = $st->fetchAll();
+    $labs = [];
+    foreach ($pdo->query('SELECT lab_id, allowed_radius_meters FROM laboratories WHERE latitude IS NOT NULL AND longitude IS NOT NULL')->fetchAll() as $r) {
+        $labs[(int) $r['lab_id']] = (int) $r['allowed_radius_meters'];
+    }
+
+    $ins = $pdo->prepare("
+        INSERT INTO attendance_sessions
+            (teacher_subject_id, session_date, qr_token, scheduled_start, session_end, late_threshold_minutes,
+             allowed_radius_meters, is_active, activated_by, created_by_role, created_by_user_id, deactivated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, 'teacher', NULL, ?)
+        RETURNING session_id
+    ");
+    $ids = [];
+    foreach (select_missed_meetings($occurrences, $existing, array_map(fn() => true, $labs), $after, $until) as $occ) {
+        $ins->execute([
+            $occ['teacher_subject_id'], $occ['date'], bin2hex(random_bytes(24)), $occ['starts_at'], $occ['ends_at'],
+            get_late_grace_minutes($pdo, $occ['late_grace_minutes'] ?? null), $labs[(int) $occ['lab_id']], $occ['teacher_id'], $occ['ends_at'],
+        ]);
+        $ids[] = (int) $ins->fetchColumn();
+    }
+    return $ids;
 }
 
 /**
