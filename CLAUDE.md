@@ -51,7 +51,9 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
 - Attendance sessions are automatic: `qr/session_manager.php` `ensure_session_for_occurrence()` opens one session per
   ACTIVE meeting (session_date = occurrence date, scheduled_start = its start, session_end = its end, fresh qr_token),
   called from teacher/session.php, admin/qr_management.php and student/ajax_scan.php. No manual activate; a teacher/admin can close a
-  session early and reopen it (`reactivate_attendance_session_by_id()`, same qr_token) only while its meeting is still ACTIVE. Late = scan after start + the class's late grace (else settings `late_grace_minutes`, default 15).
+  session early and reopen it (`reactivate_attendance_session_by_id()`, same qr_token) only while its meeting is still ACTIVE. A session that has not ended follows
+  its meeting's end (`sync_session_end()`, also run when an admin saves a class): if the meeting is already over it closes and ends 1 minute
+  from now, never in the past (an end before the absence watermark would never be marked absent). Late = scan after start + the class's late grace (else settings `late_grace_minutes`, default 15).
 - Absences: when a session's `session_end` passes, enrolled students with no record get an `Absent` attendance record
   (`includes/absences.php`, run lazily from `require_login()` at most once a minute; watermark = settings row `absence_processed_until`,
   first run only starts the clock, no back-fill). A meeting that ended with no session (nobody loaded the QR page or scanned) first gets a CLOSED

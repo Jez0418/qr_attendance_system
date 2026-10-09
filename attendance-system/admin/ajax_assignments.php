@@ -188,6 +188,22 @@ function check_assignment_conflicts(PDO $pdo, array $a, $excludeId = 0) {
  * with the term dates entered in the form ("Starts on" / "Ends on", either
  * may be blank = open-ended).
  */
+/**
+ * After the class's times changed: today's sessions of this class follow their meeting's new end
+ * (qr/session_manager.php sync_session_end()), even if nobody opens the QR page again. Best effort:
+ * the class is already saved, so a problem here is only logged.
+ */
+function sync_todays_sessions(PDO $pdo, int $classId): void {
+    try {
+        require_once __DIR__ . '/../qr/session_manager.php';
+        foreach (get_todays_occurrences($pdo, ['teacher_subject_id' => $classId]) as $occ) {
+            if ($session = find_session_for_occurrence($pdo, $occ)) sync_session_end($pdo, $session, $occ);
+        }
+    } catch (Throwable $e) {
+        error_log('sync_todays_sessions: ' . $e->getMessage());
+    }
+}
+
 function save_schedules(PDO $pdo, $classId, array $slots) {
     $pdo->prepare('DELETE FROM class_schedules WHERE teacher_subject_id = ?')->execute([$classId]);
     $ins = $pdo->prepare('INSERT INTO class_schedules (teacher_subject_id, day_of_week, start_time, end_time, effective_start_date, effective_end_date)
@@ -244,6 +260,7 @@ try {
         if ($stmt->rowCount() === 0) throw new Exception('Assignment not found.');
         save_schedules($pdo, $id, $a['schedules']);
         $pdo->commit();
+        sync_todays_sessions($pdo, $id);
 
         log_activity($pdo, $_SESSION['user_id'], "Updated class assignment ID $id");
         echo json_encode(['success' => true, 'message' => 'Class assignment updated successfully.']);

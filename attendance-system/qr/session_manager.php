@@ -17,7 +17,10 @@
  *
  * An open session's geofence radius follows its laboratory's current
  * allowed_radius_meters (synced on every look); a closed session keeps
- * the radius it had, as a record of what applied.
+ * the radius it had, as a record of what applied. A session that has not
+ * ended yet also follows its meeting's end time (sync_session_end()), so
+ * editing a class's times while attendance is open moves the session's end
+ * (and so the moment its absences are marked) with it.
  *
  * Automatically created sessions have created_by_user_id = NULL and
  * activated_by = the teacher of that meeting (a substitute if one was
@@ -57,13 +60,15 @@ function find_session_for_occurrence(PDO $pdo, array $occ): ?array {
  */
 function ensure_session_for_occurrence(PDO $pdo, array $occ, $now = null): ?array {
     if (get_occurrence_status($occ, $now) !== OCCURRENCE_ACTIVE) {
-        return find_session_for_occurrence($pdo, $occ);
+        $session = find_session_for_occurrence($pdo, $occ);
+        return $session ? sync_session_end($pdo, $session, $occ, $now) : null;
     }
     $lab = $pdo->prepare('SELECT latitude, longitude, allowed_radius_meters FROM laboratories WHERE lab_id = ?');
     $lab->execute([$occ['lab_id']]);
     $lab = $lab->fetch();
 
     if ($existing = find_session_for_occurrence($pdo, $occ)) {
+        $existing = sync_session_end($pdo, $existing, $occ, $now);
         // An open session follows its laboratory's current radius and its class's current late grace,
         // so editing the lab or the class applies immediately (a closed session keeps what applied).
         $grace = get_late_grace_minutes($pdo, $occ['late_grace_minutes'] ?? null);
@@ -119,6 +124,42 @@ function ensure_session_for_occurrence(PDO $pdo, array $occ, $now = null): ?arra
                 "Attendance is open for {$occ['subject_code']} in {$occ['lab_name']} until " . (new DateTimeImmutable($occ['ends_at']))->format('g:i A') . ' — scan the QR code to check in.');
         }
     }
+    return $session;
+}
+
+/**
+ * Pure: how a session that has not ended yet must change when its meeting's end time changed
+ * (the class was edited while attendance was open). null = no change, else ['end' => 'Y-m-d H:i:s', 'close' => bool].
+ * - meeting now ends later, or earlier but still in the future: the session ends with the meeting;
+ * - meeting already over: close it and end it one minute from now, NOT at the meeting's end. Absences
+ *   are added for sessions whose end is after the point the absence run already reached
+ *   (includes/absences.php); an end in the past would never be marked.
+ * A session whose end has passed is a record and stays as it is.
+ */
+function session_end_change(?string $sessionEnd, string $meetingEnd, $now = null): ?array {
+    if ($sessionEnd === null) return null;
+    $now = schedule_now($now);
+    $current = new DateTimeImmutable($sessionEnd, schedule_tz());
+    $target = new DateTimeImmutable($meetingEnd, schedule_tz());
+    if ($current <= $now || $current == $target) return null;
+    if ($target > $now) return ['end' => $target->format('Y-m-d H:i:s'), 'close' => false];
+    return ['end' => $now->modify('+1 minute')->format('Y-m-d H:i:s'), 'close' => true];
+}
+
+/** Apply session_end_change() to a session of this meeting (open or closed by hand); returns the session as saved. */
+function sync_session_end(PDO $pdo, array $session, array $occ, $now = null): array {
+    if (!empty($occ['is_cancelled'])) return $session;
+    $change = session_end_change($session['session_end'] ?? null, $occ['ends_at'], $now);
+    if (!$change) return $session;
+    if ($change['close']) {
+        $pdo->prepare('UPDATE attendance_sessions SET session_end = ?, is_active = 0, deactivated_at = COALESCE(deactivated_at, NOW()) WHERE session_id = ?')
+            ->execute([$change['end'], $session['session_id']]);
+        $session['is_active'] = 0;
+        $session['deactivated_at'] = $session['deactivated_at'] ?? schedule_now($now)->format('Y-m-d H:i:s');
+    } else {
+        $pdo->prepare('UPDATE attendance_sessions SET session_end = ? WHERE session_id = ?')->execute([$change['end'], $session['session_id']]);
+    }
+    $session['session_end'] = $change['end'];
     return $session;
 }
 
