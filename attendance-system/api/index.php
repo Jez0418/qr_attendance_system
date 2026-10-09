@@ -11,14 +11,19 @@ if (substr($path, -1) === '/') {
 }
 
 $file = realpath($root . $path);
-$blocked = ['/includes/', '/database/', '/api/', '/qr/session_manager.php', '/qr/qr_helper.php'];
-$denied = false;
-foreach ($blocked as $b) {
-    if (strpos($path, $b) === 0) { $denied = true; }
+// Checked against the RESOLVED file, not the URL: /admin/../includes/x.php or /./includes/x.php
+// would otherwise slip past a prefix check on the raw path.
+$blocked = ['/includes/', '/database/', '/api/', '/tests/', '/qr/session_manager.php', '/qr/qr_helper.php'];
+$denied = true;
+if ($file && strpos($file, $root . DIRECTORY_SEPARATOR) === 0) {
+    $relative = '/' . str_replace(DIRECTORY_SEPARATOR, '/', substr($file, strlen($root) + 1));
+    $denied = false;
+    foreach ($blocked as $b) {
+        if (strpos($relative, $b) === 0) { $denied = true; }
+    }
 }
 
-if ($denied || !$file || strpos($file, $root . DIRECTORY_SEPARATOR) !== 0
-    || pathinfo($file, PATHINFO_EXTENSION) !== 'php' || !is_file($file)) {
+if ($denied || pathinfo($file, PATHINFO_EXTENSION) !== 'php' || !is_file($file)) {
     http_response_code(404);
     echo '404 - Not Found';
     exit;

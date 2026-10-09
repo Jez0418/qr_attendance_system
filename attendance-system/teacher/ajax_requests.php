@@ -51,6 +51,12 @@ try {
     if ($action === 'approve') {
         $pdo->beginTransaction();
 
+        // Claim the request first: AND status = 'pending' (plus the row lock it takes) means a student who
+        // cancels, or an admin who reviews it, at the same moment can't end up enrolled/overwritten.
+        $claim = $pdo->prepare("UPDATE enrollment_requests SET status = 'approved', reviewed_by = ?, reviewed_by_role = 'teacher', reviewed_by_user_id = ?, reviewed_at = NOW() WHERE request_id = ? AND status = 'pending'");
+        $claim->execute([$teacherId, $_SESSION['user_id'], $requestId]);
+        if ($claim->rowCount() !== 1) throw new Exception('This request was just reviewed or cancelled. Reload the page.');
+
         // Re-check capacity at approval time (it may have filled up since the request was made)
         $countStmt = $pdo->prepare('SELECT COUNT(*) FROM enrollments WHERE teacher_subject_id = ? AND status = "enrolled"');
         $countStmt->execute([$request['teacher_subject_id']]);
@@ -68,9 +74,6 @@ try {
             $pdo->prepare('INSERT INTO enrollments (student_id, teacher_subject_id) VALUES (?, ?)')->execute([$request['student_id'], $request['teacher_subject_id']]);
         }
 
-        $pdo->prepare('UPDATE enrollment_requests SET status = "approved", reviewed_by = ?, reviewed_by_role = "teacher", reviewed_by_user_id = ?, reviewed_at = NOW() WHERE request_id = ?')
-            ->execute([$teacherId, $_SESSION['user_id'], $requestId]);
-
         create_notification($pdo, $request['student_user_id'], 'Enrollment Approved', "Your request to enroll in {$request['subject_name']} was approved. You're now officially enrolled.");
         log_activity($pdo, $_SESSION['user_id'], "Approved enrollment request #$requestId");
 
@@ -82,8 +85,9 @@ try {
         if ($reason === '') throw new Exception('A rejection reason is required.');
         if (mb_strlen($reason) > 500) throw new Exception('The rejection reason must be at most 500 characters.');
 
-        $pdo->prepare('UPDATE enrollment_requests SET status = "rejected", rejection_reason = ?, reviewed_by = ?, reviewed_by_role = "teacher", reviewed_by_user_id = ?, reviewed_at = NOW() WHERE request_id = ?')
-            ->execute([$reason, $teacherId, $_SESSION['user_id'], $requestId]);
+        $rej = $pdo->prepare("UPDATE enrollment_requests SET status = 'rejected', rejection_reason = ?, reviewed_by = ?, reviewed_by_role = 'teacher', reviewed_by_user_id = ?, reviewed_at = NOW() WHERE request_id = ? AND status = 'pending'");
+        $rej->execute([$reason, $teacherId, $_SESSION['user_id'], $requestId]);
+        if ($rej->rowCount() !== 1) throw new Exception('This request was just reviewed or cancelled. Reload the page.');
 
         create_notification($pdo, $request['student_user_id'], 'Enrollment Rejected', "Your request to enroll in {$request['subject_name']} was rejected. Reason: $reason");
         log_activity($pdo, $_SESSION['user_id'], "Rejected enrollment request #$requestId");
