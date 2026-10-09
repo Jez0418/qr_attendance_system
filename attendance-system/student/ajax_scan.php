@@ -93,10 +93,7 @@ try {
 
     // ---- 4. Recompute the meeting's status from the schedule, server-side ----
     $now = schedule_now();
-    $occ = null;
-    foreach (get_occurrences($pdo, $session['session_date'], $session['session_date'], ['teacher_subject_id' => $session['teacher_subject_id']]) as $o) {
-        if ($o['starts_at'] === substr($session['scheduled_start'], 0, 19)) { $occ = $o; break; }
-    }
+    $occ = find_occurrence_for_session($pdo, $session, $now);   // also re-attaches a session whose class start moved
     if (!$occ) throw new Exception('This class is not scheduled at this time.');
 
     // Where is the student relative to the meeting's lab? Worked out now (best effort) so that even a
