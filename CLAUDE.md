@@ -54,7 +54,9 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   session early and reopen it (`reactivate_attendance_session_by_id()`, same qr_token) only while its meeting is still ACTIVE. Late = scan after start + the class's late grace (else settings `late_grace_minutes`, default 15).
 - Absences: when a session's `session_end` passes, enrolled students with no record get an `Absent` attendance record
   (`includes/absences.php`, run lazily from `require_login()` at most once a minute; watermark = settings row `absence_processed_until`,
-  first run only starts the clock, no back-fill). Only meetings that HAD a session are marked (no QR = nothing to scan). Absent rows use
+  first run only starts the clock, no back-fill). A meeting that ended with no session (nobody loaded the QR page or scanned) first gets a CLOSED
+  session from `create_missed_sessions()`, so its whole class is marked Absent (teacher corrects with the override); not for cancelled meetings,
+  inactive classes or labs without GPS. One-off back-fill for a past window: `tests/backfill_missed_meetings.php --dry-run|--commit`. Absent rows use
   the meeting's end as `time_in`, so show them with `format_record_time()` and exclude them (`status <> 'Absent'`) from any count of
   check-ins/scans. Test: `php attendance-system/tests/absence_test.php`. After marking, `notify_new_absences()` notifies each student
   ("Marked Absent", with their count for that class) and the teacher once when a student reaches the absence limit.
