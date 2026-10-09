@@ -6,6 +6,7 @@
  * tests/ is not deployed (see .vercelignore).
  */
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../qr/session_manager.php';   // before any output (config.php starts a session)
 
 $fail = 0;
 function check(string $name, bool $ok): void { global $fail; echo ($ok ? 'PASS' : 'FAIL') . "  $name\n"; if (!$ok) $fail++; }
@@ -89,6 +90,22 @@ check('the same meeting listed twice gets one session',
 check('the absence run creates missed sessions before marking absences',
     preg_match('/create_missed_sessions\(\$pdo, \$after, \$until\);\s*\$added = insert_absent_records/', $sql) === 1);
 check('missed sessions are created closed', strpos($sql, "VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, 'teacher', NULL, ?)") !== false);
+
+// A session follows its meeting's end time while it has not ended (class edited during attendance).
+$now = '2026-10-09 17:28:00';
+check('meeting shortened, still running: session ends with it',
+    session_end_change('2026-10-09 20:20:00', '2026-10-09 18:00:00', $now) === ['end' => '2026-10-09 18:00:00', 'close' => false]);
+check('meeting made longer: session ends later too',
+    session_end_change('2026-10-09 18:00:00', '2026-10-09 19:00:00', $now) === ['end' => '2026-10-09 19:00:00', 'close' => false]);
+check('meeting already over: close now, end one minute from now (so its absences are still marked)',
+    session_end_change('2026-10-09 20:20:00', '2026-10-09 18:00:00', '2026-10-09 18:05:00') === ['end' => '2026-10-09 18:06:00', 'close' => true]);
+check('unchanged end: nothing to do', session_end_change('2026-10-09 18:00:00', '2026-10-09 18:00:00', $now) === null);
+check('a session that already ended is a record and is never changed',
+    session_end_change('2026-10-09 18:00:00', '2026-10-09 20:00:00', '2026-10-09 18:30:00') === null);
+check('a session without an end is left alone', session_end_change(null, '2026-10-09 18:00:00', $now) === null);
+$sm = file_get_contents(__DIR__ . '/../qr/session_manager.php');
+check('every look at a meeting syncs its session end (open, or closed by hand)', substr_count($sm, 'sync_session_end($pdo, $') >= 2);
+check('saving a class syncs today\'s sessions', strpos(file_get_contents(__DIR__ . '/../admin/ajax_assignments.php'), 'sync_todays_sessions($pdo, $id);') !== false);
 
 echo $fail ? "\n$fail FAILED\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);
