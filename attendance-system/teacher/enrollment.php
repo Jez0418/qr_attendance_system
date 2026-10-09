@@ -29,8 +29,8 @@ if (!$selectedClassRow) $selectedClass = 0;
 $enrolled = [];
 $notEnrolled = [];
 $hiddenCount = 0;   // regular students outside this class's program/year/section (can't be enrolled)
-$filterProgram = clean($_GET['filter_program'] ?? '');
-$filterYear = clean($_GET['filter_year'] ?? '');
+$filterProgram = id_param($_GET['filter_program'] ?? '');   // a non-number would make Postgres fail
+$filterYear = id_param($_GET['filter_year'] ?? '');
 
 if ($selectedClass) {
     $enrolledStmt = $pdo->prepare('
