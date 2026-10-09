@@ -20,7 +20,9 @@
  * the radius it had, as a record of what applied. A session that has not
  * ended yet also follows its meeting's end time (sync_session_end()), so
  * editing a class's times while attendance is open moves the session's end
- * (and so the moment its absences are marked) with it.
+ * (and so the moment its absences are marked) with it. If the START moved,
+ * reattach_moved_sessions() moves the running session to the meeting (same
+ * QR) instead of opening a second one, and re-checks its scans for Late.
  *
  * Automatically created sessions have created_by_user_id = NULL and
  * activated_by = the teacher of that meeting (a substitute if one was
@@ -59,15 +61,18 @@ function find_session_for_occurrence(PDO $pdo, array $occ): ?array {
  * no GPS coordinates (attendance couldn't be geofenced).
  */
 function ensure_session_for_occurrence(PDO $pdo, array $occ, $now = null): ?array {
+    $found = find_session_for_occurrence($pdo, $occ);
+    if (!$found && reattach_moved_sessions($pdo, (int) $occ['teacher_subject_id'], $occ['date'], $now)) {
+        $found = find_session_for_occurrence($pdo, $occ);   // the class's start moved: it has its running session back
+    }
     if (get_occurrence_status($occ, $now) !== OCCURRENCE_ACTIVE) {
-        $session = find_session_for_occurrence($pdo, $occ);
-        return $session ? sync_session_end($pdo, $session, $occ, $now) : null;
+        return $found ? sync_session_end($pdo, $found, $occ, $now) : null;
     }
     $lab = $pdo->prepare('SELECT latitude, longitude, allowed_radius_meters FROM laboratories WHERE lab_id = ?');
     $lab->execute([$occ['lab_id']]);
     $lab = $lab->fetch();
 
-    if ($existing = find_session_for_occurrence($pdo, $occ)) {
+    if ($existing = $found) {
         $existing = sync_session_end($pdo, $existing, $occ, $now);
         // An open session follows its laboratory's current radius and its class's current late grace,
         // so editing the lab or the class applies immediately (a closed session keeps what applied).
@@ -125,6 +130,105 @@ function ensure_session_for_occurrence(PDO $pdo, array $occ, $now = null): ?arra
         }
     }
     return $session;
+}
+
+/**
+ * Pure: pairs sessions whose start no longer matches any meeting of that class that day (an admin moved
+ * the start while attendance was open) with that day's meetings that have no session.
+ * $sessions: the class's sessions that day (session_id, scheduled_start, session_end); $occurrences: its
+ * meetings that day (get_occurrences()). Only sessions that have not ended move (an ended one is a record),
+ * cancelled meetings get none, and with several candidates the nearest start wins.
+ * Returns [session_id => occurrence].
+ */
+function pair_moved_sessions(array $sessions, array $occurrences, $now = null): array {
+    $now = schedule_now($now);
+    $norm = fn($t) => date('Y-m-d H:i:s', strtotime($t));
+    $meetingStarts = [];
+    foreach ($occurrences as $o) $meetingStarts[$norm($o['starts_at'])] = true;
+
+    $taken = [];
+    $orphans = [];
+    foreach ($sessions as $sess) {
+        if ($sess['scheduled_start'] === null) continue;
+        $start = $norm($sess['scheduled_start']);
+        if (isset($meetingStarts[$start])) { $taken[$start] = true; continue; }
+        if ($sess['session_end'] !== null && new DateTimeImmutable($sess['session_end'], schedule_tz()) > $now) $orphans[] = $sess;
+    }
+    $candidates = [];
+    foreach ($orphans as $sess) {
+        foreach ($occurrences as $o) {
+            if (!empty($o['is_cancelled']) || isset($taken[$norm($o['starts_at'])])) continue;
+            $candidates[] = [abs(strtotime($o['starts_at']) - strtotime($sess['scheduled_start'])), (int) $sess['session_id'], $o];
+        }
+    }
+    usort($candidates, fn($a, $b) => [$a[0], $a[1]] <=> [$b[0], $b[1]]);
+    $pairs = [];
+    foreach ($candidates as [, $sessionId, $o]) {
+        $key = $norm($o['starts_at']);
+        if (isset($pairs[$sessionId]) || isset($taken[$key])) continue;
+        $pairs[$sessionId] = $o;
+        $taken[$key] = true;
+    }
+    return $pairs;
+}
+
+/**
+ * Pure: the status a scan made with the app has for this start and grace (re-checked when the start moved).
+ * Only Present/Late scans change; Absent and a teacher's manual Present (marked_by_user_id) never do.
+ */
+function rechecked_scan_status(array $record, string $startsAt, int $graceMinutes): string {
+    if (!in_array($record['status'], ['Present', 'Late'], true) || !empty($record['marked_by_user_id'])) return $record['status'];
+    $lateAfter = (new DateTimeImmutable($startsAt, schedule_tz()))->modify("+$graceMinutes minutes");
+    return new DateTimeImmutable($record['time_in'], schedule_tz()) > $lateAfter ? 'Late' : 'Present';
+}
+
+/**
+ * When a class's start moved while one of that day's sessions was running, move that session to the
+ * meeting (pair_moved_sessions()) instead of opening a second one: same id, same QR token (the code on
+ * screen keeps working), same scans. Its end follows the meeting (sync_session_end()) and its scans are
+ * re-checked for Late against the new start. Returns how many sessions moved. One small query when
+ * nothing is running, since pages call this for every meeting that has no session.
+ */
+function reattach_moved_sessions(PDO $pdo, int $classId, string $date, $now = null): int {
+    $running = $pdo->prepare('SELECT 1 FROM attendance_sessions WHERE teacher_subject_id = ? AND session_date = ? AND session_end > CAST(? AS timestamp) LIMIT 1');
+    $running->execute([$classId, $date, schedule_now($now)->format('Y-m-d H:i:s')]);
+    if (!$running->fetchColumn()) return 0;
+
+    $occurrences = get_occurrences($pdo, $date, $date, ['teacher_subject_id' => $classId]);
+    $list = $pdo->prepare('SELECT session_id, scheduled_start, session_end FROM attendance_sessions WHERE teacher_subject_id = ? AND session_date = ?');
+    $list->execute([$classId, $date]);
+    $pairs = pair_moved_sessions($list->fetchAll(), $occurrences, $now);
+    if (!$pairs) return 0;
+
+    $moved = 0;
+    $ownTransaction = !$pdo->inTransaction();
+    if ($ownTransaction) $pdo->beginTransaction();
+    try {
+        foreach ($pairs as $sessionId => $occ) {
+            // Same lock as session creation, so no page opens a second session for this meeting meanwhile.
+            $pdo->prepare('SELECT pg_advisory_xact_lock(hashtext(?))')->execute(['attendance-session:' . $occ['occurrence_key']]);
+            if (find_session_for_occurrence($pdo, $occ)) continue;   // another request was first
+            $upd = $pdo->prepare('UPDATE attendance_sessions SET scheduled_start = ? WHERE session_id = ? RETURNING *');
+            $upd->execute([$occ['starts_at'], $sessionId]);
+            if (!$session = $upd->fetch()) continue;
+            sync_session_end($pdo, $session, $occ, $now);
+
+            $grace = get_late_grace_minutes($pdo, $occ['late_grace_minutes'] ?? null);
+            $recs = $pdo->prepare("SELECT record_id, status, time_in, marked_by_user_id FROM attendance_records WHERE session_id = ? AND status IN ('Present', 'Late')");
+            $recs->execute([$sessionId]);
+            $set = $pdo->prepare('UPDATE attendance_records SET status = ? WHERE record_id = ?');
+            foreach ($recs->fetchAll() as $r) {
+                $status = rechecked_scan_status($r, $occ['starts_at'], $grace);
+                if ($status !== $r['status']) $set->execute([$status, $r['record_id']]);
+            }
+            $moved++;
+        }
+        if ($ownTransaction) $pdo->commit();
+    } catch (Throwable $e) {
+        if ($ownTransaction && $pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+    return $moved;
 }
 
 /**
@@ -200,18 +304,29 @@ function deactivate_attendance_session_by_id(PDO $pdo, $sessionId) {
     return $upd->rowCount() > 0;
 }
 
-/** The scheduled meeting a session belongs to (null if it is no longer on the schedule). */
-function find_occurrence_for_session(PDO $pdo, array $session): ?array {
-    foreach (get_occurrences($pdo, $session['session_date'], $session['session_date'], ['teacher_subject_id' => $session['teacher_subject_id']]) as $o) {
-        if ($o['starts_at'] === substr($session['scheduled_start'], 0, 19)) return $o;
-    }
-    return null;
+/**
+ * The scheduled meeting a session belongs to (null if it is no longer on the schedule). If the class's
+ * start moved while the session was running, the session is re-attached first (reattach_moved_sessions()).
+ */
+function find_occurrence_for_session(PDO $pdo, array $session, $now = null): ?array {
+    $find = function (string $start) use ($pdo, $session): ?array {
+        foreach (get_occurrences($pdo, $session['session_date'], $session['session_date'], ['teacher_subject_id' => $session['teacher_subject_id']]) as $o) {
+            if ($o['starts_at'] === substr($start, 0, 19)) return $o;
+        }
+        return null;
+    };
+    if ($occ = $find((string) $session['scheduled_start'])) return $occ;
+    if (!reattach_moved_sessions($pdo, (int) $session['teacher_subject_id'], $session['session_date'], $now)) return null;
+    $st = $pdo->prepare('SELECT scheduled_start FROM attendance_sessions WHERE session_id = ?');
+    $st->execute([$session['session_id']]);
+    $start = $st->fetchColumn();
+    return $start ? $find((string) $start) : null;
 }
 
 /** True when a closed session may be reopened: its meeting is still ACTIVE (not over, not cancelled). */
 function can_reopen_session(PDO $pdo, array $session, $now = null): bool {
     if ((int) $session['is_active'] === 1) return false;
-    $occ = find_occurrence_for_session($pdo, $session);
+    $occ = find_occurrence_for_session($pdo, $session, $now);
     return $occ && get_occurrence_status($occ, $now) === OCCURRENCE_ACTIVE;
 }
 
@@ -227,7 +342,7 @@ function reactivate_attendance_session_by_id(PDO $pdo, $sessionId, $now = null):
     if (!$session) throw new Exception('Session not found.');
     if ((int) $session['is_active'] === 1) throw new Exception('This session is already open.');
 
-    $occ = find_occurrence_for_session($pdo, $session);
+    $occ = find_occurrence_for_session($pdo, $session, $now);
     $status = $occ ? get_occurrence_status($occ, $now) : null;
     if ($status === OCCURRENCE_CANCELLED) throw new Exception('This class meeting was cancelled, so attendance cannot be reopened.');
     if ($status !== OCCURRENCE_ACTIVE) throw new Exception('This class meeting has already ended, so attendance cannot be reopened.');

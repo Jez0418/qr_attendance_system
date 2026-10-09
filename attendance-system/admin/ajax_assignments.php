@@ -189,13 +189,14 @@ function check_assignment_conflicts(PDO $pdo, array $a, $excludeId = 0) {
  * may be blank = open-ended).
  */
 /**
- * After the class's times changed: today's sessions of this class follow their meeting's new end
- * (qr/session_manager.php sync_session_end()), even if nobody opens the QR page again. Best effort:
- * the class is already saved, so a problem here is only logged.
+ * After the class's times changed: today's sessions of this class follow their meeting's new start
+ * (reattach_moved_sessions()) and end (sync_session_end(), both in qr/session_manager.php), even if nobody
+ * opens the QR page again. Best effort: the class is already saved, so a problem here is only logged.
  */
 function sync_todays_sessions(PDO $pdo, int $classId): void {
     try {
         require_once __DIR__ . '/../qr/session_manager.php';
+        reattach_moved_sessions($pdo, $classId, schedule_now()->format('Y-m-d'));
         foreach (get_todays_occurrences($pdo, ['teacher_subject_id' => $classId]) as $occ) {
             if ($session = find_session_for_occurrence($pdo, $occ)) sync_session_end($pdo, $session, $occ);
         }
