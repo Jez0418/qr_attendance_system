@@ -38,6 +38,7 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
 ## Database changes (Supabase does NOT update from git pushes)
 - Full schema + seed: `attendance-system/database/supabase_schema.sql` (final state; v1-v5 merged).
 - ISAP/MCNP departments + programs: `attendance-system/database/supabase_departments_programs.sql`.
+- Excused status: `attendance-system/database/supabase_excused_status.sql` (allows `'Excused'` in the status CHECK).
 - Foreign-key indexes the pages filter by: `attendance-system/database/supabase_indexes.sql` (also in the schema file).
   A new query that filters or joins on an unindexed column of a growing table should add its index there too.
 - Recurring class schedules: `attendance-system/database/supabase_class_schedules.sql` (adds `class_schedules`,
@@ -64,8 +65,9 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   first run only starts the clock, no back-fill). A meeting that ended with no session (nobody loaded the QR page or scanned) first gets a CLOSED
   session from `create_missed_sessions()`, so its whole class is marked Absent (teacher corrects with the override); not for cancelled meetings,
   inactive classes or labs without GPS. One-off back-fill for a past window: `tests/backfill_missed_meetings.php --dry-run|--commit`. Absent rows use
-  the meeting's end as `time_in`, so show them with `format_record_time()` and exclude them (`status <> 'Absent'`) from any count of
-  check-ins/scans. Test: `php attendance-system/tests/absence_test.php`. After marking, `notify_new_absences()` notifies each student
+  the meeting's end as `time_in`, so show them with `format_record_time()`. A count of check-ins/scans/times attended is written
+  `status IN ("Present", "Late")` (SQL quotes follow the enclosing PHP string), never `status <> 'Absent'`, which would also count
+  Excused rows; `tests/excused_status_test.php` fails if that pattern comes back. Test: `php attendance-system/tests/absence_test.php`. After marking, `notify_new_absences()` notifies each student
   ("Marked Absent", with their count for that class) and the teacher once when a student reaches the absence limit.
 - Attendance warnings (`includes/attendance_stats.php`): per student per class, rate = (Present+Late)/(records). Settings
   `absence_limit` (default 3) and `min_attendance_rate` (default 80, applies after 5 meetings); 0 turns either off (Admin > Settings).
@@ -80,10 +82,16 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   (set in `student/scanner.php` before output); `ajax_scan.php` stores it and refuses a scan when `device_conflict()` finds another
   student checked in from that device for the same session (teacher sees "Same phone as <name>" in Rejected scans; the fix for an
   honest borrowed phone is the override below). Absent rows and overrides keep `device_id` NULL. Test: `php attendance-system/tests/device_check_test.php`.
-- Teacher override (Absent -> Present only, own classes, reason required): button on `teacher/history.php` -> `teacher/ajax_attendance_override.php`
-  (`includes/attendance_override.php`; columns `marked_by_user_id/marked_at/override_reason` from `database/supabase_attendance_override.sql`).
-  A manual Present has no GPS data and is shown as "marked by teacher" via `format_record_time()` (selects must include `ar.marked_by_user_id`).
-  The student is notified and the activity log gets a line. Test: `php attendance-system/tests/attendance_override_test.php`.
+- Teacher override (Absent -> Present or Absent -> Excused, one-way, own classes, reason required): "Mark present" / "Excuse" buttons on
+  `teacher/history.php` -> `teacher/ajax_attendance_override.php` (POST `target`) -> `override_absent()` in `includes/attendance_override.php`
+  (columns `marked_by_user_id/marked_at/override_reason` from `database/supabase_attendance_override.sql`). A manual Present has no GPS data
+  and is shown as "marked by teacher" via `format_record_time()` (selects must include `ar.marked_by_user_id`). The student is notified and the
+  activity log gets a line. Test: `php attendance-system/tests/attendance_override_test.php`.
+- Excused status (`'Excused'` in `attendance_records.status`, `database/supabase_excused_status.sql`): an absence the teacher excused. It counts
+  as neither attended nor absent (out of the rate and the absence limit; `attendance_standing()` unchanged), is shown as "<date> · excused",
+  has its own blue tokens (`--excused-*`, `--chart-excused`, `.badge-excused`, `.dot-blue`, `c.excused` in charts) and appears in the admin
+  dashboard, reports, monitoring filter and exports. Test: `php attendance-system/tests/excused_status_test.php` (`--db` excuses a real Absent
+  record in a rolled-back transaction via `tests/demo_common.php` `DemoPDO`; hits the LIVE database).
 - Any new table/column: write the SQL as a new file in `database/` AND run it in Supabase
   (SQL Editor: click in editor, Ctrl+A, Run so the whole script runs). Run SQL before pushing code that needs it.
 - The old MySQL files (`schema.sql`, `migration_v*.sql`) and the `database/*.php` helper scripts were deleted (they are in git history only); never recreate them: they do not work on Postgres and `reset_passwords_to_id.php` could reset every password.
@@ -152,7 +160,7 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   The top-bar subtitle comes from `$pageSubtitle` or the map in `includes/header.php`. Chart.js needs a sized `.chart-box` and `maintainAspectRatio:false`.
 - Chart.js: build charts in a function that starts with `const c = themeChartDefaults();` and rebuild on `window` `themechange` (see `admin/dashboard.php`).
 - Admin dashboard: "Recent Attendance Activity" and the 7-day graph include Absent records ("was absent from <subject>"); "Laboratory Usage Today"
-  counts scans only (`ar.status <> "Absent"`).
+  counts scans only (`ar.status IN ("Present", "Late")`). Excused records appear as "was excused from <subject>".
 
 ## Workflow rules
 - UI: `assets/css/style.css` (colors in `:root` variables), `includes/header.php`,
