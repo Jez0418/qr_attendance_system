@@ -82,6 +82,11 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   (set in `student/scanner.php` before output); `ajax_scan.php` stores it and refuses a scan when `device_conflict()` finds another
   student checked in from that device for the same session (teacher sees "Same phone as <name>" in Rejected scans; the fix for an
   honest borrowed phone is the override below). Absent rows and overrides keep `device_id` NULL. Test: `php attendance-system/tests/device_check_test.php`.
+- Housekeeping (`includes/housekeeping.php`, run lazily from `require_login()` at most once a day, settings row `housekeeping_ran_at`):
+  deletes read notifications after 90 days, unread after 180, `activity_logs` after 365, `scan_attempts` after 180 (`retention_rules()`),
+  at most 5000 rows per rule per run. Attendance records, sessions and enrollments are never pruned. Test: `php attendance-system/tests/housekeeping_test.php`.
+- Scan GPS accuracy is required: `gps_accuracy_problem()` (`includes/geo.php`) refuses a missing/non-numeric/<= 0 accuracy and one worse than
+  `max_gps_accuracy_meters`. Test: `php attendance-system/tests/geo_accuracy_test.php`.
 - Teacher override (Absent -> Present or Absent -> Excused, one-way, own classes, reason required): "Mark present" / "Excuse" buttons on
   `teacher/history.php` -> `teacher/ajax_attendance_override.php` (POST `target`) -> `override_absent()` in `includes/attendance_override.php`
   (columns `marked_by_user_id/marked_at/override_reason` from `database/supabase_attendance_override.sql`). A manual Present has no GPS data

@@ -36,3 +36,19 @@ function is_within_geofence($studentLat, $studentLon, $targetLat, $targetLon, $r
     $distance = haversine_distance_meters($studentLat, $studentLon, $targetLat, $targetLon);
     return [$distance <= (float) $radiusMeters, round($distance, 2)];
 }
+
+/**
+ * Why a scan's reported GPS accuracy (meters, from the browser) is not acceptable, or '' when it is.
+ * A real phone always reports a positive accuracy; a hand-made request or some fake-GPS apps send none
+ * or 0, so missing / non-numeric / not finite / <= 0 is refused. Worse than $maxMeters is refused too.
+ */
+function gps_accuracy_problem($accuracy, int $maxMeters): string {
+    $value = (is_int($accuracy) || is_float($accuracy) || (is_string($accuracy) && is_numeric($accuracy))) ? (float) $accuracy : null;
+    if ($value === null || !is_finite($value) || $value <= 0) {
+        return "Your phone didn't report how accurate its location is. Turn on precise location and try again.";
+    }
+    if ($value > $maxMeters) {
+        return 'Your location accuracy is too low. Please enable high-accuracy location services and try again.';
+    }
+    return '';
+}
