@@ -38,6 +38,8 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
 ## Database changes (Supabase does NOT update from git pushes)
 - Full schema + seed: `attendance-system/database/supabase_schema.sql` (final state; v1-v5 merged).
 - ISAP/MCNP departments + programs: `attendance-system/database/supabase_departments_programs.sql`.
+- Foreign-key indexes the pages filter by: `attendance-system/database/supabase_indexes.sql` (also in the schema file).
+  A new query that filters or joins on an unindexed column of a growing table should add its index there too.
 - Recurring class schedules: `attendance-system/database/supabase_class_schedules.sql` (adds `class_schedules`,
   backfills it from old `meeting_date`/`schedule_day`). A class assignment (`teacher_subjects`) = who/what/which class/where;
   its weekly meetings live in `class_schedules` (day_of_week 1=Mon..7=Sun). `meeting_date`, `schedule_day`,
@@ -73,6 +75,11 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   `database/supabase_attendance_insights.sql`, set in Admin > Class Assignments). Always call `get_late_grace_minutes($pdo, $occ['late_grace_minutes'])`
   with the meeting from `includes/schedule.php`; an open session's `late_threshold_minutes` is synced like its radius.
   Test for these three: `php attendance-system/tests/attendance_insights_test.php`.
+- One phone, one student per meeting (`includes/device.php`, column `attendance_records.device_id` from
+  `database/supabase_scan_device.sql`): `current_device_id()` gives each browser a random ID in the HttpOnly cookie `qr_device`
+  (set in `student/scanner.php` before output); `ajax_scan.php` stores it and refuses a scan when `device_conflict()` finds another
+  student checked in from that device for the same session (teacher sees "Same phone as <name>" in Rejected scans; the fix for an
+  honest borrowed phone is the override below). Absent rows and overrides keep `device_id` NULL. Test: `php attendance-system/tests/device_check_test.php`.
 - Teacher override (Absent -> Present only, own classes, reason required): button on `teacher/history.php` -> `teacher/ajax_attendance_override.php`
   (`includes/attendance_override.php`; columns `marked_by_user_id/marked_at/override_reason` from `database/supabase_attendance_override.sql`).
   A manual Present has no GPS data and is shown as "marked by teacher" via `format_record_time()` (selects must include `ar.marked_by_user_id`).
