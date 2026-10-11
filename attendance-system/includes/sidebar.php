@@ -81,29 +81,6 @@ if ($role === 'teacher' && isset($pdo)) {
             <a href="<?php echo BASE_URL; ?>student/notifications.php" class="<?php echo nav_active('notifications.php', $current); ?>"><i class="fa-solid fa-bell"></i><span>Notifications</span></a>
         <?php endif; ?>
     </nav>
-    <script>
-    /* The menu scrolls on its own and every link is a full page load, which would reset it to the top
-       and hide the active link (Notifications is last). Restore the position before first paint and
-       keep the active link in view. sessionStorage may be blocked, so every access is guarded. */
-    (function () {
-        var nav = document.querySelector('.sidebar-nav');
-        if (!nav) return;
-        var KEY = 'sidebarNavScroll';
-        try {
-            var saved = parseInt(sessionStorage.getItem(KEY), 10);
-            if (!isNaN(saved)) nav.scrollTop = saved;
-        } catch (e) {}
-        var active = nav.querySelector('a.active');
-        if (active && nav.clientHeight > 0) {
-            var n = nav.getBoundingClientRect(), a = active.getBoundingClientRect();
-            if (a.bottom > n.bottom) nav.scrollTop += a.bottom - n.bottom + 8;
-            else if (a.top < n.top) nav.scrollTop -= n.top - a.top + 8;
-        }
-        nav.addEventListener('scroll', function () {
-            try { sessionStorage.setItem(KEY, String(nav.scrollTop)); } catch (e) {}
-        }, { passive: true });
-    })();
-    </script>
 
     <div class="sidebar-footer">
         <a href="<?php echo BASE_URL; ?>logout.php" onclick="return confirm('Log out of your account?');">
@@ -111,3 +88,34 @@ if ($role === 'teacher' && isset($pdo)) {
         </a>
     </div>
 </aside>
+<script>
+/* The menu scrolls on its own and every link is a full page load, which would reset it to the top
+   and hide the active link (Notifications is last). Put it back before first paint. This sits after the
+   whole sidebar because the menu's height depends on the brand and Logout around it, and runs again after
+   load/fonts (heights shift) until the user touches the menu. sessionStorage may be blocked: guarded. */
+(function () {
+    var nav = document.querySelector('.sidebar-nav');
+    if (!nav) return;
+    var KEY = 'sidebarNavScroll', saved = NaN, touched = false;
+    try { saved = parseInt(sessionStorage.getItem(KEY), 10); } catch (e) {}
+    function place() {
+        if (touched || nav.clientHeight === 0) return;
+        if (!isNaN(saved)) nav.scrollTop = saved;
+        var active = nav.querySelector('a.active');
+        if (!active) return;
+        var n = nav.getBoundingClientRect(), a = active.getBoundingClientRect();
+        if (a.bottom > n.bottom) nav.scrollTop += a.bottom - n.bottom + 8;
+        else if (a.top < n.top) nav.scrollTop -= n.top - a.top + 8;
+    }
+    place();
+    window.addEventListener('load', place);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(place);
+    ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(function (t) {
+        nav.addEventListener(t, function () { touched = true; }, { passive: true });
+    });
+    nav.addEventListener('scroll', function () {
+        if (!touched) return;   // remember the user's scrolling, not our own adjustments
+        try { sessionStorage.setItem(KEY, String(nav.scrollTop)); } catch (e) {}
+    }, { passive: true });
+})();
+</script>
