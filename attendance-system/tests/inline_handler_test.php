@@ -13,7 +13,7 @@ $fail = 0;
 function check(string $name, bool $ok): void { global $fail; echo ($ok ? 'PASS' : 'FAIL') . "  $name\n"; if (!$ok) $fail++; }
 
 $bad = [];
-$it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(__DIR__ . '/..', FilesystemIterator::SKIP_DOTS));
+$it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(realpath(__DIR__ . '/..'), FilesystemIterator::SKIP_DOTS));
 foreach ($it as $f) {
     $path = str_replace('\\', '/', $f->getPathname());
     if ($f->getExtension() !== 'php' || strpos($path, '/tests/') !== false) continue;
@@ -21,6 +21,16 @@ foreach ($it as $f) {
     if (preg_match("/on\w+='[^']*<\?php\s+echo\s+json_encode\(/", file_get_contents($path))) $bad[] = str_replace(realpath(__DIR__ . '/..') . '/', '', $path);
 }
 check('no single-quoted handler uses plain json_encode (' . implode(', ', $bad) . ')', !$bad);
+
+// js_attr_json() hex-escapes quotes INSIDE the string, but the JSON string's own delimiters are raw ", so it only
+// works in a single-quoted handler: in onclick="fn(...js_attr_json output...)" the attribute ends at the JSON's first ".
+$dq = [];
+foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(realpath(__DIR__ . '/..'), FilesystemIterator::SKIP_DOTS)) as $f) {
+    $path = str_replace('\\', '/', $f->getPathname());
+    if ($f->getExtension() !== 'php' || strpos($path, '/tests/') !== false) continue;
+    if (preg_match('/on\w+="[^"]*js_attr_json\(/', file_get_contents($path))) $dq[] = basename(dirname($path)) . '/' . basename($path);
+}
+check('no double-quoted handler uses js_attr_json (' . implode(', ', $dq) . ')', !$dq);
 
 check('the unused all-students search endpoint is gone', !file_exists(__DIR__ . '/../teacher/ajax_search_students.php'));
 

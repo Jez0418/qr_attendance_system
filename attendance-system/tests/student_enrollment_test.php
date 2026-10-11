@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includes/functions.php';
 $fail = 0;
 function check(string $name, bool $ok): void { global $fail; echo ($ok ? 'PASS' : 'FAIL') . "  $name\n"; if (!$ok) $fail++; }
 
-// --- js_attr_json: safe inside onclick='...' AND onclick="..." ---
+// --- js_attr_json: safe inside a single-quoted onclick='...' (its own " delimiters would end onclick="...") ---
 $data = ['subject_name' => "Women's Health \"Nursing\" <b>&amp;", 'teacher_name' => "D'Souza", 'n' => 5];
 $json = js_attr_json($data);
 check("no raw ' in the attribute JSON", strpos($json, "'") === false);

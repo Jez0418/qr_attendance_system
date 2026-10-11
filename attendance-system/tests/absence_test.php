@@ -22,7 +22,7 @@ check('Absent never shows the meeting end time', strpos(format_record_time($abs)
 // Pages that list records must go through format_record_time(), or an absent student would
 // look like they checked in at the end of class.
 $bad = [];
-$it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(__DIR__ . '/..', FilesystemIterator::SKIP_DOTS));
+$it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(realpath(__DIR__ . '/..'), FilesystemIterator::SKIP_DOTS));
 foreach ($it as $f) {
     $path = str_replace('\\', '/', $f->getPathname());
     if ($f->getExtension() !== 'php' || strpos($path, '/tests/') !== false || strpos($path, '/includes/functions.php') !== false) continue;

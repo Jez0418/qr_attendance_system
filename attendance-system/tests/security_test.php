@@ -19,9 +19,10 @@ check('our own validation message is shown as written', safe_error_message(new E
 
 // --- no endpoint may echo raw exception text / SQL errors again ---
 $bad = [];
-$it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(__DIR__ . '/..', FilesystemIterator::SKIP_DOTS));
+$it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(realpath(__DIR__ . '/..'), FilesystemIterator::SKIP_DOTS));
 foreach ($it as $f) {
-    if ($f->getExtension() !== 'php' || strpos($f->getPathname(), '/tests/') !== false || strpos($f->getPathname(), '/database/') !== false) continue;
+    $p = str_replace('\\', '/', $f->getPathname());
+    if ($f->getExtension() !== 'php' || strpos($p, '/tests/') !== false || strpos($p, '/database/') !== false) continue;
     $src = file_get_contents($f->getPathname());
     if (preg_match("/'message'\\s*=>\\s*(\\\$e->getMessage\\(\\)|'Database error)/", $src)) $bad[] = basename($f->getPathname());
 }

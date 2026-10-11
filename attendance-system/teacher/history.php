@@ -107,8 +107,8 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><span class="badge badge-<?php echo strtolower($r['status']); ?>"<?php if (!empty($r['marked_by_user_id'])): ?> title="<?php echo e('Marked by teacher: ' . $r['override_reason']); ?>"<?php endif; ?>><?php echo $r['status']; ?></span></td>
                         <td>
                             <?php if ($r['status'] === 'Absent'): $who = $r['full_name'] . ' - ' . $r['subject_name'] . ', ' . date('M d, Y', strtotime($r['time_in'])); ?>
-                                <button type="button" class="btn btn-outline btn-sm" onclick="openOverride(<?php echo (int) $r['record_id']; ?>, <?php echo js_attr_json($who); ?>, 'Present')"><i class="fa-solid fa-check"></i> Mark present</button>
-                                <button type="button" class="btn btn-outline btn-sm" onclick="openOverride(<?php echo (int) $r['record_id']; ?>, <?php echo js_attr_json($who); ?>, 'Excused')"><i class="fa-solid fa-file-medical"></i> Excuse</button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick='openOverride(<?php echo (int) $r['record_id']; ?>, <?php echo js_attr_json($who); ?>, "Present")'><i class="fa-solid fa-check"></i> Mark present</button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick='openOverride(<?php echo (int) $r['record_id']; ?>, <?php echo js_attr_json($who); ?>, "Excused")'><i class="fa-solid fa-file-medical"></i> Excuse</button>
                             <?php else: ?><span class="text-muted">—</span><?php endif; ?>
                         </td>
                     </tr>

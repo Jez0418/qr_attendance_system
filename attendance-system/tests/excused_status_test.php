@@ -41,9 +41,21 @@ check('dot-blue style exists', strpos($css, '.dot-blue{') !== false);
 check('excused tokens defined in light and dark', substr_count($css, '--excused-fg:') === 2 && substr_count($css, '--chart-excused:') === 2);
 check('chart helper returns excused colours', strpos(file_get_contents("$root/assets/js/theme.js"), 'excusedFill') !== false);
 $hist = file_get_contents("$root/teacher/history.php");
-check('history offers Excuse', strpos($hist, "'Excused')") !== false);
+check('history offers Excuse', strpos($hist, '"Excused")') !== false);
 check('history buttons use js_attr_json', strpos($hist, 'js_attr_json(') !== false && strpos($hist, 'e(json_encode(') === false);
 check('history posts the target', strpos($hist, 'reason, target }') !== false);
+// Render the real buttons with a name full of quotes and parse them like a browser: the handler must be whole.
+preg_match_all('/<button[^\n]*openOverride\([^\n]*<\/button>/', $hist, $m);
+check('history has the two override buttons', count($m[0]) === 2);
+$who = "D'Souza \"Jr\" - Women's Health, Oct 07, 2026";
+foreach ($m[0] as $i => $button) {
+    $html = str_replace(["<?php echo (int) \$r['record_id']; ?>", '<?php echo js_attr_json($who); ?>'], ['5', js_attr_json($who)], $button);
+    $doc = new DOMDocument();
+    @$doc->loadHTML('<meta charset="utf-8">' . $html);
+    $onclick = $doc->getElementsByTagName('button')->item(0)?->getAttribute('onclick') ?? '';
+    $target = $i === 0 ? 'Present' : 'Excused';
+    check("history button $target keeps its whole handler", preg_match('/^openOverride\(5, "D\\\\u0027Souza \\\\u0022Jr\\\\u0022 - Women\\\\u0027s Health, Oct 07, 2026", "' . $target . '"\)$/', $onclick) === 1);
+}
 
 // ---- Student dashboard and teacher roster show how many absences were excused
 $sd = file_get_contents("$root/student/dashboard.php");
