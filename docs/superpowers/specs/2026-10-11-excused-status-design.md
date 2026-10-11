@@ -75,8 +75,9 @@ The live constraint is `attendance_records_status_check` (checked 2026-10-11). `
 ### Statistics: `includes/attendance_stats.php`
 
 `attendance_standing()` is unchanged. Its queries already count attended = `Present`/`Late` and
-absent = `Absent`, so Excused drops out of both. The three queries gain
-`COUNT(...) FILTER (WHERE ar.status = 'Excused') AS excused`, returned in the rows for display only.
+absent = `Absent`, so Excused drops out of both. `student_class_standings()` and `class_student_standings()` gain
+`COUNT(...) FILTER (WHERE ar.status = 'Excused') AS excused`, returned for display only. The watchlist query
+(`teacher_students_at_risk()`) is unchanged: it shows no excused count.
 
 ### "Real scans" cleanup
 
