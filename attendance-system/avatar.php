@@ -8,6 +8,7 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/avatar.php';
 require_login();
 
+global $pdo;   // opened by includes/db.php through auth.php (no-op here; tells the IDE it exists)
 $table = photo_table_for_role($_SESSION['role'] ?? '');
 $photo = '';
 if ($table && !empty($_SESSION['profile_id'])) {
