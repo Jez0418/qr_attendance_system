@@ -5,7 +5,9 @@
  * Attendance rate and absence-limit warnings, per student per class.
  *
  * A "meeting" here is a session the student has a record for: Present, Late (both count as
- * attended) or Absent (added by includes/absences.php when a session ends). Meetings that never
+ * attended) or Absent (added by includes/absences.php when a session ends). An Excused record (a teacher
+ * excused the absence, includes/attendance_override.php) counts as neither: not a meeting, not an absence;
+ * it is only counted for display (`excused`). Meetings that never
  * had a session are not counted, the same rule the absence marking uses.
  *
  * Two limits, both in Admin > Settings (database/supabase_attendance_insights.sql):
@@ -71,7 +73,7 @@ function absence_count_label(int $absent, array $limits): string {
 
 /**
  * Every class the student is enrolled in, with counts and standing, worst first.
- * Rows: teacher_subject_id, subject_code, subject_name, section, late, standing.
+ * Rows: teacher_subject_id, subject_code, subject_name, section, late, excused, standing.
  */
 function student_class_standings(PDO $pdo, int $studentId, ?array $limits = null): array {
     $limits = $limits ?? attendance_limits($pdo);
@@ -79,7 +81,8 @@ function student_class_standings(PDO $pdo, int $studentId, ?array $limits = null
         SELECT ts.teacher_subject_id, sub.subject_code, sub.subject_name, ts.section,
                COUNT(ar.record_id) FILTER (WHERE ar.status IN ('Present', 'Late')) AS attended,
                COUNT(ar.record_id) FILTER (WHERE ar.status = 'Late') AS late,
-               COUNT(ar.record_id) FILTER (WHERE ar.status = 'Absent') AS absent
+               COUNT(ar.record_id) FILTER (WHERE ar.status = 'Absent') AS absent,
+               COUNT(ar.record_id) FILTER (WHERE ar.status = 'Excused') AS excused
         FROM enrollments e
         JOIN teacher_subjects ts ON ts.teacher_subject_id = e.teacher_subject_id
         JOIN subjects sub ON sub.subject_id = ts.subject_id
@@ -93,6 +96,7 @@ function student_class_standings(PDO $pdo, int $studentId, ?array $limits = null
     $rows = [];
     foreach ($stmt->fetchAll() as $r) {
         $r['late'] = (int) $r['late'];
+        $r['excused'] = (int) $r['excused'];
         $r['standing'] = attendance_standing((int) $r['attended'], (int) $r['absent'], $limits);
         $rows[] = $r;
     }
@@ -100,15 +104,16 @@ function student_class_standings(PDO $pdo, int $studentId, ?array $limits = null
 }
 
 /**
- * Per-student counts for one class (teacher roster). Keyed by student_id; students with no
- * records yet are absent from the map (treat as attended 0 / absent 0).
+ * Per-student counts for one class (teacher roster). Keyed by student_id: attendance_standing() plus
+ * 'excused'. Students with no records yet are absent from the map (treat as attended 0 / absent 0 / excused 0).
  */
 function class_student_standings(PDO $pdo, int $teacherSubjectId, ?array $limits = null): array {
     $limits = $limits ?? attendance_limits($pdo);
     $stmt = $pdo->prepare("
         SELECT ar.student_id,
                COUNT(*) FILTER (WHERE ar.status IN ('Present', 'Late')) AS attended,
-               COUNT(*) FILTER (WHERE ar.status = 'Absent') AS absent
+               COUNT(*) FILTER (WHERE ar.status = 'Absent') AS absent,
+               COUNT(*) FILTER (WHERE ar.status = 'Excused') AS excused
         FROM attendance_records ar
         JOIN attendance_sessions s ON s.session_id = ar.session_id
         WHERE s.teacher_subject_id = ?
@@ -117,7 +122,7 @@ function class_student_standings(PDO $pdo, int $teacherSubjectId, ?array $limits
     $stmt->execute([$teacherSubjectId]);
     $out = [];
     foreach ($stmt->fetchAll() as $r) {
-        $out[(int) $r['student_id']] = attendance_standing((int) $r['attended'], (int) $r['absent'], $limits);
+        $out[(int) $r['student_id']] = attendance_standing((int) $r['attended'], (int) $r['absent'], $limits) + ['excused' => (int) $r['excused']];
     }
     return $out;
 }
