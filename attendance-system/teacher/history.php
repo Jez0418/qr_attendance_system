@@ -106,8 +106,9 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><?php echo format_record_time($r); ?></td>
                         <td><span class="badge badge-<?php echo strtolower($r['status']); ?>"<?php if (!empty($r['marked_by_user_id'])): ?> title="<?php echo e('Marked by teacher: ' . $r['override_reason']); ?>"<?php endif; ?>><?php echo $r['status']; ?></span></td>
                         <td>
-                            <?php if ($r['status'] === 'Absent'): ?>
-                                <button type="button" class="btn btn-outline btn-sm" onclick="openOverride(<?php echo (int) $r['record_id']; ?>, <?php echo e(json_encode($r['full_name'] . ' - ' . $r['subject_name'] . ', ' . date('M d, Y', strtotime($r['time_in'])))); ?>)"><i class="fa-solid fa-check"></i> Mark present</button>
+                            <?php if ($r['status'] === 'Absent'): $who = $r['full_name'] . ' - ' . $r['subject_name'] . ', ' . date('M d, Y', strtotime($r['time_in'])); ?>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="openOverride(<?php echo (int) $r['record_id']; ?>, <?php echo js_attr_json($who); ?>, 'Present')"><i class="fa-solid fa-check"></i> Mark present</button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="openOverride(<?php echo (int) $r['record_id']; ?>, <?php echo js_attr_json($who); ?>, 'Excused')"><i class="fa-solid fa-file-medical"></i> Excuse</button>
                             <?php else: ?><span class="text-muted">—</span><?php endif; ?>
                         </td>
                     </tr>
@@ -121,10 +122,10 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="modal-backdrop" id="overrideModal">
     <div class="modal">
-        <div class="modal-header"><h3>Mark present</h3><button type="button" class="modal-close" onclick="closeModal('overrideModal')">&times;</button></div>
+        <div class="modal-header"><h3 id="overrideTitle">Mark present</h3><button type="button" class="modal-close" onclick="closeModal('overrideModal')">&times;</button></div>
         <div class="modal-body">
             <p id="overrideWho" style="margin-top:0;font-weight:600"></p>
-            <p class="text-muted" style="font-size:13px">This changes the record from Absent to Present, tells the student, and is saved in the activity log with your name and this reason.</p>
+            <p class="text-muted" style="font-size:13px" id="overrideText"></p>
             <div class="form-group">
                 <label for="overrideReason">Reason *</label>
                 <textarea id="overrideReason" class="form-control" rows="3" maxlength="255" placeholder="e.g. Scanner problem, student was present in class"></textarea>
@@ -137,9 +138,29 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 <script>
+// One modal for both changes of an Absent record (includes/attendance_override.php): to Present or to Excused.
+const OVERRIDE_MODES = {
+    Present: {
+        title: 'Mark present', button: 'Mark present',
+        text: "This changes the record from Absent to Present, tells the student, and is saved in the activity log with your name and this reason. This can't be undone.",
+        placeholder: 'e.g. Scanner problem, student was present in class'
+    },
+    Excused: {
+        title: 'Excuse absence', button: 'Excuse',
+        text: "This changes the record from Absent to Excused. It won't count as an absence or against the attendance rate. The student is notified, and it is saved in the activity log with your name and this reason. This can't be undone.",
+        placeholder: 'e.g. Medical certificate shown'
+    }
+};
 let overrideRecordId = null;
-function openOverride(recordId, who) {
+let overrideTarget = 'Present';
+function openOverride(recordId, who, target) {
     overrideRecordId = recordId;
+    overrideTarget = OVERRIDE_MODES[target] ? target : 'Present';
+    const mode = OVERRIDE_MODES[overrideTarget];
+    document.getElementById('overrideTitle').textContent = mode.title;
+    document.getElementById('overrideText').textContent = mode.text;
+    document.getElementById('overrideReason').placeholder = mode.placeholder;
+    document.getElementById('overrideSubmit').textContent = mode.button;
     document.getElementById('overrideWho').textContent = who;
     document.getElementById('overrideReason').value = '';
     openModal('overrideModal');
@@ -151,7 +172,8 @@ async function submitOverride() {
     const btn = document.getElementById('overrideSubmit');
     btn.disabled = true;
     try {
-        const res = await ajaxPost('ajax_attendance_override.php', { record_id: overrideRecordId, reason });
+        const target = overrideTarget;
+        const res = await ajaxPost('ajax_attendance_override.php', { record_id: overrideRecordId, reason, target });
         if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 600); }
         else { showToast('error', res.message); btn.disabled = false; }
     } catch (err) { showToast('error', 'Something went wrong. Please try again.'); btn.disabled = false; }

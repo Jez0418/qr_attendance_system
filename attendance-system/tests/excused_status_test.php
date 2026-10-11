@@ -34,6 +34,17 @@ check('live list counts only Present/Late as scanned', strpos($live, "['Pending'
 $stats = file_get_contents("$root/includes/attendance_stats.php");
 check('student and roster standings count excused', preg_match_all("/FILTER \\(WHERE ar\\.status = 'Excused'\\) AS excused/", $stats) === 2);
 
+// ---- Colour and the teacher's Excuse button
+$css = file_get_contents("$root/assets/css/style.css");
+check('badge-excused style exists', strpos($css, '.badge-excused{') !== false);
+check('dot-blue style exists', strpos($css, '.dot-blue{') !== false);
+check('excused tokens defined in light and dark', substr_count($css, '--excused-fg:') === 2 && substr_count($css, '--chart-excused:') === 2);
+check('chart helper returns excused colours', strpos(file_get_contents("$root/assets/js/theme.js"), 'excusedFill') !== false);
+$hist = file_get_contents("$root/teacher/history.php");
+check('history offers Excuse', strpos($hist, "'Excused')") !== false);
+check('history buttons use js_attr_json', strpos($hist, 'js_attr_json(') !== false && strpos($hist, 'e(json_encode(') === false);
+check('history posts the target', strpos($hist, 'reason, target }') !== false);
+
 // ---- Database: excuse a real Absent record (rolled back). DemoPDO turns override_absent()'s own
 // transaction into a SAVEPOINT inside ours, so everything is undone at the end.
 if ($useDb) {
