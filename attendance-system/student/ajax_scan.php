@@ -17,7 +17,7 @@
  *                                                  ensure_session_for_occurrence()
  *   6.  Session still open (not closed early, not past session_end)?
  *   7.  Student enrolled in the class?
- *   8.  Location provided, accurate enough, inside the lab's radius?
+ *   8.  Location provided, accuracy reported and good enough, inside the lab's radius?
  *                                                  server-side Haversine
  *   9.  Not already recorded?
  *  10.  This phone hasn't already checked in another student for this session?
@@ -143,10 +143,8 @@ try {
     if ($lat === null || $lon === null || $lat === '' || $lon === '' || !is_numeric($lat) || !is_numeric($lon)) {
         throw new Exception('Location access is required to verify attendance.');
     }
-    $maxAccuracy = get_setting_int($pdo, 'max_gps_accuracy_meters', 100);
-    if ($accuracy !== null && $accuracy !== '' && is_numeric($accuracy) && (float) $accuracy > $maxAccuracy) {
-        throw new Exception('Your location accuracy is too low. Please enable high-accuracy location services and try again.');
-    }
+    $accuracyProblem = gps_accuracy_problem($accuracy, get_setting_int($pdo, 'max_gps_accuracy_meters', 100));   // missing counts as a problem
+    if ($accuracyProblem !== '') throw new Exception($accuracyProblem);
     if (!$lab || $lab['latitude'] === null || $lab['longitude'] === null) {
         throw new Exception('This laboratory has no GPS coordinates configured. Please contact your administrator.');
     }
