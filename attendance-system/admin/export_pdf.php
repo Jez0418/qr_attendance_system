@@ -56,6 +56,7 @@ if ($subjectId) { $s = $pdo->prepare('SELECT subject_name FROM subjects WHERE su
     .status-Present{color:#166534;font-weight:bold}
     .status-Late{color:#92400e;font-weight:bold}
     .status-Absent{color:#991b1b;font-weight:bold}
+    .status-Excused{color:#3730a3;font-weight:bold}
     .print-btn{margin-bottom:20px;padding:10px 18px;background:#4338ca;color:#fff;border:0;border-radius:6px;cursor:pointer;font-size:14px}
     @media print{ .print-btn{display:none} }
 </style>

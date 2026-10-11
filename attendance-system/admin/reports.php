@@ -33,14 +33,14 @@ $baseQuery = "
 // Summary counts
 $summary = $pdo->prepare("SELECT ar.status, COUNT(*) c $baseQuery GROUP BY ar.status");
 $summary->execute($params);
-$counts = ['Present' => 0, 'Late' => 0, 'Absent' => 0];
+$counts = ['Present' => 0, 'Late' => 0, 'Absent' => 0, 'Excused' => 0];
 foreach ($summary->fetchAll() as $row) $counts[$row['status']] = (int) $row['c'];
 $totalScans = array_sum($counts);
 
 // Per-subject breakdown
 $bySubject = $pdo->prepare("
     SELECT sub.subject_name,
-        SUM(ar.status='Present') AS present, SUM(ar.status='Late') AS late, SUM(ar.status='Absent') AS absent
+        SUM(ar.status='Present') AS present, SUM(ar.status='Late') AS late, SUM(ar.status='Absent') AS absent, SUM(ar.status='Excused') AS excused
     $baseQuery GROUP BY sub.subject_id ORDER BY sub.subject_name
 ");
 $bySubject->execute($params);
@@ -88,6 +88,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-check"></i></div><div><div class="stat-value"><?php echo $counts['Present']; ?></div><div class="stat-label">Present</div></div></div>
     <div class="stat-card"><div class="stat-icon amber"><i class="fa-solid fa-clock"></i></div><div><div class="stat-value"><?php echo $counts['Late']; ?></div><div class="stat-label">Late</div></div></div>
     <div class="stat-card"><div class="stat-icon red"><i class="fa-solid fa-xmark"></i></div><div><div class="stat-value"><?php echo $counts['Absent']; ?></div><div class="stat-label">Absent</div></div></div>
+    <div class="stat-card"><div class="stat-icon excused"><i class="fa-solid fa-file-medical"></i></div><div><div class="stat-value"><?php echo $counts['Excused']; ?></div><div class="stat-label">Excused</div></div></div>
 </div>
 
 <div class="grid-2">
@@ -131,9 +132,10 @@ const subjectData = {
     labels: <?php echo json_encode(array_column($subjectRows, 'subject_name')); ?>,
     present: <?php echo json_encode(array_map('intval', array_column($subjectRows,'present'))); ?>,
     late: <?php echo json_encode(array_map('intval', array_column($subjectRows,'late'))); ?>,
-    absent: <?php echo json_encode(array_map('intval', array_column($subjectRows,'absent'))); ?>
+    absent: <?php echo json_encode(array_map('intval', array_column($subjectRows,'absent'))); ?>,
+    excused: <?php echo json_encode(array_map('intval', array_column($subjectRows,'excused'))); ?>
 };
-const shareData = [<?php echo $counts['Present']; ?>, <?php echo $counts['Late']; ?>, <?php echo $counts['Absent']; ?>];
+const shareData = [<?php echo $counts['Present']; ?>, <?php echo $counts['Late']; ?>, <?php echo $counts['Absent']; ?>, <?php echo $counts['Excused']; ?>];
 let charts = [];
 
 // Colours come from the active theme (assets/js/theme.js); the charts are rebuilt when it changes.
@@ -148,14 +150,15 @@ function buildCharts() {
                 datasets: [
                     { label:'Present', data: subjectData.present, backgroundColor: c.green },
                     { label:'Late', data: subjectData.late, backgroundColor: c.amber },
-                    { label:'Absent', data: subjectData.absent, backgroundColor: c.red }
+                    { label:'Absent', data: subjectData.absent, backgroundColor: c.red },
+                    { label:'Excused', data: subjectData.excused, backgroundColor: c.excused }
                 ]
             },
             options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16}}}, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}} }
         }),
         new Chart(document.getElementById('shareChart'), {
             type: 'pie',
-            data: { labels:['Present','Late','Absent'], datasets:[{ data: shareData, backgroundColor:[c.green, c.amber, c.red], borderColor: c.surface }] },
+            data: { labels:['Present','Late','Absent','Excused'], datasets:[{ data: shareData, backgroundColor:[c.green, c.amber, c.red, c.excused], borderColor: c.surface }] },
             options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16}}} }
         })
     ];

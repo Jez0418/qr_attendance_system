@@ -40,14 +40,15 @@ $trendStmt = $pdo->query('
     SELECT DATE(time_in) AS d,
            SUM(status = "Present") AS present,
            SUM(status = "Late") AS late,
-           SUM(status = "Absent") AS absent
+           SUM(status = "Absent") AS absent,
+           SUM(status = "Excused") AS excused
     FROM attendance_records
     WHERE time_in >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
     GROUP BY DATE(time_in)
     ORDER BY d ASC
 ');
 $trend = $trendStmt->fetchAll();
-$trendLabels = []; $trendPresent = []; $trendLate = []; $trendAbsent = [];
+$trendLabels = []; $trendPresent = []; $trendLate = []; $trendAbsent = []; $trendExcused = [];
 for ($i = 6; $i >= 0; $i--) {
     $d = date('Y-m-d', strtotime("-$i day"));
     $trendLabels[] = date('M d', strtotime($d));
@@ -56,11 +57,12 @@ for ($i = 6; $i >= 0; $i--) {
     $trendPresent[] = $found ? (int) $found['present'] : 0;
     $trendLate[] = $found ? (int) $found['late'] : 0;
     $trendAbsent[] = $found ? (int) $found['absent'] : 0;
+    $trendExcused[] = $found ? (int) $found['excused'] : 0;
 }
 
 // ---- Status distribution (all-time) ----
 $statusStmt = $pdo->query('SELECT status, COUNT(*) c FROM attendance_records GROUP BY status');
-$statusCounts = ['Present' => 0, 'Late' => 0, 'Absent' => 0];
+$statusCounts = ['Present' => 0, 'Late' => 0, 'Absent' => 0, 'Excused' => 0];
 foreach ($statusStmt->fetchAll() as $row) $statusCounts[$row['status']] = (int) $row['c'];
 
 // ---- Laboratory usage (today) ----
@@ -167,9 +169,11 @@ require_once __DIR__ . '/../includes/header.php';
                 <p class="text-muted text-center" style="padding:20px 0">No attendance records yet.</p>
             <?php else: foreach ($recent as $r): ?>
                 <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--slate-100);font-size:13px">
-                    <span class="dot <?php echo ['Late' => 'dot-amber', 'Absent' => 'dot-red'][$r['status']] ?? 'dot-green'; ?>" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>
+                    <span class="dot <?php echo ['Late' => 'dot-amber', 'Absent' => 'dot-red', 'Excused' => 'dot-blue'][$r['status']] ?? 'dot-green'; ?>" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>
                     <?php if ($r['status'] === 'Absent'): ?>
                     <span style="flex:1"><?php echo e($r['full_name']); ?> was absent from <?php echo e($r['subject_name']); ?> · <?php echo date('M d', strtotime($r['time_in'])); ?></span>
+                    <?php elseif ($r['status'] === 'Excused'): ?>
+                    <span style="flex:1"><?php echo e($r['full_name']); ?> was excused from <?php echo e($r['subject_name']); ?> · <?php echo date('M d', strtotime($r['time_in'])); ?></span>
                     <?php else: ?>
                     <span style="flex:1"><?php echo e($r['full_name']); ?> <?php echo !empty($r['marked_by_user_id']) ? 'was marked present by the teacher at' : 'checked in at'; ?> <?php echo e($r['lab_name']); ?> · <?php echo date('h:i A', strtotime($r['time_in'])); ?></span>
                     <?php endif; ?>
@@ -304,9 +308,10 @@ const trendData = {
     labels: <?php echo json_encode($trendLabels); ?>,
     present: <?php echo json_encode($trendPresent); ?>,
     late: <?php echo json_encode($trendLate); ?>,
-    absent: <?php echo json_encode($trendAbsent); ?>
+    absent: <?php echo json_encode($trendAbsent); ?>,
+    excused: <?php echo json_encode($trendExcused); ?>
 };
-const statusData = [<?php echo $statusCounts['Present']; ?>, <?php echo $statusCounts['Late']; ?>, <?php echo $statusCounts['Absent']; ?>];
+const statusData = [<?php echo $statusCounts['Present']; ?>, <?php echo $statusCounts['Late']; ?>, <?php echo $statusCounts['Absent']; ?>, <?php echo $statusCounts['Excused']; ?>];
 const labData = {
     labels: <?php echo json_encode(array_column($labUsage, 'lab_name')); ?>,
     counts: <?php echo json_encode(array_map('intval', array_column($labUsage, 'cnt'))); ?>
@@ -324,7 +329,8 @@ function buildCharts() {
                 datasets: [
                     { label: 'Present', data: trendData.present, borderColor: c.green, backgroundColor: c.greenFill, tension:.35, fill:true },
                     { label: 'Late', data: trendData.late, borderColor: c.amber, backgroundColor: c.amberFill, tension:.35, fill:true },
-                    { label: 'Absent', data: trendData.absent, borderColor: c.red, backgroundColor: c.redFill, tension:.35, fill:true }
+                    { label: 'Absent', data: trendData.absent, borderColor: c.red, backgroundColor: c.redFill, tension:.35, fill:true },
+                    { label: 'Excused', data: trendData.excused, borderColor: c.excused, backgroundColor: c.excusedFill, tension:.35, fill:true }
                 ]
             },
             options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16}}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} }
@@ -332,8 +338,8 @@ function buildCharts() {
         new Chart(document.getElementById('statusChart'), {
             type: 'doughnut',
             data: {
-                labels: ['Present','Late','Absent'],
-                datasets: [{ data: statusData, backgroundColor: [c.green, c.amber, c.red], borderColor: c.surface }]
+                labels: ['Present','Late','Absent','Excused'],
+                datasets: [{ data: statusData, backgroundColor: [c.green, c.amber, c.red, c.excused], borderColor: c.surface }]
             },
             options: { responsive:true, maintainAspectRatio:false, cutout:'68%', plugins:{legend:{position:'bottom', labels:{usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16}}} }
         }),

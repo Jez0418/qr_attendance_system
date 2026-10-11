@@ -51,6 +51,18 @@ check('student dashboard defaults an Excused count', strpos($sd, "'Excused' => 0
 check('student class rows mention excused', strpos($sd, "' excused'") !== false);
 check('roster reads excused safely', strpos(file_get_contents("$root/teacher/class_view.php"), "\$st['excused'] ?? 0") !== false);
 
+// ---- Admin pages and exports
+$ad = file_get_contents("$root/admin/dashboard.php");
+check('admin recent activity has an excused sentence', strpos($ad, 'was excused from') !== false);
+check('admin charts plot Excused', strpos($ad, "label: 'Excused'") !== false && strpos($ad, "'Present','Late','Absent','Excused'") !== false);
+$rp = file_get_contents("$root/admin/reports.php");
+check('reports count and plot Excused', strpos($rp, "'Excused' => 0") !== false && strpos($rp, "SUM(ar.status='Excused') AS excused") !== false && strpos($rp, "label:'Excused'") !== false);
+check('monitoring filter accepts Excused', strpos(file_get_contents("$root/admin/attendance_monitoring.php"), "['Present', 'Late', 'Absent', 'Excused']") !== false);
+foreach (['includes/export.php', 'admin/export_pdf.php'] as $f) {
+    check("$f colours Excused", strpos(file_get_contents("$root/$f"), '.status-Excused{') !== false);
+}
+check('export colour list includes Excused', strpos(file_get_contents("$root/includes/export.php"), "['Present', 'Late', 'Absent', 'Excused']") !== false);
+
 // ---- Database: excuse a real Absent record (rolled back). DemoPDO turns override_absent()'s own
 // transaction into a SAVEPOINT inside ours, so everything is undone at the end.
 if ($useDb) {

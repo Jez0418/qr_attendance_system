@@ -9,7 +9,7 @@
  *
  * $meta    = ['Label' => 'value', ...] shown above the table (PDF only)
  * $headers = column titles; $rows = list of rows of plain-text cells
- * (escaped here). Cells reading Present / Late / Absent are colour-coded.
+ * (escaped here). Cells reading Present / Late / Absent / Excused are colour-coded.
  */
 
 /** The requested export format from ?export=, or null. */
@@ -32,7 +32,7 @@ function send_attendance_export(string $format, string $title, array $meta, arra
     $meta['Records'] = (string) count($rows);
     $cell = function ($v, $tag = 'td') {
         $v = (string) $v;
-        $cls = in_array($v, ['Present', 'Late', 'Absent'], true) ? ' class="status-' . $v . '"' : '';
+        $cls = in_array($v, ['Present', 'Late', 'Absent', 'Excused'], true) ? ' class="status-' . $v . '"' : '';
         return "<$tag$cls>" . e($v) . "</$tag>";
     };
 
@@ -65,6 +65,7 @@ function send_attendance_export(string $format, string $title, array $meta, arra
     .status-Present{color:#166534;font-weight:bold}
     .status-Late{color:#92400e;font-weight:bold}
     .status-Absent{color:#991b1b;font-weight:bold}
+    .status-Excused{color:#3730a3;font-weight:bold}
     .print-btn{margin-bottom:20px;padding:10px 18px;background:#4338ca;color:#fff;border:0;border-radius:6px;cursor:pointer;font-size:14px}
     @media print{ .print-btn{display:none} body{padding:0} }
 </style>

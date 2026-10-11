@@ -194,6 +194,7 @@ img{max-width:100%}
 .stat-icon.green{background:var(--green-100);color:var(--green-fg)}
 .stat-icon.amber{background:var(--amber-100);color:var(--amber-fg)}
 .stat-icon.red{background:var(--red-100);color:var(--red-fg)}
+.stat-icon.excused{background:var(--excused-100);color:var(--excused-fg)}
 .stat-value{font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--slate-900);line-height:1.1;font-variant-numeric:tabular-nums}
 .stat-value.warn{color:var(--amber-fg)}
 
