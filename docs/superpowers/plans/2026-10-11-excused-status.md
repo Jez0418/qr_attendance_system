@@ -16,16 +16,18 @@
 - Only `'Absent'` can change, only to `'Present'` or `'Excused'`, only once, only by the class's own teacher (`ts.teacher_id`).
 - Reason 3-255 characters, counted with `mb_strlen`.
 - Excused counts as neither attended nor absent: rate = (Present+Late) / (Present+Late+Absent). `attendance_standing()` stays unchanged.
-- "A check-in/scan" in SQL is written `status IN ('Present','Late')`; in PHP `in_array($status, ['Present', 'Late'], true)`. Never `<> 'Absent'` / `!== 'Absent'` for that purpose.
+- "A check-in/scan" in SQL is written `status IN ("Present", "Late")` inside a single-quoted PHP string (the file style; the shim rewrites double-quoted literals) or `status IN ('Present', 'Late')` inside a double-quoted one: **the SQL quotes follow the enclosing PHP string**. In PHP: `in_array($status, ['Present', 'Late'], true)`. Never `<> 'Absent'` / `!== 'Absent'` for that purpose.
 - Excused colour is blue/indigo from CSS tokens; no hard-coded white surfaces (`tests/theme_test.php`).
 - Inline `onclick` data goes through `js_attr_json()`; every POST goes through `ajaxPost()` (CSRF).
 - Never return raw exception text for DB errors: `safe_error_message($e)`.
 - Live database writes and `--db` test runs need the user's explicit OK first (user rule). SQL runs in Supabase before the code reaches `main`.
 - Run commands from `attendance-system/`. Run the whole suite with:
   `for t in tests/*_test.php; do php "$t" >/dev/null 2>&1 || echo "FAILED: $t"; done` (no output = all passed).
+- The suite only reads files; it never loads the pages. **Every verify step also runs `php -l` on each PHP file the task touched** (expected: `No syntax errors detected` for each).
 
 ## Review Focus
 
+0. **Pages that only break when loaded:** a quoting slip inside a SQL string is invisible to the source-reading tests. Expected: every touched file passes `php -l`. Test: the `php -l` line in every task's verify step.
 1. **Double submit / two tabs:** the teacher clicks Excuse twice, or excuses in one tab and Mark present in another. Expected: the second call throws "This record was already changed. Reload the page." and the record keeps the first change. Test: Task 3 `--db` step.
 2. **A name with an apostrophe in the button** (D'Souza, Women's Health). Expected: both buttons still open the modal. Test: Task 4 source check that `teacher/history.php` uses `js_attr_json(` and no longer `e(json_encode(`.
 3. **A hand-crafted POST** with `target=Late`, `target=excused`, `target=` or `target[]=x`. Expected: refused with a JSON error, never a 500 or a status change. Test: Task 1 unit checks on `override_problem()`, plus the endpoint's non-string guard (Task 1 Step 5).
@@ -133,7 +135,9 @@ git commit -m "Let a teacher change an Absent record to Excused"
 
 - [ ] **Step 1: Write the failing source check**
 
-Scan every `*.php` under `attendance-system/` except `tests/` (use `RecursiveDirectoryIterator`). For each line matching
+Scan every `*.php` under `attendance-system/` except `tests/` and `includes/attendance_override.php` (use `RecursiveDirectoryIterator`).
+That file is exempt because its `!== 'Absent'` is the rule "only an Absent record can change", not a check-in count. Say so in a
+comment next to the exemption. For each line matching
 `/<>\s*["\']Absent["\']|!==?\s*["\']Absent["\']/`, collect `file:line`. Then:
 
 ```php
@@ -149,15 +153,16 @@ Expected: `FAIL` listing 7 hits (dashboard ×2, qr_management, my_subjects, clas
 
 - [ ] **Step 3: Rewrite each query and check**
 
-- SQL: `status <> "Absent"` becomes `status IN ('Present', 'Late')`, keeping the `ar.` prefix where present.
+Fix **every** hit the scan reports, not only the ones listed above (the list came from a filtered grep).
+- SQL: `status <> "Absent"` becomes `status IN ("Present", "Late")` (all inside single-quoted PHP strings; see Global Constraints), keeping the `ar.` prefix where present.
 - `ajax_session_status.php`:
-  - Line 35: `ORDER BY (ar.time_in IS NULL OR ar.status NOT IN ('Present', 'Late'))`.
+  - Line 35: `ORDER BY (ar.time_in IS NULL OR ar.status NOT IN ("Present", "Late"))` (single-quoted PHP string).
   - Line 42: the time is shown only when `in_array($r['status'], ['Present', 'Late'], true)`.
   - Line 48: `$scannedCount` counts `in_array($r['status'], ['Present', 'Late'], true)`.
 
 - [ ] **Step 4: Run the test and the suite**
 
-Run: `php tests/excused_status_test.php` (expected: `All passed`), then the suite (expected: no output).
+Run: `php tests/excused_status_test.php` (expected: `All passed`), `php -l` on the 6 touched pages (expected: no syntax errors), then the suite (expected: no output).
 
 - [ ] **Step 5: Commit**
 
@@ -183,21 +188,21 @@ git commit -m "Count only Present and Late as check-ins"
 
 - [ ] **Step 1: Write the `--db` section** (it runs only with `--db`, inside `$pdo->beginTransaction()` ... `finally { $pdo->rollBack(); }`, like `tests/device_check_test.php`)
 
-- Pick an enrolled student/class pair that has at least one session:
-  `SELECT e.student_id, e.teacher_subject_id, ts.teacher_id, s.session_id FROM enrollments e JOIN teacher_subjects ts ... JOIN attendance_sessions s ON s.teacher_subject_id = ts.teacher_subject_id LEFT JOIN attendance_records ar ON ar.session_id = s.session_id AND ar.student_id = e.student_id WHERE e.status = 'enrolled' AND ar.record_id IS NULL LIMIT 1`
-- `$row = fn() => current(array_filter(student_class_standings($pdo, $studentId), fn($r) => (int) $r['teacher_subject_id'] === $classId));`, then `$before = $row();`.
-- Insert an Absent record (`time_in = NOW()`) and get its `record_id`.
+- Pick an existing Absent record of an enrolled student (live data had 77 on 2026-10-11):
+  `SELECT ar.record_id, ar.student_id, s.teacher_subject_id, ts.teacher_id FROM attendance_records ar JOIN attendance_sessions s ON s.session_id = ar.session_id JOIN teacher_subjects ts ON ts.teacher_subject_id = s.teacher_subject_id JOIN enrollments e ON e.student_id = ar.student_id AND e.teacher_subject_id = s.teacher_subject_id AND e.status = 'enrolled' WHERE ar.status = 'Absent' LIMIT 1`
+- No row: `check('found an Absent record to excuse', false)` and skip the rest. That is an explicit FAIL, not a crash.
+- `$standingRow = fn() => current(array_filter(student_class_standings($pdo, $studentId), fn($r) => (int) $r['teacher_subject_id'] === $classId));`, then `$before = $standingRow();`.
 - Get the class teacher's user id: `SELECT user_id FROM teachers WHERE teacher_id = ?` (the class's `teacher_id`).
 
 ```php
 $name = override_absent($pdo, $recordId, 'Excused', $teacherId, $teacherUserId, 'Medical certificate shown');
 check('override_absent returns the student name', $name !== '');
-$row = $pdo->query("SELECT status, marked_by_user_id, override_reason FROM attendance_records WHERE record_id = $recordId")->fetch();
-check('record is Excused with who/why', $row['status'] === 'Excused' && (int) $row['marked_by_user_id'] === $teacherUserId && $row['override_reason'] === 'Medical certificate shown');
-$after = $row();
+$rec = $pdo->query("SELECT status, marked_by_user_id, override_reason FROM attendance_records WHERE record_id = $recordId")->fetch();
+check('record is Excused with who/why', $rec['status'] === 'Excused' && (int) $rec['marked_by_user_id'] === $teacherUserId && $rec['override_reason'] === 'Medical certificate shown');
+$after = $standingRow();
+check('excusing lowers the absence count by 1', $after['standing']['absent'] === $before['standing']['absent'] - 1);
 check('excused count went up by 1', $after['excused'] === $before['excused'] + 1);
-check('absence count unchanged by an excused record', $after['standing']['absent'] === $before['standing']['absent']);
-check('meetings unchanged by an excused record', $after['standing']['meetings'] === $before['standing']['meetings']);
+check('the excused meeting drops out of the meeting count', $after['standing']['meetings'] === $before['standing']['meetings'] - 1);
 $threw = false; try { override_absent($pdo, $recordId, 'Present', $teacherId, $teacherUserId, 'second click'); } catch (Exception $e) { $threw = true; }
 check('a second change of the same record is refused', $threw);
 check('class roster map carries excused', (class_student_standings($pdo, $classId)[$studentId]['excused'] ?? null) === $after['excused']);
@@ -399,7 +404,11 @@ git commit -m "Show Excused on the admin dashboard, reports, monitoring and expo
 ### Task 7: Docs, live rollout and verification
 
 **Files:**
-- Modify: `CLAUDE.md`. Rewrite the "Teacher override" bullet (Absent -> Present or Excused; `override_absent()`; one-way). Add a bullet for the check-in rule (`status IN ('Present','Late')`, guarded by `tests/excused_status_test.php`). Add `supabase_excused_status.sql` to the database list.
+- Modify: `CLAUDE.md`:
+  - Rewrite the "Teacher override" bullet (Absent -> Present or Excused; `override_absent()`; one-way).
+  - **Rewrite the two lines that prescribe the old pattern**: the Absences bullet ("exclude them (`status <> 'Absent'`) from any count of check-ins") and the Admin dashboard bullet ("counts scans only (`ar.status <> "Absent"`)"). Both become `status IN ("Present", "Late")`, and the Absences bullet says Excused rows are excluded too.
+  - Add a bullet for the check-in rule, guarded by `tests/excused_status_test.php`.
+  - Add `supabase_excused_status.sql` to the database list.
 - Modify (outside the repo, no secrets): `C:\Users\Jezreel\OneDrive\Desktop\QR-Attendance-System-Notes.txt`. Update the override section, statuses, and the "Files already run" list.
 
 - [ ] **Step 1: Update both docs and commit `CLAUDE.md`**
