@@ -34,5 +34,23 @@ check('a manual Present says it was marked by the teacher', format_record_time($
 check('a manual Present does not show a fake check-in time', strpos(format_record_time($manual), '11:00') === false);
 check('rows without the column still render', format_record_time(['time_in' => '2026-10-07 11:00:00', 'status' => 'Present']) === 'Oct 07, 2026 11:00 AM');
 
+// Excused: the same override, with 'Excused' as the target (one-way, like Present).
+check('Absent -> Excused allowed', override_problem($abs, 7, 'Medical certificate', 'Excused') === '');
+check('three-argument call still means Present', override_problem($abs, 7, 'reason') === override_problem($abs, 7, 'reason', 'Present'));
+foreach (['Late', 'Absent', 'excused', 'EXCUSED', '', 'Present ', 'Excused;'] as $t) {
+    check("target '$t' is refused", override_problem($abs, 7, 'reason', $t) !== '');
+}
+foreach (['Present', 'Late', 'Excused'] as $s) {
+    check("$s record cannot be excused", override_problem(['status' => $s, 'teacher_id' => 7], 7, 'reason', 'Excused') !== '');
+}
+check('Excused record cannot become Present', override_problem(['status' => 'Excused', 'teacher_id' => 7], 7, 'reason', 'Present') !== '');
+check("someone else's class is refused for Excused too", override_problem($abs, 8, 'reason', 'Excused') === override_problem(null, 7, 'reason', 'Excused'));
+$exc = ['time_in' => '2026-10-07 11:00:00', 'status' => 'Excused', 'marked_by_user_id' => 5];
+check('an Excused row says excused', format_record_time($exc) === 'Oct 07, 2026 · excused');
+check('an Excused row shows no check-in time', strpos(format_record_time($exc), '11:00') === false);
+check('override_absent_to_present() is gone', !function_exists('override_absent_to_present'));
+check('override_absent() exists', function_exists('override_absent'));
+check('endpoint refuses a non-string target', strpos(file_get_contents(__DIR__ . '/../teacher/ajax_attendance_override.php'), 'is_string($target)') !== false);
+
 echo $fail ? "\n$fail FAILED\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

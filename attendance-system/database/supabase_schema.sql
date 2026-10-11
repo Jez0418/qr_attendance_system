@@ -224,7 +224,7 @@ CREATE TABLE attendance_records (
     session_id INT NOT NULL REFERENCES attendance_sessions(session_id) ON DELETE CASCADE,
     student_id INT NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
     time_in TIMESTAMP NOT NULL,
-    status VARCHAR(10) NOT NULL DEFAULT 'Present' CHECK (status IN ('Present','Late','Absent')),
+    status VARCHAR(10) NOT NULL DEFAULT 'Present' CHECK (status IN ('Present','Late','Absent','Excused')),
     latitude DECIMAL(10,7) NULL,
     longitude DECIMAL(10,7) NULL,
     location_accuracy DECIMAL(7,2) NULL,

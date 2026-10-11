@@ -7,7 +7,7 @@
  * - Reads DB_* (and DEMO_PASSWORD) from attendance-system/.env when they are not already set
  *   in the environment. .env is git-ignored; never commit it.
  * - DemoPDO: the app's PDO with nested transactions. App functions that open their own
- *   transaction (override_absent_to_present(), ...) get a SAVEPOINT instead, so the whole
+ *   transaction (override_absent(), ...) get a SAVEPOINT instead, so the whole
  *   seed or cleanup stays ONE transaction that --dry-run can roll back. If the outer
  *   transaction is ever rolled back, the connection refuses every further statement, so
  *   nothing can be written outside the transaction by accident.

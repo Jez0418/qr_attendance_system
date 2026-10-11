@@ -22,7 +22,7 @@
  *   Present / Late  get_late_grace_minutes() and the scan endpoint's rule (late after start + grace)
  *   GPS             is_within_geofence() against the meeting's lab and the session's radius
  *   absences        insert_absent_records() + notify_new_absences() when the meeting ends
- *   overrides       override_absent_to_present()
+ *   overrides       override_absent()
  *   enrollment      enrollment_block_reason() / student_eligible_for_class(), schedule_rules_conflict()
  * Rows those functions create get their real date afterwards (see demo_stamp()).
  * One transaction (tests/demo_common.php): any error and nothing is saved.
@@ -392,7 +392,7 @@ try {
             $rid = $pdo->prepare('SELECT record_id FROM attendance_records WHERE session_id = ? AND student_id = ?');
             $rid->execute([$sid, $studentId]);
             $recordId = (int) $rid->fetchColumn();
-            override_absent_to_present($pdo, $recordId, (int) $classes[$classId]['teacher_id'], (int) $classes[$classId]['teacher_user_id'], $reason);
+            override_absent($pdo, $recordId, 'Present', (int) $classes[$classId]['teacher_id'], (int) $classes[$classId]['teacher_user_id'], $reason);
             $when = ts(at($occ['date'] . ' 07:30:00')->modify('+1 day')->modify('+' . mt_rand(0, 90) . ' minutes'));
             $pdo->prepare('UPDATE attendance_records SET marked_at = ? WHERE record_id = ?')->execute([$when, $recordId]);
             demo_stamp($pdo, $when);
