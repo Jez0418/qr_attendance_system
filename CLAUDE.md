@@ -73,6 +73,11 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   `database/supabase_attendance_insights.sql`, set in Admin > Class Assignments). Always call `get_late_grace_minutes($pdo, $occ['late_grace_minutes'])`
   with the meeting from `includes/schedule.php`; an open session's `late_threshold_minutes` is synced like its radius.
   Test for these three: `php attendance-system/tests/attendance_insights_test.php`.
+- One phone, one student per meeting (`includes/device.php`, column `attendance_records.device_id` from
+  `database/supabase_scan_device.sql`): `current_device_id()` gives each browser a random ID in the HttpOnly cookie `qr_device`
+  (set in `student/scanner.php` before output); `ajax_scan.php` stores it and refuses a scan when `device_conflict()` finds another
+  student checked in from that device for the same session (teacher sees "Same phone as <name>" in Rejected scans; the fix for an
+  honest borrowed phone is the override below). Absent rows and overrides keep `device_id` NULL. Test: `php attendance-system/tests/device_check_test.php`.
 - Teacher override (Absent -> Present only, own classes, reason required): button on `teacher/history.php` -> `teacher/ajax_attendance_override.php`
   (`includes/attendance_override.php`; columns `marked_by_user_id/marked_at/override_reason` from `database/supabase_attendance_override.sql`).
   A manual Present has no GPS data and is shown as "marked by teacher" via `format_record_time()` (selects must include `ar.marked_by_user_id`).
