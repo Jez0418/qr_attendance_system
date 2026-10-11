@@ -74,6 +74,7 @@ CREATE TABLE students (
     photo TEXT DEFAULT NULL,  -- data URI (see supabase_profile_photos.sql)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX idx_students_user ON students (user_id);
 
 CREATE TABLE teachers (
     teacher_id SERIAL PRIMARY KEY,
@@ -85,6 +86,7 @@ CREATE TABLE teachers (
     photo TEXT DEFAULT NULL,  -- data URI (see supabase_profile_photos.sql)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX idx_teachers_user ON teachers (user_id);
 
 CREATE TABLE laboratories (
     lab_id SERIAL PRIMARY KEY,
@@ -178,6 +180,7 @@ CREATE TABLE enrollments (
     status VARCHAR(10) DEFAULT 'enrolled' CHECK (status IN ('enrolled','dropped')),
     UNIQUE (student_id, teacher_subject_id)
 );
+CREATE INDEX idx_enrollments_class ON enrollments (teacher_subject_id);
 
 CREATE TABLE enrollment_requests (
     request_id SERIAL PRIMARY KEY,
@@ -213,6 +216,8 @@ CREATE TABLE attendance_sessions (
     deactivated_at TIMESTAMP NULL DEFAULT NULL
 );
 CREATE INDEX idx_sessions_active ON attendance_sessions (is_active);
+CREATE INDEX idx_sessions_class_date ON attendance_sessions (teacher_subject_id, session_date);
+CREATE INDEX idx_sessions_date ON attendance_sessions (session_date);
 
 CREATE TABLE attendance_records (
     record_id SERIAL PRIMARY KEY,
@@ -229,6 +234,7 @@ CREATE TABLE attendance_records (
     UNIQUE (session_id, student_id)
 );
 CREATE INDEX idx_ar_status ON attendance_records (status);
+CREATE INDEX idx_ar_student ON attendance_records (student_id);
 CREATE INDEX idx_ar_session_device ON attendance_records (session_id, device_id) WHERE device_id IS NOT NULL;
 
 CREATE TABLE notifications (

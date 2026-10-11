@@ -38,6 +38,8 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
 ## Database changes (Supabase does NOT update from git pushes)
 - Full schema + seed: `attendance-system/database/supabase_schema.sql` (final state; v1-v5 merged).
 - ISAP/MCNP departments + programs: `attendance-system/database/supabase_departments_programs.sql`.
+- Foreign-key indexes the pages filter by: `attendance-system/database/supabase_indexes.sql` (also in the schema file).
+  A new query that filters or joins on an unindexed column of a growing table should add its index there too.
 - Recurring class schedules: `attendance-system/database/supabase_class_schedules.sql` (adds `class_schedules`,
   backfills it from old `meeting_date`/`schedule_day`). A class assignment (`teacher_subjects`) = who/what/which class/where;
   its weekly meetings live in `class_schedules` (day_of_week 1=Mon..7=Sun). `meeting_date`, `schedule_day`,
