@@ -30,6 +30,9 @@ function require_login() {
     if (strpos(basename($_SERVER['SCRIPT_NAME'] ?? ''), 'ajax_') !== 0) {
         require_once __DIR__ . '/absences.php';
         mark_absent_for_ended_sessions($GLOBALS['pdo']);
+        // Delete old notifications / activity log / rejected scans (at most once a day; see includes/housekeeping.php).
+        require_once __DIR__ . '/housekeeping.php';
+        prune_old_rows($GLOBALS['pdo']);
     }
 }
 
