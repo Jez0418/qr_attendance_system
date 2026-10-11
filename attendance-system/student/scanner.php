@@ -9,7 +9,9 @@
  * student/ajax_scan.php for the actual validation logic.
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/device.php';
 require_role('student');
+current_device_id();   // give this browser its device ID before any output (one phone, one student per meeting)
 $pageTitle = 'Scan Attendance';
 require_once __DIR__ . '/../includes/header.php';
 ?>

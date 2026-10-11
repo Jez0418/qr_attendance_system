@@ -20,6 +20,8 @@
  *   8.  Location provided, accurate enough, inside the lab's radius?
  *                                                  server-side Haversine
  *   9.  Not already recorded?
+ *  10.  This phone hasn't already checked in another student for this session?
+ *                                                  device_conflict() (includes/device.php)
  *
  * Every rejected scan that got as far as a valid QR (step 3) is also saved in
  * `scan_attempts` with the student's distance from the laboratory, so the teacher
@@ -33,7 +35,9 @@
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/geo.php';
 require_once __DIR__ . '/../qr/session_manager.php';
+require_once __DIR__ . '/../includes/device.php';
 require_role('student');
+$deviceId = current_device_id();   // before any output: may set the cookie
 header('Content-Type: application/json');
 
 auto_expire_sessions($pdo);
@@ -41,6 +45,7 @@ auto_expire_sessions($pdo);
 $studentId = (int) $_SESSION['profile_id'];
 const INVALID_QR = 'This QR code is invalid or has expired.';
 const ALREADY_RECORDED = 'You have already recorded attendance for this class.';
+const SAME_DEVICE = 'This phone was already used to check in another student for this class. Ask your teacher to mark you present.';
 const MAX_ATTEMPTS_PER_STUDENT = 30;   // per session, so a spammed scan can't fill the table
 
 /** Save a rejected scan for the teacher to see. Never throws: logging must not break the scan response. */
@@ -65,6 +70,7 @@ function log_scan_attempt(PDO $pdo, int $sessionId, int $studentId, string $reas
 }
 
 $session = null; $occ = null; $lab = null; $distance = null; $attemptSessionId = null;
+$attemptReason = null;   // what the teacher sees for a rejected scan, when it differs from the student's message
 $lat = $_POST['latitude'] ?? null;
 $lon = $_POST['longitude'] ?? null;
 $accuracy = $_POST['accuracy'] ?? null;
@@ -156,20 +162,27 @@ try {
         throw new Exception(ALREADY_RECORDED);
     }
 
+    // ---- 10. One phone, one student per meeting ----
+    $otherStudent = device_conflict($pdo, (int) $current['session_id'], $deviceId, $studentId);
+    if ($otherStudent !== null) {
+        $attemptReason = 'Same phone as ' . $otherStudent;   // the teacher sees who; the student does not
+        throw new Exception(SAME_DEVICE);
+    }
+
     // ---- Late logic: start + the class's late grace (or the settings default) ----
     $lateAfter = (new DateTimeImmutable($occ['starts_at'], schedule_tz()))->modify('+' . get_late_grace_minutes($pdo, $occ['late_grace_minutes'] ?? null) . ' minutes');
     $recordStatus = $now > $lateAfter ? 'Late' : 'Present';
 
     $pdo->beginTransaction();
     $ins = $pdo->prepare('
-        INSERT INTO attendance_records (session_id, student_id, time_in, status, latitude, longitude, location_accuracy, distance_from_location)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO attendance_records (session_id, student_id, time_in, status, latitude, longitude, location_accuracy, distance_from_location, device_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ');
     $ins->execute([
         $current['session_id'], $studentId, $now->format('Y-m-d H:i:s'), $recordStatus,
         (float) $lat, (float) $lon,
         ($accuracy !== null && $accuracy !== '' && is_numeric($accuracy)) ? (float) $accuracy : null,
-        $distance,
+        $distance, $deviceId,
     ]);
     create_notification($pdo, $_SESSION['user_id'], 'Attendance Recorded', "You were marked $recordStatus for {$occ['subject_name']} in {$occ['lab_name']}.");
     log_activity($pdo, $_SESSION['user_id'], "Scanned attendance for session #{$current['session_id']} - $recordStatus ({$distance}m)");
@@ -199,7 +212,7 @@ try {
     if ($pdo->inTransaction()) $pdo->rollBack();
     $message = safe_error_message($e);
     if ($attemptSessionId && $message !== ALREADY_RECORDED) {
-        log_scan_attempt($pdo, $attemptSessionId, $studentId, $message, $lat, $lon, $accuracy, $distance);
+        log_scan_attempt($pdo, $attemptSessionId, $studentId, $attemptReason ?? $message, $lat, $lon, $accuracy, $distance);
     }
     echo json_encode(['success' => false, 'message' => $message]);
 }

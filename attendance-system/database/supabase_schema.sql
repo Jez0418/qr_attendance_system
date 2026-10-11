@@ -229,11 +229,13 @@ CREATE TABLE attendance_records (
     longitude DECIMAL(10,7) NULL,
     location_accuracy DECIMAL(7,2) NULL,
     distance_from_location DECIMAL(8,2) NULL,
+    device_id CHAR(32) NULL,  -- browser that scanned (see supabase_scan_device.sql)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (session_id, student_id)
 );
 CREATE INDEX idx_ar_status ON attendance_records (status);
 CREATE INDEX idx_ar_student ON attendance_records (student_id);
+CREATE INDEX idx_ar_session_device ON attendance_records (session_id, device_id) WHERE device_id IS NOT NULL;
 
 CREATE TABLE notifications (
     notification_id SERIAL PRIMARY KEY,
