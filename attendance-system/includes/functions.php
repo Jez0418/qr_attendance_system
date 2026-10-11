@@ -61,7 +61,7 @@ function csrf_guard(): void {
 }
 
 /**
- * JSON for an inline handler such as onclick='fn(<?php echo js_attr_json($data); ?>)'. Plain json_encode()
+ * JSON for a SINGLE-quoted inline handler: onclick='fn(<?php echo js_attr_json($data); ?>)' (never onclick="...": the JSON's own " would end it). Plain json_encode()
  * leaves ' and " alone, so a name like O'Brien ends the attribute early and breaks the button (or worse).
  */
 function js_attr_json($data): string {
@@ -164,10 +164,11 @@ function format_datetime($datetime) {
     return date('M d, Y h:i A', strtotime($datetime));
 }
 
-/** Time shown for an attendance record: the check-in time, or "no check-in" for an Absent record
-  * (its time_in is just the end of the meeting, see includes/absences.php). */
+/** Time shown for an attendance record: the check-in time, "no check-in" for an Absent record (its time_in is
+  * just the end of the meeting, see includes/absences.php), or "excused" for an Excused one (also no check-in). */
 function format_record_time(array $r) {
     if (($r['status'] ?? '') === 'Absent') return format_date($r['time_in']) . ' · no check-in';
+    if (($r['status'] ?? '') === 'Excused') return format_date($r['time_in']) . ' · excused';
     if (!empty($r['marked_by_user_id'])) return format_date($r['time_in']) . ' · marked by teacher';   // a teacher override, not a scan
     return format_datetime($r['time_in']);
 }

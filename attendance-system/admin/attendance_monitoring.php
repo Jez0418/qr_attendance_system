@@ -11,7 +11,7 @@ $pageTitle = 'Attendance Monitoring';
 $search    = clean($_GET['search'] ?? '');
 $labId     = id_param($_GET['lab_id'] ?? '');       // hand-edited junk in the URL is ignored instead of crashing the query
 $subjectId = id_param($_GET['subject_id'] ?? '');
-$status    = in_array($_GET['status'] ?? '', ['Present', 'Late', 'Absent'], true) ? $_GET['status'] : '';
+$status    = in_array($_GET['status'] ?? '', ['Present', 'Late', 'Absent', 'Excused'], true) ? $_GET['status'] : '';
 $dateFrom  = valid_ymd($_GET['date_from'] ?? '');
 $dateTo    = valid_ymd($_GET['date_to'] ?? '');
 
@@ -77,6 +77,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <option value="Present" <?php echo $status === 'Present' ? 'selected' : ''; ?>>Present</option>
                 <option value="Late" <?php echo $status === 'Late' ? 'selected' : ''; ?>>Late</option>
                 <option value="Absent" <?php echo $status === 'Absent' ? 'selected' : ''; ?>>Absent</option>
+                <option value="Excused" <?php echo $status === 'Excused' ? 'selected' : ''; ?>>Excused</option>
             </select>
             <input type="date" name="date_from" class="form-control" style="max-width:160px" value="<?php echo e($dateFrom); ?>">
             <input type="date" name="date_to" class="form-control" style="max-width:160px" value="<?php echo e($dateTo); ?>">

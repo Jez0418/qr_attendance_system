@@ -1,0 +1,128 @@
+<?php
+/**
+ * Run: php attendance-system/tests/excused_status_test.php
+ *      php attendance-system/tests/excused_status_test.php --db   also runs against the DB from DB_* env vars,
+ *                                                                inside a transaction that is rolled back.
+ * The Excused status (database/supabase_excused_status.sql): it must never count as a check-in or an absence,
+ * and it must show up wherever statuses are shown. tests/ is not deployed (see .vercelignore).
+ */
+$useDb = in_array('--db', $argv, true);
+require_once __DIR__ . '/../includes/functions.php';
+
+$fail = 0;
+function check(string $name, bool $ok): void { global $fail; echo ($ok ? 'PASS' : 'FAIL') . "  $name\n"; if (!$ok) $fail++; }
+
+$root = realpath(__DIR__ . '/..');
+
+// ---- "A check-in" is Present or Late, never "anything but Absent" (that would count Excused rows as scans)
+// includes/attendance_override.php is exempt: its !== 'Absent' is the rule "only an Absent record can change".
+$exempt = [str_replace('/', DIRECTORY_SEPARATOR, 'includes/attendance_override.php')];
+$hits = [];
+foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS)) as $file) {
+    if ($file->getExtension() !== 'php') continue;
+    $rel = substr($file->getPathname(), strlen($root) + 1);
+    if (strpos($rel, 'tests' . DIRECTORY_SEPARATOR) === 0 || in_array($rel, $exempt, true)) continue;
+    foreach (file($file->getPathname()) as $i => $line) {
+        if (preg_match('/<>\s*["\']Absent["\']|!==?\s*["\']Absent["\']/', $line)) $hits[] = str_replace('\\', '/', $rel) . ':' . ($i + 1);
+    }
+}
+check('no page treats "not Absent" as a check-in (' . implode(', ', $hits) . ')', !$hits);
+$live = file_get_contents("$root/teacher/ajax_session_status.php");
+check('live list counts only Present/Late as scanned', strpos($live, "['Pending', 'Absent']") === false);
+
+// ---- Stats: Excused is counted for display (never as attended or absent; the --db section proves the numbers)
+$stats = file_get_contents("$root/includes/attendance_stats.php");
+check('student and roster standings count excused', preg_match_all("/FILTER \\(WHERE ar\\.status = 'Excused'\\) AS excused/", $stats) === 2);
+
+// ---- Colour and the teacher's Excuse button
+$css = file_get_contents("$root/assets/css/style.css");
+check('badge-excused style exists', strpos($css, '.badge-excused{') !== false);
+check('dot-blue style exists', strpos($css, '.dot-blue{') !== false);
+check('excused tokens defined in light and dark', substr_count($css, '--excused-fg:') === 2 && substr_count($css, '--chart-excused:') === 2);
+check('chart helper returns excused colours', strpos(file_get_contents("$root/assets/js/theme.js"), 'excusedFill') !== false);
+$hist = file_get_contents("$root/teacher/history.php");
+check('history offers Excuse', strpos($hist, '"Excused")') !== false);
+check('history buttons use js_attr_json', strpos($hist, 'js_attr_json(') !== false && strpos($hist, 'e(json_encode(') === false);
+check('history posts the target', strpos($hist, 'reason, target }') !== false);
+// Render the real buttons with a name full of quotes and parse them like a browser: the handler must be whole.
+preg_match_all('/<button[^\n]*openOverride\([^\n]*<\/button>/', $hist, $m);
+check('history has the two override buttons', count($m[0]) === 2);
+$who = "D'Souza \"Jr\" - Women's Health, Oct 07, 2026";
+foreach ($m[0] as $i => $button) {
+    $html = str_replace(["<?php echo (int) \$r['record_id']; ?>", '<?php echo js_attr_json($who); ?>'], ['5', js_attr_json($who)], $button);
+    $doc = new DOMDocument();
+    @$doc->loadHTML('<meta charset="utf-8">' . $html);
+    $onclick = $doc->getElementsByTagName('button')->item(0)?->getAttribute('onclick') ?? '';
+    $target = $i === 0 ? 'Present' : 'Excused';
+    check("history button $target keeps its whole handler", preg_match('/^openOverride\(5, "D\\\\u0027Souza \\\\u0022Jr\\\\u0022 - Women\\\\u0027s Health, Oct 07, 2026", "' . $target . '"\)$/', $onclick) === 1);
+}
+
+// ---- Student dashboard and teacher roster show how many absences were excused
+$sd = file_get_contents("$root/student/dashboard.php");
+check('student dashboard defaults an Excused count', strpos($sd, "'Excused' => 0") !== false);
+check('student class rows mention excused', strpos($sd, "' excused'") !== false);
+check('roster reads excused safely', strpos(file_get_contents("$root/teacher/class_view.php"), "\$st['excused'] ?? 0") !== false);
+
+// ---- Admin pages and exports
+$ad = file_get_contents("$root/admin/dashboard.php");
+check('admin recent activity has an excused sentence', strpos($ad, 'was excused from') !== false);
+check('admin charts plot Excused', strpos($ad, "label: 'Excused'") !== false && strpos($ad, "'Present','Late','Absent','Excused'") !== false);
+$rp = file_get_contents("$root/admin/reports.php");
+check('reports count and plot Excused', strpos($rp, "'Excused' => 0") !== false && strpos($rp, "SUM(ar.status='Excused') AS excused") !== false && strpos($rp, "label:'Excused'") !== false);
+check('monitoring filter accepts Excused', strpos(file_get_contents("$root/admin/attendance_monitoring.php"), "['Present', 'Late', 'Absent', 'Excused']") !== false);
+foreach (['includes/export.php', 'admin/export_pdf.php'] as $f) {
+    check("$f colours Excused", strpos(file_get_contents("$root/$f"), '.status-Excused{') !== false);
+}
+check('export colour list includes Excused', strpos(file_get_contents("$root/includes/export.php"), "['Present', 'Late', 'Absent', 'Excused']") !== false);
+
+// ---- Database: excuse a real Absent record (rolled back). DemoPDO turns override_absent()'s own
+// transaction into a SAVEPOINT inside ours, so everything is undone at the end.
+if ($useDb) {
+    require_once __DIR__ . '/demo_common.php';   // loads DB_* from .env when not set; exits if there is no database
+    require_once __DIR__ . '/../includes/attendance_stats.php';
+    require_once __DIR__ . '/../includes/attendance_override.php';
+    echo "\n== Database (DB_HOST=" . getenv('DB_HOST') . "), rolled back afterwards\n";
+    $pdo = demo_connect();
+    $GLOBALS['pdo'] = $pdo;
+    $pdo->beginTransaction();
+    try {
+        $pick = $pdo->query("
+            SELECT ar.record_id, ar.student_id, s.teacher_subject_id, ts.teacher_id, t.user_id AS teacher_user_id
+            FROM attendance_records ar
+            JOIN attendance_sessions s ON s.session_id = ar.session_id
+            JOIN teacher_subjects ts ON ts.teacher_subject_id = s.teacher_subject_id
+            JOIN teachers t ON t.teacher_id = ts.teacher_id
+            JOIN enrollments e ON e.student_id = ar.student_id AND e.teacher_subject_id = s.teacher_subject_id AND e.status = 'enrolled'
+            WHERE ar.status = 'Absent'
+            ORDER BY ar.record_id LIMIT 1
+        ")->fetch();
+        check('found an Absent record to excuse', (bool) $pick);
+        if ($pick) {
+            $recordId = (int) $pick['record_id'];
+            $studentId = (int) $pick['student_id'];
+            $classId = (int) $pick['teacher_subject_id'];
+            $teacherId = (int) $pick['teacher_id'];
+            $teacherUserId = (int) $pick['teacher_user_id'];
+            $standingRow = fn() => current(array_filter(student_class_standings($pdo, $studentId), fn($r) => (int) $r['teacher_subject_id'] === $classId));
+            $before = $standingRow();
+
+            $name = override_absent($pdo, $recordId, 'Excused', $teacherId, $teacherUserId, 'Medical certificate shown');
+            check('override_absent returns the student name', $name !== '');
+            $rec = $pdo->query("SELECT status, marked_by_user_id, override_reason FROM attendance_records WHERE record_id = $recordId")->fetch();
+            check('record is Excused with who/why', $rec['status'] === 'Excused' && (int) $rec['marked_by_user_id'] === $teacherUserId && $rec['override_reason'] === 'Medical certificate shown');
+            $after = $standingRow();
+            check('excusing lowers the absence count by 1', $after['standing']['absent'] === $before['standing']['absent'] - 1);
+            check('excused count went up by 1', ($after['excused'] ?? null) === ($before['excused'] ?? 0) + 1);
+            check('the excused meeting drops out of the meeting count', $after['standing']['meetings'] === $before['standing']['meetings'] - 1);
+            $threw = false;
+            try { override_absent($pdo, $recordId, 'Present', $teacherId, $teacherUserId, 'second click'); } catch (Exception $e) { $threw = true; }
+            check('a second change of the same record is refused', $threw);
+            check('class roster map carries excused', (class_student_standings($pdo, $classId)[$studentId]['excused'] ?? null) === $after['excused']);
+        }
+    } finally {
+        $pdo->rollBackAll();
+    }
+}
+
+echo $fail ? "\n$fail FAILED\n" : "\nAll passed\n";
+exit($fail ? 1 : 0);

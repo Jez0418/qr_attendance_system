@@ -64,7 +64,7 @@ $requests = $requests->fetchAll();
 $roster = $pdo->prepare('
     SELECT s.student_id, s.student_number, s.full_name, s.year_level, pr.program_code, e.enrollment_id, e.enrolled_at,
         (SELECT COUNT(*) FROM attendance_records ar JOIN attendance_sessions ses ON ses.session_id = ar.session_id
-            WHERE ses.teacher_subject_id = ? AND ar.student_id = s.student_id AND ar.status <> "Absent") AS attended_count
+            WHERE ses.teacher_subject_id = ? AND ar.student_id = s.student_id AND ar.status IN ("Present", "Late")) AS attended_count
     FROM enrollments e
     JOIN students s ON s.student_id = e.student_id
     LEFT JOIN programs pr ON pr.program_id = s.program_id
@@ -178,7 +178,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <td><?php echo e($s['program_code'] ?? '—'); ?></td>
                     <td><?php echo e($s['year_level']); ?></td>
                     <td><?php echo (int) $s['attended_count']; ?>x</td>
-                    <td class="rate-cell"><?php echo $st['absent']; ?><?php echo $limits['absence_limit'] ? ' / ' . $limits['absence_limit'] : ''; ?></td>
+                    <td class="rate-cell"><?php echo $st['absent']; ?><?php echo $limits['absence_limit'] ? ' / ' . $limits['absence_limit'] : ''; ?><?php $exc = (int) ($st['excused'] ?? 0); if ($exc > 0): ?><small class="text-muted"> · <?php echo $exc; ?> excused</small><?php endif; ?></td>
                     <td class="rate-cell"><?php if ($st['rate'] === null): ?><span class="text-muted">—</span><?php else: ?><?php echo $st['rate']; ?>%<?php if ($st['level'] !== STANDING_OK): ?><span class="badge <?php echo $st['badge']; ?>"><?php echo e($st['label']); ?></span><?php endif; ?><?php endif; ?></td>
                     <td>
                         <a href="history.php?class=<?php echo $classId; ?>&search=<?php echo urlencode($s['student_number']); ?>" class="btn btn-outline btn-sm" title="View Attendance"><i class="fa-solid fa-clock-rotate-left"></i></a>

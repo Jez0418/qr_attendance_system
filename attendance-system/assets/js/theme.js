@@ -107,6 +107,7 @@
             green: v('--chart-green'), greenFill: v('--chart-green-fill'),
             amber: v('--chart-amber'), amberFill: v('--chart-amber-fill'),
             red: v('--chart-red'), redFill: v('--chart-red-fill'),
+            excused: v('--chart-excused'), excusedFill: v('--chart-excused-fill'),
             accent: v('--chart-accent'), surface: v('--surface'),
             text: v('--chart-text'), grid: v('--chart-grid')
         };

@@ -22,7 +22,7 @@ check('Absent never shows the meeting end time', strpos(format_record_time($abs)
 // Pages that list records must go through format_record_time(), or an absent student would
 // look like they checked in at the end of class.
 $bad = [];
-$it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(__DIR__ . '/..', FilesystemIterator::SKIP_DOTS));
+$it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(realpath(__DIR__ . '/..'), FilesystemIterator::SKIP_DOTS));
 foreach ($it as $f) {
     $path = str_replace('\\', '/', $f->getPathname());
     if ($f->getExtension() !== 'php' || strpos($path, '/tests/') !== false || strpos($path, '/includes/functions.php') !== false) continue;
@@ -30,16 +30,16 @@ foreach ($it as $f) {
 }
 check('no page formats a record time directly (' . implode(',', $bad) . ')', !$bad);
 
-// Counts of "scans / check-ins / times attended" must ignore Absent records.
+// Counts of "scans / check-ins / times attended" must ignore Absent (and Excused) records: only Present/Late count.
 $must = [
-    'admin/dashboard.php' => 'status <> "Absent"',
-    'teacher/dashboard.php' => 'ar.status <> "Absent"',
-    'student/my_subjects.php' => 'ar.status <> "Absent"',
-    'teacher/class_view.php' => 'ar.status <> "Absent"',
-    'admin/qr_management.php' => 'ar.status <> "Absent"',
+    'admin/dashboard.php' => 'status IN ("Present", "Late")',
+    'teacher/dashboard.php' => 'ar.status IN ("Present", "Late")',
+    'student/my_subjects.php' => 'ar.status IN ("Present", "Late")',
+    'teacher/class_view.php' => 'ar.status IN ("Present", "Late")',
+    'admin/qr_management.php' => 'ar.status IN ("Present", "Late")',
 ];
 foreach ($must as $file => $needle) {
-    check("$file ignores Absent in its counts", strpos(file_get_contents(__DIR__ . '/../' . $file), $needle) !== false);
+    check("$file counts only Present/Late", strpos(file_get_contents(__DIR__ . '/../' . $file), $needle) !== false);
 }
 
 // Admin dashboard: absences appear in "Recent Attendance Activity" and in the attendance graph,
@@ -48,7 +48,7 @@ $dash = file_get_contents(__DIR__ . '/../admin/dashboard.php');
 check('recent activity no longer hides Absent records', strpos($dash, 'WHERE ar.status <> "Absent"') === false);
 check('recent activity words an absence differently from a check-in', strpos($dash, 'was absent from') !== false);
 check('attendance graph counts Absent per day', strpos($dash, 'SUM(status = "Absent")') !== false && strpos($dash, "label: 'Absent'") !== false);
-check('laboratory usage counts scans only', strpos($dash, 'ar.session_id = s.session_id AND ar.status <> "Absent"') !== false);
+check('laboratory usage counts scans only', strpos($dash, 'ar.session_id = s.session_id AND ar.status IN ("Present", "Late")') !== false);
 
 // A student enrolled after the meeting started (but before it ended) could still scan, so must still be
 // marked absent. Comparing against scheduled_start silently skipped them.

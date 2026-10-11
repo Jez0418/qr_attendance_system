@@ -19,7 +19,7 @@ $student = $studentStmt->fetch();
 
 $statusCounts = $pdo->prepare('SELECT status, COUNT(*) c FROM attendance_records WHERE student_id = ? GROUP BY status');
 $statusCounts->execute([$studentId]);
-$counts = ['Present' => 0, 'Late' => 0, 'Absent' => 0];
+$counts = ['Present' => 0, 'Late' => 0, 'Absent' => 0, 'Excused' => 0];   // Excused is not a meeting: left out of the rate
 foreach ($statusCounts->fetchAll() as $row) $counts[$row['status']] = (int) $row['c'];
 $meetings = $counts['Present'] + $counts['Late'] + $counts['Absent'];
 $overallRate = $meetings > 0 ? (int) floor(($counts['Present'] + $counts['Late']) * 100 / $meetings) : null;
@@ -76,7 +76,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="stat-grid">
     <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Attendance</span><div class="stat-icon blue"><i class="fa-solid fa-chart-simple"></i></div></div><div class="stat-value"><?php echo $overallRate === null ? '—' : $overallRate . '%'; ?></div></div>
     <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Late</span><div class="stat-icon amber"><i class="fa-solid fa-clock"></i></div></div><div class="stat-value warn"><?php echo $counts['Late']; ?></div></div>
-    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Absent</span><div class="stat-icon red"><i class="fa-solid fa-user-xmark"></i></div></div><div class="stat-value<?php echo $counts['Absent'] ? ' bad' : ''; ?>"><?php echo $counts['Absent']; ?></div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Absent</span><div class="stat-icon red"><i class="fa-solid fa-user-xmark"></i></div></div><div class="stat-value<?php echo $counts['Absent'] ? ' bad' : ''; ?>"><?php echo $counts['Absent']; ?></div><?php if ($counts['Excused'] > 0): ?><small class="text-muted"><?php echo $counts['Excused']; ?> excused</small><?php endif; ?></div>
 </div>
 
 <div class="grid-2 dashboard-split">
@@ -98,7 +98,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <?php if ($st['meetings'] === 0): ?>
                             No recorded meetings yet
                         <?php else: ?>
-                            <?php echo $st['attended']; ?> of <?php echo $st['meetings']; ?> attended<?php echo $c['late'] ? ' (' . $c['late'] . ' late)' : ''; ?> · <?php echo e(absence_count_label($st['absent'], $limits)); ?>
+                            <?php echo $st['attended']; ?> of <?php echo $st['meetings']; ?> attended<?php echo $c['late'] ? ' (' . $c['late'] . ' late)' : ''; ?> · <?php echo e(absence_count_label($st['absent'], $limits)); ?><?php echo $c['excused'] > 0 ? ' · ' . $c['excused'] . ' excused' : ''; ?>
                         <?php endif; ?>
                     </div>
                     <?php if ($st['rate'] !== null): ?>
