@@ -45,6 +45,12 @@ check('history offers Excuse', strpos($hist, "'Excused')") !== false);
 check('history buttons use js_attr_json', strpos($hist, 'js_attr_json(') !== false && strpos($hist, 'e(json_encode(') === false);
 check('history posts the target', strpos($hist, 'reason, target }') !== false);
 
+// ---- Student dashboard and teacher roster show how many absences were excused
+$sd = file_get_contents("$root/student/dashboard.php");
+check('student dashboard defaults an Excused count', strpos($sd, "'Excused' => 0") !== false);
+check('student class rows mention excused', strpos($sd, "' excused'") !== false);
+check('roster reads excused safely', strpos(file_get_contents("$root/teacher/class_view.php"), "\$st['excused'] ?? 0") !== false);
+
 // ---- Database: excuse a real Absent record (rolled back). DemoPDO turns override_absent()'s own
 // transaction into a SAVEPOINT inside ours, so everything is undone at the end.
 if ($useDb) {

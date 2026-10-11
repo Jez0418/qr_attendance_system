@@ -178,7 +178,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <td><?php echo e($s['program_code'] ?? '—'); ?></td>
                     <td><?php echo e($s['year_level']); ?></td>
                     <td><?php echo (int) $s['attended_count']; ?>x</td>
-                    <td class="rate-cell"><?php echo $st['absent']; ?><?php echo $limits['absence_limit'] ? ' / ' . $limits['absence_limit'] : ''; ?></td>
+                    <td class="rate-cell"><?php echo $st['absent']; ?><?php echo $limits['absence_limit'] ? ' / ' . $limits['absence_limit'] : ''; ?><?php $exc = (int) ($st['excused'] ?? 0); if ($exc > 0): ?><small class="text-muted"> · <?php echo $exc; ?> excused</small><?php endif; ?></td>
                     <td class="rate-cell"><?php if ($st['rate'] === null): ?><span class="text-muted">—</span><?php else: ?><?php echo $st['rate']; ?>%<?php if ($st['level'] !== STANDING_OK): ?><span class="badge <?php echo $st['badge']; ?>"><?php echo e($st['label']); ?></span><?php endif; ?><?php endif; ?></td>
                     <td>
                         <a href="history.php?class=<?php echo $classId; ?>&search=<?php echo urlencode($s['student_number']); ?>" class="btn btn-outline btn-sm" title="View Attendance"><i class="fa-solid fa-clock-rotate-left"></i></a>
