@@ -86,7 +86,10 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   deletes read notifications after 90 days, unread after 180, `activity_logs` after 365, `scan_attempts` after 180 (`retention_rules()`),
   at most 5000 rows per rule per run. Attendance records, sessions and enrollments are never pruned. Test: `php attendance-system/tests/housekeeping_test.php`.
 - Scan GPS accuracy is required: `gps_accuracy_problem()` (`includes/geo.php`) refuses a missing/non-numeric/<= 0 accuracy and one worse than
-  `max_gps_accuracy_meters`. Test: `php attendance-system/tests/geo_accuracy_test.php`.
+  `max_gps_accuracy_meters`. Test: `php attendance-system/tests/geo_accuracy_test.php`. The scanner (`student/scanner.php`) reads the
+  location when the page opens (permission + accuracy shown) AND again when a QR is read (`getFreshPosition()`, `maximumAge: 0`); only the
+  fresh reading is posted, and if it fails the scan is not sent. Test: `php attendance-system/tests/scanner_fresh_location_test.php`
+  (also runs `node --check` on the page's JS when Node is installed: a stray apostrophe in a JS string is invisible to `php -l`).
 - Teacher override (Absent -> Present or Absent -> Excused, one-way, own classes, reason required): "Mark present" / "Excuse" buttons on
   `teacher/history.php` -> `teacher/ajax_attendance_override.php` (POST `target`) -> `override_absent()` in `includes/attendance_override.php`
   (columns `marked_by_user_id/marked_at/override_reason` from `database/supabase_attendance_override.sql`). A manual Present has no GPS data
