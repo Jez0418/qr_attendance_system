@@ -20,7 +20,7 @@ $totalLabs = $pdo->query('SELECT COUNT(*) FROM laboratories')->fetchColumn();
 $activeSessions = $pdo->query('SELECT COUNT(*) FROM attendance_sessions WHERE is_active = 1')->fetchColumn();
 $todayPresent = $pdo->query('SELECT COUNT(*) FROM attendance_records WHERE DATE(time_in) = CURDATE() AND status = "Present"')->fetchColumn();
 $todayLate = $pdo->query('SELECT COUNT(*) FROM attendance_records WHERE DATE(time_in) = CURDATE() AND status = "Late"')->fetchColumn();
-$todayTotal = $pdo->query('SELECT COUNT(*) FROM attendance_records WHERE DATE(time_in) = CURDATE() AND status <> "Absent"')->fetchColumn();
+$todayTotal = $pdo->query('SELECT COUNT(*) FROM attendance_records WHERE DATE(time_in) = CURDATE() AND status IN ("Present", "Late")')->fetchColumn();
 $pendingRequests = $pdo->query('SELECT COUNT(*) FROM enrollment_requests WHERE status = "pending"')->fetchColumn();
 $missingGeoLabs = $pdo->query('SELECT COUNT(*) FROM laboratories WHERE latitude IS NULL OR longitude IS NULL')->fetchColumn();
 
@@ -69,7 +69,7 @@ $labUsage = $pdo->query('
     FROM laboratories l
     LEFT JOIN teacher_subjects ts ON ts.lab_id = l.lab_id
     LEFT JOIN attendance_sessions s ON s.teacher_subject_id = ts.teacher_subject_id AND DATE(s.session_date) = CURDATE()
-    LEFT JOIN attendance_records ar ON ar.session_id = s.session_id AND ar.status <> "Absent"
+    LEFT JOIN attendance_records ar ON ar.session_id = s.session_id AND ar.status IN ("Present", "Late")
     GROUP BY l.lab_id ORDER BY l.lab_name
 ')->fetchAll();
 
