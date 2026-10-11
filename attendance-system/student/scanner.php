@@ -141,6 +141,18 @@ async function startScanner() {
     }
 }
 
+// A new high-accuracy reading, never a cached one: the scan must say where the phone is NOW, not where it was
+// when the page opened (open the page in the lab, walk out, scan a forwarded QR).
+function getFreshPosition() {
+    return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+            reject,
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    });
+}
+
 async function onScanSuccess(decodedText) {
     if (!scanning) return;
     scanning = false;
@@ -149,16 +161,32 @@ async function onScanSuccess(decodedText) {
 
     document.getElementById('cameraStatusText').innerHTML =
         '<span class="dot dot-green" style="width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px"></span>QR Code Detected ✓';
-    document.getElementById('attendanceStatusText').textContent = 'Checking attendance...';
     const resultDiv = document.getElementById('scanResult');
+
+    // Where is the phone at the moment of the scan? No fallback to the page-open reading.
+    document.getElementById('attendanceStatusText').textContent = 'Checking your location...';
+    resultDiv.innerHTML = '<div class="alert alert-info"><span class="spinner spinner-dark"></span> Checking your location...</div>';
+    let fresh;
+    try {
+        fresh = await getFreshPosition();
+    } catch (err) {
+        document.getElementById('attendanceStatusText').textContent = 'Location required';
+        resultDiv.innerHTML = '<div class="alert alert-error"><i class="fa-solid fa-location-crosshairs"></i> Could not get your location right now. Make sure location is on, then tap Scan again.</div>';
+        document.getElementById('restartBtn').style.display = 'inline-flex';
+        return;
+    }
+    currentPosition = fresh;
+    document.getElementById('accuracyText').textContent = Math.round(fresh.accuracy) + ' meters';
+
+    document.getElementById('attendanceStatusText').textContent = 'Checking attendance...';
     resultDiv.innerHTML = '<div class="alert alert-info"><span class="spinner spinner-dark"></span> Checking attendance (location, enrollment, and active class)...</div>';
 
     try {
         const res = await ajaxPost('ajax_scan.php', {
             qr_payload: decodedText,
-            latitude: currentPosition.latitude,
-            longitude: currentPosition.longitude,
-            accuracy: currentPosition.accuracy
+            latitude: fresh.latitude,
+            longitude: fresh.longitude,
+            accuracy: fresh.accuracy
         });
 
         if (res.success) {
