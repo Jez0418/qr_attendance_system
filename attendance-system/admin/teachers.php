@@ -71,7 +71,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><span class="badge badge-<?php echo $t['status'] === 'active' ? 'active' : 'inactive'; ?>"><?php echo ucfirst($t['status']); ?></span></td>
                         <td>
                             <button class="btn btn-outline btn-sm" onclick='openEditModal(<?php echo js_attr_json($t); ?>)'><i class="fa-solid fa-pen"></i></button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteTeacher(<?php echo $t['teacher_id']; ?>)"><i class="fa-solid fa-trash"></i></button>
+                            <button class="btn btn-danger btn-sm<?php echo $t['status'] === 'active' ? ' is-dimmed' : ''; ?>" title="<?php echo $t['status'] === 'active' ? 'Set the account to Inactive first to delete it' : 'Delete teacher'; ?>" aria-label="Delete teacher" onclick="deleteTeacher(<?php echo $t['teacher_id']; ?>)"><i class="fa-solid fa-trash"></i></button>
                         </td>
                     </tr>
                 <?php endforeach; endif; ?>
@@ -187,12 +187,8 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
     } catch (err) { showToast('error', 'Something went wrong. Please try again.'); }
     btn.disabled = false; btn.innerHTML = 'Save Teacher';
 });
-async function deleteTeacher(id) {
-    if (!confirmDelete('Delete this teacher? This cannot be undone.')) return;
-    const res = await ajaxPost('ajax_teachers.php', { action: 'delete', teacher_id: id });
-    if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 700); }
-    else showToast('error', res.message);
-}
+// Only an inactive teacher can be deleted; the confirmation lists what goes with them (deleteDisabled() in app.js).
+function deleteTeacher(id) { return deleteDisabled('ajax_teachers.php', 'teacher_id', id); }
 </script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

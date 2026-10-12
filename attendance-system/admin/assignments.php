@@ -179,7 +179,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <td>
                             <div style="display:flex;gap:8px">
                                 <button class="btn btn-outline btn-sm" style="width:40px;height:40px;padding:0" title="Edit assignment" aria-label="Edit assignment" onclick="openEditModal(<?php echo e(json_encode($a)); ?>)"><i class="fa-solid fa-pen"></i></button>
-                                <button class="btn btn-danger btn-sm" style="width:40px;height:40px;padding:0" title="Delete assignment" aria-label="Delete assignment" onclick="deleteAssignment(<?php echo $id; ?>)"><i class="fa-solid fa-trash"></i></button>
+                                <button class="btn btn-danger btn-sm<?php echo $a['status'] === 'active' ? ' is-dimmed' : ''; ?>" style="width:40px;height:40px;padding:0" title="<?php echo $a['status'] === 'active' ? 'Disable this class first to delete it' : 'Delete assignment'; ?>" aria-label="Delete assignment" onclick="deleteAssignment(<?php echo $id; ?>)"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </td>
                     </tr>
@@ -552,10 +552,7 @@ document.getElementById('assignForm').addEventListener('submit', async (e) => {
     else if (!(res.field && showFieldError(res.field, res.message))) showToast('error', res.message);
     btn.disabled = false; btn.innerHTML = 'Save assignment';
 });
-async function deleteAssignment(id) {
-    if (!confirmDelete('Delete this class assignment? This cannot be undone.')) return;
-    const res = await ajaxPost('ajax_assignments.php', { action: 'delete', teacher_subject_id: id });
-    if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 700); } else showToast('error', res.message);
-}
+// Only a disabled class can be deleted; the confirmation lists what goes with it (deleteDisabled() in app.js).
+function deleteAssignment(id) { return deleteDisabled('ajax_assignments.php', 'teacher_subject_id', id); }
 </script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

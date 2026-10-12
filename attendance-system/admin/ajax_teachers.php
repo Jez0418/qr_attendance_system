@@ -3,6 +3,7 @@
  * admin/ajax_teachers.php — create / update / delete teacher records.
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/admin_delete.php';
 require_role('admin');
 header('Content-Type: application/json');
 
@@ -95,27 +96,15 @@ try {
         if ($status === 'inactive' || $password !== '') destroy_user_sessions($pdo, (int) $userId);
         echo json_encode(['success' => true, 'message' => 'Teacher updated successfully.']);
 
-    } elseif ($action === 'delete') {
+    } elseif ($action === 'delete_preview' || $action === 'delete') {
+        // Only an Inactive teacher can go; their classes (and those classes' history) go with them (includes/admin_delete.php).
         $teacherId = (int) ($_POST['teacher_id'] ?? 0);
         if (!$teacherId) throw new Exception('Invalid teacher.');
-        $find = $pdo->prepare('SELECT user_id, full_name FROM teachers WHERE teacher_id = ?');
-        $find->execute([$teacherId]);
-        $row = $find->fetch();
-        if (!$row) throw new Exception('Teacher not found.');
-
-        $used = $pdo->prepare('SELECT COUNT(*) FROM teacher_subjects WHERE teacher_id = ?');
-        $used->execute([$teacherId]);
-        $count = (int) $used->fetchColumn();
-        if ($count > 0) {
-            throw new Exception("This teacher has $count class assignment(s). Set their account to Inactive instead of deleting it.");
+        if ($action === 'delete_preview') {
+            echo json_encode(['success' => true] + admin_delete_preview($pdo, 'teacher', $teacherId));
+        } else {
+            echo json_encode(['success' => true, 'message' => admin_delete_perform($pdo, 'teacher', $teacherId, (int) $_SESSION['user_id'])]);
         }
-
-        destroy_user_sessions($pdo, (int) $row['user_id']);
-        $del = $pdo->prepare('DELETE FROM users WHERE user_id = ?');
-        $del->execute([$row['user_id']]);
-
-        log_activity($pdo, $_SESSION['user_id'], "Deleted teacher: {$row['full_name']}");
-        echo json_encode(['success' => true, 'message' => 'Teacher deleted successfully.']);
     } else {
         throw new Exception('Unknown action.');
     }

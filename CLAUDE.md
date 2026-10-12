@@ -95,6 +95,12 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   (columns `marked_by_user_id/marked_at/override_reason` from `database/supabase_attendance_override.sql`). A manual Present has no GPS data
   and is shown as "marked by teacher" via `format_record_time()` (selects must include `ar.marked_by_user_id`). The student is notified and the
   activity log gets a line. Test: `php attendance-system/tests/attendance_override_test.php`.
+- Admin deletes (`includes/admin_delete.php`, used by `admin/ajax_assignments|teachers|subjects|laboratories.php`): only a DISABLED
+  class / INACTIVE teacher, subject or laboratory can be deleted. The foreign keys cascade, so a delete also removes the item's enrollments, sessions
+  and attendance records (a subject/lab/teacher takes its classes too); it is refused while one of those classes is still enabled. The page calls
+  `deleteDisabled()` (app.js): `delete_preview` returns the counts for the confirmation, `delete` re-checks inside a transaction. Blocker messages go
+  into toasts (innerHTML), so they never contain item names. Test: `php attendance-system/tests/admin_delete_test.php` (`--db` hits the LIVE
+  database in a rolled-back transaction).
 - Excused status (`'Excused'` in `attendance_records.status`, `database/supabase_excused_status.sql`): an absence the teacher excused. It counts
   as neither attended nor absent (out of the rate and the absence limit; `attendance_standing()` unchanged), is shown as "<date> · excused",
   has its own blue tokens (`--excused-*`, `--chart-excused`, `.badge-excused`, `.dot-blue`, `c.excused` in charts) and appears in the admin

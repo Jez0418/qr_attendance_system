@@ -107,8 +107,13 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><span class="badge badge-<?php echo strtolower($r['status']); ?>"<?php if (!empty($r['marked_by_user_id'])): ?> title="<?php echo e('Marked by teacher: ' . $r['override_reason']); ?>"<?php endif; ?>><?php echo $r['status']; ?></span></td>
                         <td>
                             <?php if ($r['status'] === 'Absent'): $who = $r['full_name'] . ' - ' . $r['subject_name'] . ', ' . date('M d, Y', strtotime($r['time_in'])); ?>
-                                <button type="button" class="btn btn-outline btn-sm" onclick='openOverride(<?php echo (int) $r['record_id']; ?>, <?php echo js_attr_json($who); ?>, "Present")'><i class="fa-solid fa-check"></i> Mark present</button>
-                                <button type="button" class="btn btn-outline btn-sm" onclick='openOverride(<?php echo (int) $r['record_id']; ?>, <?php echo js_attr_json($who); ?>, "Excused")'><i class="fa-solid fa-file-medical"></i> Excuse</button>
+                                <div class="row-menu">
+                                    <button type="button" class="btn btn-outline btn-sm" aria-haspopup="menu" aria-expanded="false" onclick="toggleRowMenu(this)">Actions <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>
+                                    <div class="row-menu-list" role="menu" hidden>
+                                        <button type="button" role="menuitem" onclick='openOverride(<?php echo (int) $r['record_id']; ?>, <?php echo js_attr_json($who); ?>, "Present")'><i class="fa-solid fa-check"></i> Mark present</button>
+                                        <button type="button" role="menuitem" onclick='openOverride(<?php echo (int) $r['record_id']; ?>, <?php echo js_attr_json($who); ?>, "Excused")'><i class="fa-solid fa-file-medical"></i> Excuse</button>
+                                    </div>
+                                </div>
                             <?php else: ?><span class="text-muted">—</span><?php endif; ?>
                         </td>
                     </tr>
@@ -151,9 +156,45 @@ const OVERRIDE_MODES = {
         placeholder: 'e.g. Medical certificate shown'
     }
 };
+// The "Actions" menu of an Absent row: one open at a time, placed under its button (position:fixed, so the
+// scrolling table can't clip it), closed by an outside click, Esc, scrolling or resizing.
+function closeRowMenus() {
+    document.querySelectorAll('.row-menu-list:not([hidden])').forEach(list => {
+        list.hidden = true;
+        const toggle = list.parentElement.querySelector('[aria-haspopup]');
+        if (toggle) toggle.setAttribute('aria-expanded', 'false');
+    });
+}
+function toggleRowMenu(button) {
+    const list = button.parentElement.querySelector('.row-menu-list');
+    const wasOpen = !list.hidden;
+    closeRowMenus();
+    if (wasOpen) return;
+    list.hidden = false;
+    button.setAttribute('aria-expanded', 'true');
+    const rect = button.getBoundingClientRect();
+    const height = list.offsetHeight, width = list.offsetWidth;
+    const below = rect.bottom + 6;
+    list.style.top = (below + height > window.innerHeight && rect.top - 6 - height > 0 ? rect.top - 6 - height : below) + 'px';
+    list.style.left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8)) + 'px';
+    const first = list.querySelector('button');
+    if (first) first.focus({ preventScroll: true });
+}
+document.addEventListener('click', e => { if (!e.target.closest('.row-menu')) closeRowMenus(); });
+document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const open = document.querySelector('.row-menu-list:not([hidden])');
+    const toggle = open && open.parentElement.querySelector('[aria-haspopup]');
+    closeRowMenus();
+    if (toggle) toggle.focus();
+});
+window.addEventListener('resize', closeRowMenus);
+window.addEventListener('scroll', closeRowMenus, true);
+
 let overrideRecordId = null;
 let overrideTarget = 'Present';
 function openOverride(recordId, who, target) {
+    closeRowMenus();
     overrideRecordId = recordId;
     overrideTarget = OVERRIDE_MODES[target] ? target : 'Present';
     const mode = OVERRIDE_MODES[overrideTarget];

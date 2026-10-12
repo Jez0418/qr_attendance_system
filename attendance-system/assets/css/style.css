@@ -220,6 +220,8 @@ img{max-width:100%}
 .btn-sm{padding:7px 14px;font-size:12.5px}
 .btn-block{width:100%}
 .btn:disabled{opacity:.55;cursor:not-allowed}
+/* Looks off but stays clickable: the click explains why (e.g. Delete on an item that is still enabled). */
+.btn.is-dimmed{opacity:.45}
 
 /* ================= FORMS ================= */
 .form-group{margin-bottom:16px}
@@ -695,6 +697,16 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .theme-menu .theme-check{margin-left:auto;font-size:12px;color:var(--indigo-600);visibility:hidden}
 .theme-menu button[aria-checked="true"]{color:var(--slate-900);font-weight:700}
 .theme-menu button[aria-checked="true"] .theme-check{visibility:visible}
+/* ROW ACTION MENU (teacher/history.php): an "Actions" button with a small menu. The menu is position:fixed and placed
+   from the button by JS, because .table-wrapper scrolls and would clip an absolutely positioned one. */
+.row-menu{display:inline-block}
+.row-menu-list{position:fixed;z-index:200;min-width:170px;padding:6px;
+    background:var(--surface);border:1px solid var(--slate-200);border-radius:var(--radius-md);box-shadow:var(--shadow-lg)}
+.row-menu-list[hidden]{display:none}
+.row-menu-list button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;background:none;border-radius:var(--radius-sm);
+    font-family:inherit;font-size:13.5px;font-weight:500;color:var(--slate-700);cursor:pointer;text-align:left}
+.row-menu-list button:hover,.row-menu-list button:focus-visible{background:var(--slate-100);outline:none}
+.row-menu-list button > i{width:16px;text-align:center;color:var(--slate-500)}
 .theme-float{position:fixed;top:16px;right:16px;z-index:50}
 .theme-float .icon-btn{background:var(--surface);border:1px solid var(--slate-200);box-shadow:var(--shadow-sm)}
 

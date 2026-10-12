@@ -57,7 +57,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <td>
                             <div style="display:flex;gap:8px">
                                 <button class="btn btn-outline btn-sm" style="width:40px;height:40px;padding:0" title="Edit subject" aria-label="Edit subject" onclick='openEditModal(<?php echo js_attr_json($s); ?>)'><i class="fa-solid fa-pen"></i></button>
-                                <button class="btn btn-danger btn-sm" style="width:40px;height:40px;padding:0" title="Delete subject" aria-label="Delete subject" onclick="deleteSubject(<?php echo $s['subject_id']; ?>)"><i class="fa-solid fa-trash"></i></button>
+                                <button class="btn btn-danger btn-sm<?php echo $s['status'] === 'active' ? ' is-dimmed' : ''; ?>" style="width:40px;height:40px;padding:0" title="<?php echo $s['status'] === 'active' ? 'Set this subject to Inactive first to delete it' : 'Delete subject'; ?>" aria-label="Delete subject" onclick="deleteSubject(<?php echo $s['subject_id']; ?>)"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </td>
                     </tr>
@@ -124,10 +124,7 @@ document.getElementById('subjectForm').addEventListener('submit', async (e) => {
     else showToast('error', res.message);
     btn.disabled = false; btn.innerHTML = 'Save Subject';
 });
-async function deleteSubject(id) {
-    if (!confirmDelete('Delete this subject? This cannot be undone.')) return;
-    const res = await ajaxPost('ajax_subjects.php', { action: 'delete', subject_id: id });
-    if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 700); } else showToast('error', res.message);
-}
+// Only an inactive subject can be deleted; the confirmation lists what goes with it (deleteDisabled() in app.js).
+function deleteSubject(id) { return deleteDisabled('ajax_subjects.php', 'subject_id', id); }
 </script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

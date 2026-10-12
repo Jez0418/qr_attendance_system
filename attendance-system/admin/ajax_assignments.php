@@ -8,12 +8,15 @@
  * submitted department, which belongs to the submitted institution,
  * before ever writing to the database. Never trust the browser.
  *
+ * Delete (action delete_preview, then delete): only a disabled class, see includes/admin_delete.php.
+ *
  * One assignment = one class for the whole term. Its weekly slots say
  * when it meets; attendance sessions are opened per meeting from those
  * slots, so the admin never creates an assignment per meeting.
  */
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/schedule.php';
+require_once __DIR__ . '/../includes/admin_delete.php';
 require_role('admin');
 header('Content-Type: application/json');
 
@@ -266,27 +269,15 @@ try {
         log_activity($pdo, $_SESSION['user_id'], "Updated class assignment ID $id");
         echo json_encode(['success' => true, 'message' => 'Class assignment updated successfully.']);
 
-    } elseif ($action === 'delete') {
+    } elseif ($action === 'delete_preview' || $action === 'delete') {
+        // Only a disabled class can go; its enrollments, sessions and attendance records go with it (includes/admin_delete.php).
         $id = (int) ($_POST['teacher_subject_id'] ?? 0);
         if (!$id) throw new Exception('Invalid assignment.');
-
-        $usage = $pdo->prepare("
-            SELECT
-                (SELECT COUNT(*) FROM enrollments WHERE teacher_subject_id = ? AND status = 'enrolled') AS enrolled,
-                (SELECT COUNT(*) FROM attendance_sessions WHERE teacher_subject_id = ?) AS sessions
-        ");
-        $usage->execute([$id, $id]);
-        $usage = $usage->fetch();
-        $enrolled = (int) $usage['enrolled'];
-        $sessions = (int) $usage['sessions'];
-        if ($enrolled > 0 || $sessions > 0) {
-            throw new Exception("This class has $enrolled enrolled student(s) and $sessions attendance session(s). Disable it instead of deleting it.");
+        if ($action === 'delete_preview') {
+            echo json_encode(['success' => true] + admin_delete_preview($pdo, 'class', $id));
+        } else {
+            echo json_encode(['success' => true, 'message' => admin_delete_perform($pdo, 'class', $id, (int) $_SESSION['user_id'])]);
         }
-
-        $stmt = $pdo->prepare('DELETE FROM teacher_subjects WHERE teacher_subject_id = ?');
-        $stmt->execute([$id]);
-        log_activity($pdo, $_SESSION['user_id'], "Deleted class assignment ID $id");
-        echo json_encode(['success' => true, 'message' => 'Class assignment deleted successfully.']);
     } else {
         throw new Exception('Unknown action.');
     }

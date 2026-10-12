@@ -89,6 +89,22 @@ function confirmDelete(message = 'Are you sure you want to delete this record? T
     return confirm(message);
 }
 
+/* Delete a disabled class / teacher / subject / laboratory (includes/admin_delete.php). Two steps against the same
+ * endpoint: action=delete_preview says why it can't be deleted yet, or what would go with it (shown in the confirm);
+ * action=delete then does it. idField is the POST key of the item's id, e.g. 'lab_id'. */
+async function deleteDisabled(url, idField, id) {
+    try {
+        const preview = await ajaxPost(url, { action: 'delete_preview', [idField]: id });
+        if (!preview.success) { showToast('error', preview.message); return; }
+        if (!confirm(preview.confirm)) return;
+        const res = await ajaxPost(url, { action: 'delete', [idField]: id });
+        if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 700); }
+        else showToast('error', res.message);
+    } catch (err) {
+        showToast('error', 'Something went wrong. Please try again.');
+    }
+}
+
 /* ==============================================================
  * GENERIC MULTI-CDN SCRIPT LOADER — robust against a blocked or
  * unreachable CDN (common on restrictive school/campus networks).

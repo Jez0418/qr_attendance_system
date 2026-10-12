@@ -5,6 +5,7 @@
  * needs before a QR attendance session can be activated for it.
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/admin_delete.php';
 require_role('admin');
 header('Content-Type: application/json');
 
@@ -73,21 +74,15 @@ try {
         log_activity($pdo, $_SESSION['user_id'], "Updated laboratory: $name");
         echo json_encode(['success' => true, 'message' => 'Laboratory updated successfully.']);
 
-    } elseif ($action === 'delete') {
+    } elseif ($action === 'delete_preview' || $action === 'delete') {
+        // Only an Inactive laboratory can go; its classes (and their history) go with it (includes/admin_delete.php).
         $id = (int) ($_POST['lab_id'] ?? 0);
         if (!$id) throw new Exception('Invalid laboratory.');
-
-        $used = $pdo->prepare('SELECT COUNT(*) FROM teacher_subjects WHERE lab_id = ?');
-        $used->execute([$id]);
-        $count = (int) $used->fetchColumn();
-        if ($count > 0) {
-            throw new Exception("This laboratory is used by $count class assignment(s). Set it to Inactive instead of deleting it.");
+        if ($action === 'delete_preview') {
+            echo json_encode(['success' => true] + admin_delete_preview($pdo, 'lab', $id));
+        } else {
+            echo json_encode(['success' => true, 'message' => admin_delete_perform($pdo, 'lab', $id, (int) $_SESSION['user_id'])]);
         }
-
-        $stmt = $pdo->prepare('DELETE FROM laboratories WHERE lab_id = ?');
-        $stmt->execute([$id]);
-        log_activity($pdo, $_SESSION['user_id'], "Deleted laboratory ID: $id");
-        echo json_encode(['success' => true, 'message' => 'Laboratory deleted successfully.']);
     } else {
         throw new Exception('Unknown action.');
     }

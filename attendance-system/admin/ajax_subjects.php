@@ -3,6 +3,7 @@
  * admin/ajax_subjects.php — create / update / delete subjects.
  */
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/admin_delete.php';
 require_role('admin');
 header('Content-Type: application/json');
 
@@ -42,21 +43,15 @@ try {
         log_activity($pdo, $_SESSION['user_id'], "Updated subject: $name");
         echo json_encode(['success' => true, 'message' => 'Subject updated successfully.']);
 
-    } elseif ($action === 'delete') {
+    } elseif ($action === 'delete_preview' || $action === 'delete') {
+        // Only an Inactive subject can go; its classes (and their history) go with it (includes/admin_delete.php).
         $id = (int) ($_POST['subject_id'] ?? 0);
         if (!$id) throw new Exception('Invalid subject.');
-
-        $used = $pdo->prepare('SELECT COUNT(*) FROM teacher_subjects WHERE subject_id = ?');
-        $used->execute([$id]);
-        $count = (int) $used->fetchColumn();
-        if ($count > 0) {
-            throw new Exception("This subject is used by $count class assignment(s). Set it to Inactive instead of deleting it.");
+        if ($action === 'delete_preview') {
+            echo json_encode(['success' => true] + admin_delete_preview($pdo, 'subject', $id));
+        } else {
+            echo json_encode(['success' => true, 'message' => admin_delete_perform($pdo, 'subject', $id, (int) $_SESSION['user_id'])]);
         }
-
-        $stmt = $pdo->prepare('DELETE FROM subjects WHERE subject_id = ?');
-        $stmt->execute([$id]);
-        log_activity($pdo, $_SESSION['user_id'], "Deleted subject ID: $id");
-        echo json_encode(['success' => true, 'message' => 'Subject deleted successfully.']);
     } else {
         throw new Exception('Unknown action.');
     }
