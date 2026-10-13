@@ -69,6 +69,16 @@ try {
         $check->execute([$code, $id]);
         if ($check->fetchColumn() > 0) throw new Exception('Lab code already used by another laboratory.');
 
+        // Going Active -> Inactive is refused while enabled classes still meet there (an already inactive lab stays editable).
+        if ($status === 'inactive') {
+            $cur = $pdo->prepare('SELECT status FROM laboratories WHERE lab_id = ?');
+            $cur->execute([$id]);
+            if ($cur->fetchColumn() === 'active') {
+                $blocker = lab_deactivation_blocker(...lab_deactivation_counts($pdo, $id));
+                if ($blocker !== '') throw new Exception($blocker);
+            }
+        }
+
         $stmt = $pdo->prepare('UPDATE laboratories SET lab_code=?, lab_name=?, location=?, latitude=?, longitude=?, allowed_radius_meters=?, capacity=?, status=? WHERE lab_id=?');
         $stmt->execute([$code, $name, $loc, $lat, $lon, $radius, $cap, $status, $id]);
         log_activity($pdo, $_SESSION['user_id'], "Updated laboratory: $name");

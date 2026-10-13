@@ -15,6 +15,33 @@
  * tests/admin_delete_test.php can check them without a database.
  */
 
+/**
+ * Pure: why a laboratory cannot be set to Inactive, or '' when it can. A lab with enabled classes would keep
+ * generating meetings, sessions and absences that students cannot scan into (scans of an inactive lab are
+ * refused). Counts only, never names: messages go into toasts (innerHTML).
+ */
+function lab_deactivation_blocker(int $enabledClasses, int $movedInMeetings): string {
+    if ($enabledClasses <= 0 && $movedInMeetings <= 0) return '';
+    $parts = [];
+    if ($enabledClasses > 0) $parts[] = $enabledClasses . ' enabled class' . ($enabledClasses === 1 ? '' : 'es') . ' assigned to it';
+    if ($movedInMeetings > 0) $parts[] = $movedInMeetings . ' upcoming meeting' . ($movedInMeetings === 1 ? '' : 's') . ' rescheduled into it';
+    return 'This laboratory cannot be set to Inactive: it still has ' . implode(' and ', $parts)
+        . '. Disable those classes or move them to another laboratory first.';
+}
+
+/** Enabled classes assigned to the lab, and upcoming rescheduled meetings of enabled classes moved into it. [classes, moved] */
+function lab_deactivation_counts(PDO $pdo, int $labId): array {
+    $c = $pdo->prepare("SELECT COUNT(*) FROM teacher_subjects WHERE lab_id = ? AND status = 'active'");
+    $c->execute([$labId]);
+    $m = $pdo->prepare("
+        SELECT COUNT(*) FROM schedule_exceptions x
+        JOIN teacher_subjects ts ON ts.teacher_subject_id = x.teacher_subject_id
+        WHERE x.new_lab_id = ? AND ts.status = 'active' AND ts.lab_id <> ?
+          AND x.exception_type = 'RESCHEDULED' AND COALESCE(x.new_date, x.original_date) >= CURRENT_DATE");
+    $m->execute([$labId, $labId]);
+    return [(int) $c->fetchColumn(), (int) $m->fetchColumn()];
+}
+
 /** kind => [SQL column that finds the item's classes, noun, "on" word, "off" word] */
 const ADMIN_DELETE_KINDS = [
     'class'   => ['ts.teacher_subject_id', 'class assignment', 'enabled', 'disabled'],
