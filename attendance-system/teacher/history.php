@@ -88,8 +88,10 @@ require_once __DIR__ . '/../includes/header.php';
             <button class="btn btn-outline btn-sm" type="submit">Filter</button>
             <a href="history.php" class="btn btn-outline btn-sm">Reset</a>
             <div class="toolbar-spacer"></div>
-            <a class="btn btn-outline btn-sm" target="_blank" href="history.php?<?php echo e(export_query('pdf')); ?>"><i class="fa-solid fa-file-pdf"></i> Export PDF</a>
-            <a class="btn btn-outline btn-sm" href="history.php?<?php echo e(export_query('excel')); ?>"><i class="fa-solid fa-file-excel"></i> Export Excel</a>
+            <span class="toolbar-actions">
+                <a class="btn btn-outline btn-sm" target="_blank" href="history.php?<?php echo e(export_query('pdf')); ?>"><i class="fa-solid fa-file-pdf"></i> Export PDF</a>
+                <a class="btn btn-outline btn-sm" href="history.php?<?php echo e(export_query('excel')); ?>"><i class="fa-solid fa-file-excel"></i> Export Excel</a>
+            </span>
         </form>
         <div class="table-wrapper">
             <table class="data-table">

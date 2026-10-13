@@ -303,6 +303,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .search-box i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--slate-500)}
 .search-box input{padding-left:38px}
 .toolbar-spacer{flex:1}
+.toolbar-actions{display:flex;flex-wrap:wrap;gap:10px;margin-left:auto}
 
 /* ================= ALERTS / TOASTS ================= */
 .alert{display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:var(--radius-md);font-size:13.5px;margin-bottom:16px;font-weight:600}
