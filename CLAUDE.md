@@ -51,10 +51,20 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   stored; `includes/schedule.php` generates them (`get_occurrences`, `get_occurrence_status`, `get_todays_occurrences`,
   Asia/Manila) and is meant to be the single source of truth for "when does a class meet". Test:
   `php attendance-system/tests/schedule_test.php` (add `--db` with DB_* env vars; it rolls back). `tests/` is not deployed.
+- Laboratory QR codes (permanent, wall-mounted): students scan the code of the LAB, not of a meeting. Payload
+  `{"t":"lab","lab":<id>,"v":<version>,"sig":HMAC}` (`qr_build_lab_payload()` / `qr_parse_lab_payload()` in `qr/qr_helper.php`, signed
+  with `QR_SECRET_KEY`, so the key must never change after printing). `student/ajax_scan.php` checks the lab is active and the
+  version is current (`lab_qr_version()`: settings key `lab_qr_version_<lab_id>`, default 1, no migration), then
+  `resolve_lab_occurrence()` finds the meeting that is ACTIVE in that lab now (`get_todays_occurrences` with the `lab_id` filter, so a
+  meeting rescheduled INTO the lab counts), preferring the student's own enrolled class; two of the student's classes at once is refused.
+  Admin > Attendance Sessions shows one printable code per active lab and "Regenerate" (`admin/ajax_lab_qr.php`, bumps the version, old
+  printouts stop working); codes are not shown on Vercel while `QR_SECRET_KEY` is unset. Teachers no longer display a QR. The old
+  per-meeting `qr_token` stays on `attendance_sessions` (internal only, not shown or checked). Two classes may never overlap in a lab
+  (`find_schedule_conflict()`). Test: `php attendance-system/tests/lab_qr_test.php`.
 - Attendance sessions are automatic: `qr/session_manager.php` `ensure_session_for_occurrence()` opens one session per
-  ACTIVE meeting (session_date = occurrence date, scheduled_start = its start, session_end = its end, fresh qr_token),
+  ACTIVE meeting (session_date = occurrence date, scheduled_start = its start, session_end = its end, internal qr_token),
   called from teacher/session.php, admin/qr_management.php and student/ajax_scan.php. No manual activate; a teacher/admin can close a
-  session early and reopen it (`reactivate_attendance_session_by_id()`, same qr_token) only while its meeting is still ACTIVE. A session that has not ended follows
+  session early and reopen it (`reactivate_attendance_session_by_id()`) only while its meeting is still ACTIVE. A session that has not ended follows
   its meeting's end (`sync_session_end()`, also run when an admin saves a class): if the meeting is already over it closes and ends 1 minute
   from now, never in the past (an end before the absence watermark would never be marked absent). If the START moved, the running
   session is re-attached to the meeting (`reattach_moved_sessions()`: same id + QR, scans re-checked for Late, a teacher's manual Present
@@ -139,7 +149,7 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
 - Security headers (CSP, X-Frame-Options, nosniff, Permissions-Policy, HSTS over HTTPS) are sent from `includes/security_headers.php`
   via `config.php`. If a page needs a new external script/style/font host (or camera/location elsewhere), add it there. Test:
   `php attendance-system/tests/security_headers_test.php`. `QR_SECRET_KEY` unset = warning in the Vercel log + red banner for admins
-  (it still works with a key derived from the DB credentials, but a DB password change would then break every QR).
+  (it still works with a key derived from the DB credentials, but a DB password change would then break every printed lab QR).
 - Data passed to an inline handler (`onclick='fn(...)'`) must go through `js_attr_json()` (`includes/functions.php`), never plain
   `json_encode()`: a name with an apostrophe (Women's Health, D'Souza) would end the attribute and break the button.
   A student's free-text remark in that attribute was a script-injection route into teacher/admin sessions. `tests/inline_handler_test.php` fails if it comes back.

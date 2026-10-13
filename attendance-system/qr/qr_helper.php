@@ -2,22 +2,23 @@
 /**
  * ------------------------------------------------------------
  * qr/qr_helper.php
- * Builds and validates the QR payload for an attendance SESSION.
+ * Builds and validates the QR payload that students scan.
  *
- * No permanent or unrestricted QR codes are used anywhere in this
- * system. Every time a teacher or admin opens attendance for a
- * class, a brand-new, cryptographically random token is generated
- * (qr/session_manager.php) and signed into a small JSON payload:
+ * Each LABORATORY has one permanent QR code, printed and posted on its
+ * wall. The payload names only the lab and its code version and is signed
+ * with QR_SECRET_KEY (HMAC), so it cannot be forged or edited:
  *
- *   { "session_id": 12, "token": "...", "sig": "..." }
+ *   { "t": "lab", "lab": 3, "v": 1, "sig": "..." }
  *
- * The payload contains no student information. It stops being valid
- * the moment that session closes or expires, and a token is never
- * reused across sessions — so an old screenshot can never be reused
- * for a later class meeting. Student-facing validation
- * (student/ajax_scan.php) re-checks the signature, the session's
- * active/expired state, enrollment, meeting date, time window, and
- * GPS geofence on every single scan.
+ * The payload says nothing about a class or a student. The server finds
+ * the meeting itself: the class that is ACTIVE in that laboratory right
+ * now (student/ajax_scan.php -> resolve_lab_occurrence()), then re-checks
+ * enrollment, the session's open/closed state, the lab's GPS radius and
+ * accuracy, late grace and the one-phone rule on every single scan.
+ *
+ * A code is revoked by bumping the lab's version (admin/qr_management.php
+ * "Regenerate"): every printout of the old version stops working at once.
+ * The signing key must stay the same for printed codes to keep working.
  * ------------------------------------------------------------
  */
 
@@ -39,21 +40,27 @@ define('QR_SECRET_KEY', (function () {
     return hash_hmac('sha256', 'qr-payload-signing-v1', DB_USER . '|' . DB_PASS . '|' . DB_HOST);
 })());
 
-/** Build the signed payload for one active attendance session. */
-function qr_build_session_payload($sessionId, $token) {
-    $sig = hash_hmac('sha256', 'session|' . $sessionId . '|' . $token, QR_SECRET_KEY);
-    return json_encode(['session_id' => (int) $sessionId, 'token' => $token, 'sig' => $sig]);
+/** HMAC over the lab id and its version. The 'lab|' prefix keeps it a different message from any other signature. */
+function qr_lab_signature($labId, $version): string {
+    return hash_hmac('sha256', 'lab|' . (int) $labId . '|' . (int) $version, QR_SECRET_KEY);
 }
 
-/** Returns ['session_id' => int, 'token' => string] on success, or false. */
-function qr_parse_session_payload($raw) {
-    $data = json_decode($raw, true);
-    if (!is_array($data) || empty($data['session_id']) || empty($data['token']) || empty($data['sig'])) {
+/** Build the signed, permanent payload printed for one laboratory. */
+function qr_build_lab_payload($labId, $version): string {
+    return json_encode(['t' => 'lab', 'lab' => (int) $labId, 'v' => (int) $version, 'sig' => qr_lab_signature($labId, $version)]);
+}
+
+/** Returns ['lab_id' => int, 'version' => int] when the payload is a genuine lab code, or false. */
+function qr_parse_lab_payload($raw) {
+    $data = is_string($raw) ? json_decode($raw, true) : null;
+    if (!is_array($data) || ($data['t'] ?? null) !== 'lab'
+        || !isset($data['lab'], $data['v'], $data['sig'])
+        || !is_int($data['lab']) || !is_int($data['v']) || !is_string($data['sig'])
+        || $data['lab'] < 1 || $data['v'] < 1) {
         return false;
     }
-    $expected = hash_hmac('sha256', 'session|' . $data['session_id'] . '|' . $data['token'], QR_SECRET_KEY);
-    if (!hash_equals($expected, (string) $data['sig'])) {
+    if (!hash_equals(qr_lab_signature($data['lab'], $data['v']), $data['sig'])) {
         return false;
     }
-    return ['session_id' => (int) $data['session_id'], 'token' => (string) $data['token']];
+    return ['lab_id' => $data['lab'], 'version' => $data['v']];
 }

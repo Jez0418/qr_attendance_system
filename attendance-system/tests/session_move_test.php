@@ -49,7 +49,7 @@ $sm = file_get_contents(__DIR__ . '/../qr/session_manager.php');
 check('ensure_session_for_occurrence() re-attaches before opening a new session', strpos($sm, "if (!\$found && reattach_moved_sessions(") !== false);
 check('find_occurrence_for_session() re-attaches when the start no longer matches', strpos($sm, "if (!reattach_moved_sessions(\$pdo, (int) \$session['teacher_subject_id']") !== false);
 check('re-attaching takes the same lock as opening a session', substr_count($sm, "'attendance-session:' . \$occ['occurrence_key']") >= 2);
-check('a scan uses find_occurrence_for_session()', strpos(file_get_contents(__DIR__ . '/../student/ajax_scan.php'), 'find_occurrence_for_session($pdo, $session, $now)') !== false);
+check('a scan gets its session through ensure_session_for_occurrence() (which re-attaches first)', strpos(file_get_contents(__DIR__ . '/../student/ajax_scan.php'), 'ensure_session_for_occurrence($pdo, $occ, $now)') !== false);
 check('saving a class re-attaches today\'s sessions', strpos(file_get_contents(__DIR__ . '/../admin/ajax_assignments.php'), "reattach_moved_sessions(\$pdo, \$classId, schedule_now()->format('Y-m-d'))") !== false);
 
 echo $fail ? "\n$fail FAILED\n" : "\nAll passed\n";

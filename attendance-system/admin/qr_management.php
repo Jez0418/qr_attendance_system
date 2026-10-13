@@ -1,12 +1,14 @@
 <?php
 /**
  * admin/qr_management.php — "Attendance Sessions"
- * Today's class meetings and their attendance sessions. Sessions open
- * automatically when a meeting becomes ACTIVE (ensure_session_for_occurrence()
- * in qr/session_manager.php, called here for every meeting today) and expire
- * at the meeting's end, each with a fresh one-time QR token. The admin can
- * close a session early and reopen it (same QR code) while its meeting is
- * still in progress. The page reloads itself at the next start/end time.
+ * Today's class meetings and their attendance sessions, plus the permanent
+ * QR code of every laboratory (print and post on the wall; students scan the
+ * lab's code, see qr/qr_helper.php). Sessions open automatically when a
+ * meeting becomes ACTIVE (ensure_session_for_occurrence() in
+ * qr/session_manager.php, called here for every meeting today) and expire at
+ * the meeting's end. The admin can close a session early and reopen it while
+ * its meeting is still in progress, and regenerate a lab's code if a printout
+ * leaks (ajax_lab_qr.php). The page reloads itself at the next start/end time.
  */
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../qr/session_manager.php';
@@ -21,8 +23,18 @@ $reloadIn = seconds_until_next_change(array_column($meetings, 'occurrence'), $no
 $openMeetings = array_values(array_filter($meetings, fn($m) => $m['session'] && (int) $m['session']['is_active'] === 1));
 
 $labCoords = [];
-foreach ($pdo->query('SELECT lab_id, CASE WHEN latitude IS NOT NULL AND longitude IS NOT NULL THEN 1 ELSE 0 END AS has_coords FROM laboratories')->fetchAll() as $l) {
+$labQrs = [];   // one permanent code per active laboratory
+$qrKeyBlocked = (bool) getenv('VERCEL') && !qr_key_is_configured();   // printed codes would break with the next DB password change
+foreach ($pdo->query("SELECT lab_id, lab_name, lab_code, status, CASE WHEN latitude IS NOT NULL AND longitude IS NOT NULL THEN 1 ELSE 0 END AS has_coords FROM laboratories ORDER BY lab_name")->fetchAll() as $l) {
     $labCoords[(int) $l['lab_id']] = (bool) $l['has_coords'];
+    if ($l['status'] === 'active') {
+        $version = lab_qr_version($pdo, (int) $l['lab_id']);
+        $labQrs[] = [
+            'id' => (int) $l['lab_id'], 'name' => $l['lab_name'], 'code' => $l['lab_code'],
+            'has_coords' => (bool) $l['has_coords'], 'version' => $version,
+            'payload' => $qrKeyBlocked ? null : qr_build_lab_payload($l['lab_id'], $version),
+        ];
+    }
 }
 
 $recentSessions = $pdo->query('
@@ -46,8 +58,9 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="alert alert-info">
     <i class="fa-solid fa-shield-halved"></i>
-    Attendance opens automatically when a class starts and closes when it ends, each time with a new one-time QR code.
-    You can close a session early and reopen it while the class is still in progress (the same QR code works again); cancelled classes never open.
+    Each laboratory has one permanent QR code to print and post on its wall. Attendance opens automatically when a class starts
+    and closes when it ends; a scan counts for the class that is in session in that laboratory. You can close a session early and
+    reopen it while the class is still in progress; cancelled classes never open.
 </div>
 
 <div class="card">
@@ -90,21 +103,44 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
+<style>
+.lab-qr-box{display:inline-block;padding:10px;background:#fff;border-radius:8px;border:1px solid #e2e8f0}
+.print-only{display:none}
+@media print {
+    body * { visibility: hidden; }
+    #labQrGrid, #labQrGrid * { visibility: visible; }
+    #labQrGrid { position: absolute; left: 0; top: 0; width: 100%; display: block; }
+    #labQrGrid .lab-qr-card { page-break-after: always; border: 0; box-shadow: none; text-align: center; padding-top: 60px; }
+    #labQrGrid .lab-qr-card .no-print { display: none; }
+    #labQrGrid .print-only { display: block; }
+}
+</style>
 <div class="card" style="margin-top:20px">
-    <div class="card-header"><h3>Open Sessions (<?php echo count($openMeetings); ?>)</h3></div>
+    <div class="card-header">
+        <h3>Laboratory QR Codes (<?php echo count($labQrs); ?>)</h3>
+        <?php if ($labQrs && !$qrKeyBlocked): ?><button class="btn btn-outline btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i> Print all</button><?php endif; ?>
+    </div>
     <div class="card-body">
-        <?php if (!$openMeetings): ?>
-            <div class="empty-state"><i class="fa-solid fa-qrcode"></i><p>No attendance is open right now.</p></div>
+        <?php if ($qrKeyBlocked): ?>
+            <div class="alert alert-error"><i class="fa-solid fa-triangle-exclamation"></i>
+                <code>QR_SECRET_KEY</code> is not set in Vercel, so laboratory codes are not shown. A code signed with the fallback key
+                would stop working the next time the database password changes. Set a long random <code>QR_SECRET_KEY</code>, redeploy, then print.</div>
+        <?php elseif (!$labQrs): ?>
+            <div class="empty-state"><i class="fa-solid fa-qrcode"></i><p>No active laboratories yet.</p></div>
         <?php else: ?>
-        <div class="grid-3">
-            <?php foreach ($openMeetings as $m): $o = $m['occurrence']; $s = $m['session']; ?>
-            <div class="card">
+        <p class="text-muted" style="font-size:12.5px;margin:0 0 14px">Print one code per laboratory and post it on the wall. The code never changes unless you regenerate it.
+            Keep <code>QR_SECRET_KEY</code> unchanged, or every printed code stops working.</p>
+        <div class="grid-3" id="labQrGrid">
+            <?php foreach ($labQrs as $q): ?>
+            <div class="card lab-qr-card">
                 <div class="card-body text-center">
-                    <div id="qr-<?php echo (int) $s['session_id']; ?>" style="display:inline-block;padding:10px;background:#fff;border-radius:8px;border:1px solid #e2e8f0"></div>
-                    <h4 style="margin:14px 0 4px"><?php echo e($o['subject_code'] . ' - ' . $o['subject_name']); ?></h4>
-                    <p class="text-muted" style="font-size:13px;margin:0"><?php echo e($o['teacher_name']); ?> · <?php echo e($o['lab_name']); ?></p>
-                    <p class="text-muted" style="font-size:12px;margin:4px 0 14px">Radius: <?php echo (int) $s['allowed_radius_meters']; ?>m · Expires: <?php echo date('g:i A', strtotime($s['session_end'])); ?></p>
-                    <button class="btn btn-danger btn-sm" onclick="closeSession(<?php echo (int) $s['session_id']; ?>, <?php echo e(json_encode($o['subject_code'] . ' (' . $o['section'] . ')')); ?>)"><i class="fa-solid fa-stop"></i> Close</button>
+                    <div class="lab-qr-box" id="labqr-<?php echo $q['id']; ?>"></div>
+                    <h4 style="margin:14px 0 4px"><?php echo e($q['name']); ?></h4>
+                    <p class="text-muted" style="font-size:13px;margin:0"><?php echo e($q['code']); ?></p>
+                    <p class="print-only" style="font-size:15px;margin:10px 0 0">Scan to record your attendance</p>
+                    <?php if (!$q['has_coords']): ?><p class="no-print" style="font-size:12px;color:var(--red-600);margin:8px 0 0"><i class="fa-solid fa-triangle-exclamation"></i> No GPS set: attendance can't be verified here until coordinates are added.</p><?php endif; ?>
+                    <p class="text-muted no-print" style="font-size:11.5px;margin:6px 0 12px">Code version <?php echo (int) $q['version']; ?></p>
+                    <button class="btn btn-outline btn-sm no-print" onclick='regenerateLabQr(<?php echo (int) $q['id']; ?>, <?php echo js_attr_json($q['name']); ?>)'><i class="fa-solid fa-rotate"></i> Regenerate</button>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -144,14 +180,11 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
-const OPEN_SESSION_QRS = <?php echo json_encode(array_map(fn($m) => ['id' => (int) $m['session']['session_id'], 'payload' => qr_build_session_payload($m['session']['session_id'], $m['session']['qr_token'])], $openMeetings)); ?>;
+const LAB_QRS = <?php echo json_encode(array_values(array_filter(array_map(fn($q) => $q['payload'] === null ? null : ['id' => $q['id'], 'payload' => $q['payload']], $labQrs)))); ?>;
 const RELOAD_IN = <?php echo $reloadIn !== null ? (int) $reloadIn : 'null'; ?>; // seconds until the next class starts or ends
 
 document.addEventListener('DOMContentLoaded', () => {
-    OPEN_SESSION_QRS.forEach(s => {
-        const el = document.getElementById('qr-' + s.id);
-        if (el) safeRenderQr(el, s.payload, 160);
-    });
+    LAB_QRS.forEach(q => safeRenderQr(document.getElementById('labqr-' + q.id), q.payload, 220));
     if (RELOAD_IN !== null && RELOAD_IN < 86400) setTimeout(() => location.reload(), (RELOAD_IN + 2) * 1000);
 });
 
@@ -162,8 +195,15 @@ async function closeSession(sessionId, label) {
     else showToast('error', res.message);
 }
 
+async function regenerateLabQr(labId, name) {
+    if (!confirm('Regenerate the QR code for ' + name + '? The code posted on the wall stops working immediately and the new one must be printed and posted.')) return;
+    const res = await ajaxPost('ajax_lab_qr.php', { lab_id: labId });
+    if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 500); }
+    else showToast('error', res.message);
+}
+
 async function reopenSession(sessionId, label) {
-    if (!confirm('Reopen attendance for ' + label + '? The same QR code will work again until the class ends.')) return;
+    if (!confirm('Reopen attendance for ' + label + '? Students can check in again until the class ends.')) return;
     const res = await ajaxPost('ajax_qr_reactivate.php', { session_id: sessionId });
     if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 500); }
     else showToast('error', res.message);

@@ -11,9 +11,10 @@
  * looks while the meeting is ACTIVE, with a fresh random QR token and
  * session_end (the session's "expires at") = the meeting's end time.
  * Nobody opens attendance by hand any more; a teacher or admin can
- * close it early and reopen it again (same QR token, so a QR code that
- * is already on screen works again) as long as the meeting is still
- * ACTIVE. Once the meeting has ended or been cancelled it stays closed.
+ * close it early and reopen it again as long as the meeting is still
+ * ACTIVE. Students scan the permanent QR code of the LABORATORY
+ * (qr/qr_helper.php); resolve_lab_occurrence() maps it to the meeting that
+ * is ACTIVE there now, and the session's own qr_token is only internal. Once the meeting has ended or been cancelled it stays closed.
  *
  * An open session's geofence radius follows its laboratory's current
  * allowed_radius_meters (synced on every look); a closed session keeps
@@ -41,6 +42,75 @@ require_once __DIR__ . '/../includes/schedule.php';
 function get_late_grace_minutes(PDO $pdo, $classGrace = null): int {
     $minutes = ($classGrace !== null && $classGrace !== '') ? (int) $classGrace : get_setting_int($pdo, 'late_grace_minutes', 15);
     return max(0, min(180, $minutes));
+}
+
+/** Current version of a laboratory's wall QR code (settings key lab_qr_version_<id>, 1 until regenerated). */
+function lab_qr_version(PDO $pdo, int $labId): int {
+    return max(1, (int) get_setting($pdo, 'lab_qr_version_' . $labId, 1));
+}
+
+/** Revoke a laboratory's printed QR code: bump its version. Returns the new version. */
+function rotate_lab_qr_version(PDO $pdo, int $labId): int {
+    $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ?');
+    $stmt->execute(['lab_qr_version_' . $labId]);
+    $new = max(1, (int) $stmt->fetchColumn()) + 1;
+    set_setting($pdo, 'lab_qr_version_' . $labId, (string) $new);
+    return $new;
+}
+
+/**
+ * Pure: which of today's meetings in ONE laboratory does a scan belong to?
+ * $occurrences: the lab's meetings today (get_occurrences() with the lab_id filter, so a meeting moved
+ * into this lab counts and one moved out does not). $enrolledClassIds: the scanning student's classes.
+ * Returns ['occurrence' => array|null, 'error' => string|null]:
+ *  - the student's own meeting that is ACTIVE (more than one is a refused ambiguity, never a guess);
+ *  - else, when the student has a class here today, why it is not scanable (the one nearest to now:
+ *    not started / over / cancelled);
+ *  - else the ACTIVE meeting of someone else's class, so the scan reports "not enrolled";
+ *  - else "no class right now".
+ */
+function pick_lab_occurrence(array $occurrences, array $enrolledClassIds, $now = null): array {
+    $now = schedule_now($now);
+    $enrolled = array_flip(array_map('intval', $enrolledClassIds));
+    $active = $mine = $mineActive = [];
+    foreach ($occurrences as $o) {
+        $isMine = isset($enrolled[(int) $o['teacher_subject_id']]);
+        $isActive = get_occurrence_status($o, $now) === OCCURRENCE_ACTIVE;
+        if ($isActive) $active[] = $o;
+        if ($isMine) $mine[] = $o;
+        if ($isMine && $isActive) $mineActive[] = $o;
+    }
+    if (count($mineActive) === 1) return ['occurrence' => $mineActive[0], 'error' => null];
+    if (count($mineActive) > 1) {
+        return ['occurrence' => null, 'error' => 'Two of your classes are scheduled in this laboratory at the same time. Please contact your administrator.'];
+    }
+    if ($mine) {
+        // Nearest meeting to now (distance 0 inside a window; cancelled ones keep their original window).
+        $distance = function (array $o) use ($now): int {
+            $start = (new DateTimeImmutable($o['starts_at'], schedule_tz()))->getTimestamp();
+            $end = (new DateTimeImmutable($o['ends_at'], schedule_tz()))->getTimestamp();
+            $t = $now->getTimestamp();
+            return $t < $start ? $start - $t : ($t >= $end ? $t - $end : 0);
+        };
+        usort($mine, fn($a, $b) => $distance($a) <=> $distance($b));
+        $o = $mine[0];
+        $status = get_occurrence_status($o, $now);
+        if ($status === OCCURRENCE_CANCELLED) {
+            return ['occurrence' => null, 'error' => 'This class has been cancelled' . (!empty($o['exception_reason']) ? ': ' . $o['exception_reason'] : '.')];
+        }
+        return ['occurrence' => null, 'error' => $status === OCCURRENCE_UPCOMING ? 'This class has not started yet.' : 'This class has already ended.'];
+    }
+    if ($active) return ['occurrence' => $active[0], 'error' => null];
+    return ['occurrence' => null, 'error' => 'No class is in session in this laboratory right now.'];
+}
+
+/** The meeting a scan of laboratory $labId belongs to for this student: see pick_lab_occurrence(). */
+function resolve_lab_occurrence(PDO $pdo, int $labId, int $studentId, $now = null): array {
+    $now = schedule_now($now);
+    $occurrences = get_todays_occurrences($pdo, ['lab_id' => $labId], $now);
+    $mine = $pdo->prepare("SELECT teacher_subject_id FROM enrollments WHERE student_id = ? AND status = 'enrolled'");
+    $mine->execute([$studentId]);
+    return pick_lab_occurrence($occurrences, array_map('intval', $mine->fetchAll(PDO::FETCH_COLUMN)), $now);
 }
 
 /** The session (open or closed) for this meeting, or null. */
@@ -126,7 +196,7 @@ function ensure_session_for_occurrence(PDO $pdo, array $occ, $now = null): ?arra
         $students->execute([$occ['teacher_subject_id']]);
         foreach ($students->fetchAll(PDO::FETCH_COLUMN) as $uid) {
             create_notification($pdo, $uid, 'Attendance Open',
-                "Attendance is open for {$occ['subject_code']} in {$occ['lab_name']} until " . (new DateTimeImmutable($occ['ends_at']))->format('g:i A') . ' — scan the QR code to check in.');
+                "Attendance is open for {$occ['subject_code']} in {$occ['lab_name']} until " . (new DateTimeImmutable($occ['ends_at']))->format('g:i A') . ' — scan the QR code posted in the laboratory to check in.');
         }
     }
     return $session;

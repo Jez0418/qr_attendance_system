@@ -33,7 +33,7 @@ try {
     if ($action === 'reopen') {
         reactivate_attendance_session_by_id($pdo, $sessionId);
         log_activity($pdo, $_SESSION['user_id'], "Reopened attendance session #$sessionId");
-        echo json_encode(['success' => true, 'message' => 'Attendance reopened. The same QR code works again.']);
+        echo json_encode(['success' => true, 'message' => 'Attendance reopened. Students can check in again.']);
         exit;
     }
 

@@ -17,7 +17,7 @@ try {
     if (!$sessionId) throw new Exception('Invalid request.');
     reactivate_attendance_session_by_id($pdo, $sessionId);
     log_activity($pdo, $_SESSION['user_id'], "Admin reopened attendance session #$sessionId");
-    echo json_encode(['success' => true, 'message' => 'Attendance reopened. The same QR code works again.']);
+    echo json_encode(['success' => true, 'message' => 'Attendance reopened. Students can check in again.']);
 } catch (PDOException $e) {
     echo json_encode(['success' => false, 'message' => safe_error_message($e)]);
 } catch (Exception $e) {
