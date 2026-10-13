@@ -105,6 +105,10 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   (columns `marked_by_user_id/marked_at/override_reason` from `database/supabase_attendance_override.sql`). A manual Present has no GPS data
   and is shown as "marked by teacher" via `format_record_time()` (selects must include `ar.marked_by_user_id`). The student is notified and the
   activity log gets a line. Test: `php attendance-system/tests/attendance_override_test.php`.
+- Laboratory deactivation: an Active lab cannot be set to Inactive while enabled classes are assigned to it or enabled classes have upcoming
+  meetings rescheduled into it (`lab_deactivation_blocker()` / `lab_deactivation_counts()` in `includes/admin_delete.php`, used by
+  `admin/ajax_laboratories.php`); an already inactive lab stays editable. Scans of an inactive lab are refused (`student/ajax_scan.php`).
+  Test: `php attendance-system/tests/lab_deactivate_test.php`.
 - Admin deletes (`includes/admin_delete.php`, used by `admin/ajax_assignments|teachers|subjects|laboratories.php`): only a DISABLED
   class / INACTIVE teacher, subject or laboratory can be deleted. The foreign keys cascade, so a delete also removes the item's enrollments, sessions
   and attendance records (a subject/lab/teacher takes its classes too); it is refused while one of those classes is still enabled. The page calls
