@@ -115,7 +115,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="form-row">
                     <div class="form-group">
                         <label id="passwordLabel">Password *</label>
-                        <input type="text" name="password" id="password" class="form-control" placeholder="Leave blank to keep unchanged">
+                        <input type="text" name="password" id="password" class="form-control" placeholder="Initial password">
                         <small class="text-muted">Tip: use the employee number as the password so teachers can log in with their ID.</small>
                     </div>
                     <div class="form-group">
@@ -140,6 +140,7 @@ function openAddModal() {
     document.getElementById('teacherModalTitle').textContent = 'Add Teacher';
     document.getElementById('passwordLabel').textContent = 'Password *';
     document.getElementById('password').required = true;
+    document.getElementById('password').placeholder = 'Initial password';
     openModal('teacherModal');
 }
 document.getElementById('employee_number').addEventListener('input', (e) => {
@@ -172,6 +173,7 @@ function openEditModal(t) {
     document.getElementById('teacherModalTitle').textContent = 'Edit Teacher';
     document.getElementById('passwordLabel').textContent = 'Password';
     document.getElementById('password').required = false;
+    document.getElementById('password').placeholder = 'Leave blank to keep unchanged';
     openModal('teacherModal');
 }
 document.getElementById('teacherForm').addEventListener('submit', async (e) => {

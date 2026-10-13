@@ -123,9 +123,9 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
     <div class="card-body">
         <?php if ($qrKeyBlocked): ?>
-            <div class="alert alert-error"><i class="fa-solid fa-triangle-exclamation"></i>
-                <code>QR_SECRET_KEY</code> is not set in Vercel, so laboratory codes are not shown. A code signed with the fallback key
-                would stop working the next time the database password changes. Set a long random <code>QR_SECRET_KEY</code>, redeploy, then print.</div>
+            <div class="alert alert-error"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                <span><code>QR_SECRET_KEY</code> is not set in Vercel, so laboratory codes are not shown. A code signed with the fallback key
+                would stop working the next time the database password changes. Set a long random <code>QR_SECRET_KEY</code>, redeploy, then print.</span></div>
         <?php elseif (!$labQrs): ?>
             <div class="empty-state"><i class="fa-solid fa-qrcode"></i><p>No active laboratories yet.</p></div>
         <?php else: ?>

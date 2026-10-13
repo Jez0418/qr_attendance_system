@@ -54,7 +54,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="card-body">
         <form method="GET" class="toolbar">
             <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" name="search" class="form-control" placeholder="Search student, subject, teacher..." value="<?php echo e($search); ?>"></div>
+                <input type="text" name="search" class="form-control" placeholder="Search student, subject..." value="<?php echo e($search); ?>"></div>
             <select name="status" class="form-control" style="max-width:180px" onchange="this.form.submit()">
                 <option value="pending" <?php echo $statusFilter === 'pending' ? 'selected' : ''; ?>>Pending</option>
                 <option value="approved" <?php echo $statusFilter === 'approved' ? 'selected' : ''; ?>>Approved</option>

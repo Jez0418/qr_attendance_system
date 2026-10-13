@@ -93,7 +93,7 @@ require_once __DIR__ . '/../includes/header.php';
             <?php if ($missingGeoCount > 0): ?>
                 <div class="alert alert-error">
                     <i class="fa-solid fa-triangle-exclamation"></i>
-                    <?php echo (int) $missingGeoCount; ?> laboratory(ies) still have no GPS coordinates set. Attendance sessions cannot be activated for them until an admin configures coordinates in <a href="laboratories.php">Laboratories</a>.
+                    <span><?php echo (int) $missingGeoCount; ?> laboratory(ies) still have no GPS coordinates set. Attendance sessions cannot be activated for them until an admin configures coordinates in <a href="laboratories.php">Laboratories</a>.</span>
                 </div>
             <?php else: ?>
                 <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> All laboratories have GPS coordinates configured.</div>
