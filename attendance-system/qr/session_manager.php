@@ -107,7 +107,12 @@ function pick_lab_occurrence(array $occurrences, array $enrolledClassIds, $now =
 /** The meeting a scan of laboratory $labId belongs to for this student: see pick_lab_occurrence(). */
 function resolve_lab_occurrence(PDO $pdo, int $labId, int $studentId, $now = null): array {
     $now = schedule_now($now);
-    $occurrences = get_todays_occurrences($pdo, ['lab_id' => $labId], $now);
+    // get_occurrences() already matches the lab AFTER exceptions; the second check keeps a meeting that was
+    // moved out of this lab from ever being scanned here, whatever happens to that filter.
+    $occurrences = array_values(array_filter(
+        get_todays_occurrences($pdo, ['lab_id' => $labId], $now),
+        fn($o) => (int) $o['lab_id'] === $labId
+    ));
     $mine = $pdo->prepare("SELECT teacher_subject_id FROM enrollments WHERE student_id = ? AND status = 'enrolled'");
     $mine->execute([$studentId]);
     return pick_lab_occurrence($occurrences, array_map('intval', $mine->fetchAll(PDO::FETCH_COLUMN)), $now);

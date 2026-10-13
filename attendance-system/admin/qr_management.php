@@ -113,6 +113,7 @@ require_once __DIR__ . '/../includes/header.php';
     #labQrGrid .lab-qr-card { page-break-after: always; border: 0; box-shadow: none; text-align: center; padding-top: 60px; }
     #labQrGrid .lab-qr-card .no-print { display: none; }
     #labQrGrid .print-only { display: block; }
+    #labQrGrid h4, #labQrGrid p { color: #000 !important; }
 }
 </style>
 <div class="card" style="margin-top:20px">
@@ -137,7 +138,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <div class="lab-qr-box" id="labqr-<?php echo $q['id']; ?>"></div>
                     <h4 style="margin:14px 0 4px"><?php echo e($q['name']); ?></h4>
                     <p class="text-muted" style="font-size:13px;margin:0"><?php echo e($q['code']); ?></p>
-                    <p class="print-only" style="font-size:15px;margin:10px 0 0">Scan to record your attendance</p>
+                    <p class="print-only" style="font-size:15px;margin:10px 0 0">To record your attendance, open the attendance app, go to <strong>Scan Attendance</strong> and scan this code.</p>
                     <?php if (!$q['has_coords']): ?><p class="no-print" style="font-size:12px;color:var(--red-600);margin:8px 0 0"><i class="fa-solid fa-triangle-exclamation"></i> No GPS set: attendance can't be verified here until coordinates are added.</p><?php endif; ?>
                     <p class="text-muted no-print" style="font-size:11.5px;margin:6px 0 12px">Code version <?php echo (int) $q['version']; ?></p>
                     <button class="btn btn-outline btn-sm no-print" onclick='regenerateLabQr(<?php echo (int) $q['id']; ?>, <?php echo js_attr_json($q['name']); ?>)'><i class="fa-solid fa-rotate"></i> Regenerate</button>
