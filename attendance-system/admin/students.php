@@ -12,7 +12,7 @@ $pageTitle = 'Student Management';
 $search = clean($_GET['search'] ?? '');
 $programFilter = clean($_GET['program'] ?? '');
 
-$where = [];
+$where = ['u.deleted_at IS NULL'];   // archived (deleted) students are hidden; their history stays
 $params = [];
 if ($search !== '') {
     $where[] = '(s.full_name LIKE ? OR s.student_number LIKE ? OR u.email LIKE ?)';

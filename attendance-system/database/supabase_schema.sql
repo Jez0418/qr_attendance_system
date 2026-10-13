@@ -19,6 +19,7 @@ CREATE TABLE users (
     role VARCHAR(10) NOT NULL CHECK (role IN ('admin','teacher','student')),
     email VARCHAR(100) NOT NULL UNIQUE,
     status VARCHAR(10) NOT NULL DEFAULT 'active' CHECK (status IN ('active','inactive')),
+    deleted_at TIMESTAMP NULL,   -- archived ("deleted") student/teacher: hidden, history kept
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -44,6 +44,7 @@ if ($selectedClass) {
     $enrolled = $enrolledStmt->fetchAll();
 
     $naWhere = ['s.student_id NOT IN (SELECT student_id FROM enrollments WHERE teacher_subject_id = ? AND status = "enrolled")'];
+    $naWhere[] = 'NOT EXISTS (SELECT 1 FROM users u WHERE u.user_id = s.user_id AND u.deleted_at IS NOT NULL)';
     $naParams = [$selectedClass];
     if ($filterProgram !== '') { $naWhere[] = 's.program_id = ?'; $naParams[] = $filterProgram; }
     if ($filterYear !== '') { $naWhere[] = 's.year_level = ?'; $naParams[] = $filterYear; }

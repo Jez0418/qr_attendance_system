@@ -3,9 +3,11 @@
  * includes/admin_delete.php — the admin deleting a class assignment, teacher, student, subject or laboratory.
  *
  * One rule for all five: only a DISABLED item can be deleted (class: Disabled, the others: Inactive).
- * The foreign keys are ON DELETE CASCADE, so deleting removes everything under the item: a class takes its
- * enrollments, sessions and attendance records with it; a teacher, subject or laboratory takes its classes (and
- * those) with it; a student takes their enrollments and attendance records. Because that is permanent, the page first asks `admin_delete_preview()` what would go and
+ * A student or teacher is ARCHIVED, not removed (`users.deleted_at`, database/supabase_archive_users.sql): the account is
+ * closed and hidden from the lists, but their classes, sessions and attendance records stay in the history.
+ * A class, subject or laboratory is really deleted; the foreign keys are ON DELETE CASCADE, so that removes everything
+ * under the item: a class takes its enrollments, sessions and attendance records with it; a subject or laboratory
+ * takes its classes (and those) with it. Because that is permanent, the page first asks `admin_delete_preview()` what would go and
  * shows those numbers in the confirmation.
  *
  * A subject, laboratory or teacher is also refused while one of its classes is still ENABLED: that class
@@ -41,6 +43,9 @@ function lab_deactivation_counts(PDO $pdo, int $labId): array {
     $m->execute([$labId, $labId]);
     return [(int) $c->fetchColumn(), (int) $m->fetchColumn()];
 }
+
+/** Kinds that are archived (account hidden, history kept) rather than removed from the database. */
+const ADMIN_ARCHIVE_KINDS = ['teacher', 'student'];
 
 /** kind => [SQL column that finds the item's classes, noun, "on" word, "off" word] */
 const ADMIN_DELETE_KINDS = [
@@ -139,8 +144,31 @@ function admin_delete_preview(PDO $pdo, string $kind, int $id): array {
     $impact = admin_delete_impact($pdo, $kind, $id);
     if ($blocker = admin_delete_blocker($kind, $target['status'], $impact)) throw new Exception($blocker);
     $noun = ADMIN_DELETE_KINDS[$kind][1];
+    if (in_array($kind, ADMIN_ARCHIVE_KINDS, true)) {
+        return ['confirm' => "Delete the $noun \"{$target['name']}\"?\n\nThe account is closed and removed from the lists. "
+            . "Their classes, attendance sessions and attendance records stay in the history.\n\nThis cannot be undone."];
+    }
     return ['confirm' => "Permanently delete the $noun \"{$target['name']}\"?\n\nThis also deletes: "
         . admin_delete_summary($kind, $impact) . ".\n\nThis cannot be undone."];
+}
+
+/**
+ * Archives a student or teacher account: closed (inactive), hidden (deleted_at) and its username/email released so they
+ * can be used again. A student's enrollments are dropped (no more Absent marks) and pending requests cancelled; every
+ * attendance record, session and class is left untouched. Call inside the caller's transaction.
+ */
+function admin_archive_user(PDO $pdo, int $userId, int $studentId = 0): void {
+    $row = $pdo->prepare('SELECT username, email FROM users WHERE user_id = ?');
+    $row->execute([$userId]);
+    $u = $row->fetch(PDO::FETCH_ASSOC);
+    if (!$u) return;
+    $tag = 'deleted-' . $userId . '-';
+    $pdo->prepare("UPDATE users SET deleted_at = NOW(), status = 'inactive', username = ?, email = ? WHERE user_id = ?")
+        ->execute([substr($tag . $u['username'], 0, 50), substr($tag . $u['email'], 0, 100), $userId]);
+    if ($studentId > 0) {
+        $pdo->prepare("UPDATE enrollments SET status = 'dropped' WHERE student_id = ? AND status = 'enrolled'")->execute([$studentId]);
+        $pdo->prepare("UPDATE enrollment_requests SET status = 'cancelled' WHERE student_id = ? AND status = 'pending'")->execute([$studentId]);
+    }
 }
 
 /**
@@ -156,15 +184,18 @@ function admin_delete_perform(PDO $pdo, string $kind, int $id, int $adminUserId)
         $impact = admin_delete_impact($pdo, $kind, $id);
         if ($blocker = admin_delete_blocker($kind, $target['status'], $impact)) throw new Exception($blocker);
 
-        // A teacher or student is a users row (their rows cascade from it); the others are deleted directly.
-        [$table, $column, $value] = match ($kind) {
-            'class'   => ['teacher_subjects', 'teacher_subject_id', $id],
-            'teacher', 'student' => ['users', 'user_id', $target['user_id']],
-            'subject' => ['subjects', 'subject_id', $id],
-            'lab'     => ['laboratories', 'lab_id', $id],
-        };
-        $pdo->prepare("DELETE FROM $table WHERE $column = ?")->execute([$value]);
-        log_activity($pdo, $adminUserId, "Deleted $noun: {$target['name']} (" . admin_delete_summary($kind, $impact) . ')');
+        if (in_array($kind, ADMIN_ARCHIVE_KINDS, true)) {
+            admin_archive_user($pdo, $target['user_id'], $kind === 'student' ? $id : 0);
+            log_activity($pdo, $adminUserId, "Deleted $noun: {$target['name']} (archived, history kept: " . admin_delete_summary($kind, $impact) . ')');
+        } else {
+            [$table, $column, $value] = match ($kind) {
+                'class'   => ['teacher_subjects', 'teacher_subject_id', $id],
+                'subject' => ['subjects', 'subject_id', $id],
+                'lab'     => ['laboratories', 'lab_id', $id],
+            };
+            $pdo->prepare("DELETE FROM $table WHERE $column = ?")->execute([$value]);
+            log_activity($pdo, $adminUserId, "Deleted $noun: {$target['name']} (" . admin_delete_summary($kind, $impact) . ')');
+        }
         $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
