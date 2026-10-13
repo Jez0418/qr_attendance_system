@@ -31,15 +31,18 @@ check('summary for a class has no class count', admin_delete_summary('class', $b
 check('summary for a lab lists its classes first', str_starts_with(admin_delete_summary('lab', $busy), '3 class assignments, 28 enrollments'));
 check('summary singular', admin_delete_summary('class', ['classes' => 1, 'enrollments' => 1, 'sessions' => 1, 'records' => 1] + $none)
     === '1 enrollment, 1 attendance session, 1 attendance record');
-check('every kind has a column, noun and two status words', count(array_filter(ADMIN_DELETE_KINDS, fn($k) => count($k) === 4)) === 4);
+check('active student is refused', str_contains((string) admin_delete_blocker('student', 'active', $none), 'Inactive'));
+check('inactive student with history may go', admin_delete_blocker('student', 'inactive', ['enabled_classes' => 0] + $busy) === null);
+check('summary for a student is enrollments and records only', admin_delete_summary('student', $busy) === '28 enrollments, 392 attendance records');
+check('every kind has a column, noun and two status words', count(array_filter(ADMIN_DELETE_KINDS, fn($k) => count($k) === 4)) === 5);
 
 // ---- Wiring: endpoints use the helper, pages go through deleteDisabled(), the old "in use" blocks are gone
 foreach (['assignments' => ['class', 'ajax_assignments.php'], 'teachers' => ['teacher', 'ajax_teachers.php'],
-          'subjects' => ['subject', 'ajax_subjects.php'], 'laboratories' => ['lab', 'ajax_laboratories.php']] as $page => [$kind, $endpoint]) {
+          'students' => ['student', 'ajax_students.php'], 'subjects' => ['subject', 'ajax_subjects.php'], 'laboratories' => ['lab', 'ajax_laboratories.php']] as $page => [$kind, $endpoint]) {
     $ajax = file_get_contents("$root/admin/$endpoint");
     check("$endpoint previews and deletes through the helper", str_contains($ajax, "admin_delete_preview(\$pdo, '$kind'")
         && str_contains($ajax, "admin_delete_perform(\$pdo, '$kind'") && str_contains($ajax, 'includes/admin_delete.php'));
-    check("$endpoint has no DELETE FROM of its own", !preg_match('/DELETE FROM (teacher_subjects|users|subjects|laboratories)/', $ajax));
+    check("$endpoint has no DELETE FROM of its own", !preg_match('/DELETE FROM (teacher_subjects|users|students|subjects|laboratories)/', $ajax));
     $pageSrc = file_get_contents("$root/admin/$page.php");
     check("$page.php deletes through deleteDisabled()", str_contains($pageSrc, "deleteDisabled('$endpoint'") && !str_contains($pageSrc, "action: 'delete'"));
 }

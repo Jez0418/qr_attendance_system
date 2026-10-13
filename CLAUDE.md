@@ -112,8 +112,9 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   the lab restores it; `lab_unavailable` flag), so no session opens, a scan says why, and `create_missed_sessions()` skips inactive labs
   (`includes/absences.php`) so nobody is marked Absent. Past meetings are untouched. Tests: `php attendance-system/tests/lab_deactivate_test.php`,
   `php attendance-system/tests/schedule_test.php`.
-- Admin deletes (`includes/admin_delete.php`, used by `admin/ajax_assignments|teachers|subjects|laboratories.php`): only a DISABLED
-  class / INACTIVE teacher, subject or laboratory can be deleted. The foreign keys cascade, so a delete also removes the item's enrollments, sessions
+- Admin deletes (`includes/admin_delete.php`, used by `admin/ajax_assignments|teachers|students|subjects|laboratories.php`): only a DISABLED
+  class / INACTIVE teacher, student, subject or laboratory can be deleted (the trash button is dimmed otherwise). A student's delete
+  takes their enrollments and attendance records. The foreign keys cascade, so a delete also removes the item's enrollments, sessions
   and attendance records (a subject/lab/teacher takes its classes too); it is refused while one of those classes is still enabled. The page calls
   `deleteDisabled()` (app.js): `delete_preview` returns the counts for the confirmation, `delete` re-checks inside a transaction. Blocker messages go
   into toasts (innerHTML), so they never contain item names. Test: `php attendance-system/tests/admin_delete_test.php` (`--db` hits the LIVE
