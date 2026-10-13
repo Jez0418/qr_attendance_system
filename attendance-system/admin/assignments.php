@@ -70,7 +70,7 @@ $now = schedule_now();
 $summaries = get_class_schedule_summaries($pdo, array_column($assignments, 'teacher_subject_id'),
     array_column(array_map(fn($a) => [(int) $a['teacher_subject_id'], $a['status'] === 'active'], $assignments), 1, 0), $now);
 
-$teachers = $pdo->query('SELECT teacher_id, full_name FROM teachers ORDER BY full_name')->fetchAll();
+$teachers = $pdo->query('SELECT t.teacher_id, t.full_name FROM teachers t WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.user_id = t.user_id AND u.deleted_at IS NOT NULL) ORDER BY t.full_name')->fetchAll();
 $subjects = $pdo->query('SELECT subject_id, subject_code, subject_name FROM subjects WHERE status="active" ORDER BY subject_code')->fetchAll();
 $labs = $pdo->query('SELECT lab_id, lab_name FROM laboratories WHERE status="active" ORDER BY lab_name')->fetchAll();
 $defaultGrace = get_setting_int($pdo, 'late_grace_minutes', 15);   // placeholder for the per-class Late Grace field

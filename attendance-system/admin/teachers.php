@@ -8,9 +8,9 @@ require_role('admin');
 $pageTitle = 'Teacher Management';
 
 $search = clean($_GET['search'] ?? '');
-$where = ''; $params = [];
+$where = 'WHERE u.deleted_at IS NULL'; $params = [];   // archived (deleted) teachers are hidden; their history stays
 if ($search !== '') {
-    $where = 'WHERE (t.full_name LIKE ? OR t.employee_number LIKE ? OR u.email LIKE ?)';
+    $where .= ' AND (t.full_name LIKE ? OR t.employee_number LIKE ? OR u.email LIKE ?)';
     $params = ["%$search%", "%$search%", "%$search%"];
 }
 

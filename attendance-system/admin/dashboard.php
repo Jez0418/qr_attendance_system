@@ -14,8 +14,8 @@ $pageTitle = 'Dashboard';
 auto_expire_sessions($pdo);
 
 // ---- Stat cards (row 1: totals, row 2: today's activity) ----
-$totalStudents = $pdo->query('SELECT COUNT(*) FROM students')->fetchColumn();
-$totalTeachers = $pdo->query('SELECT COUNT(*) FROM teachers')->fetchColumn();
+$totalStudents = $pdo->query('SELECT COUNT(*) FROM students s JOIN users u ON u.user_id = s.user_id WHERE u.deleted_at IS NULL')->fetchColumn();
+$totalTeachers = $pdo->query('SELECT COUNT(*) FROM teachers t JOIN users u ON u.user_id = t.user_id WHERE u.deleted_at IS NULL')->fetchColumn();
 $totalLabs = $pdo->query('SELECT COUNT(*) FROM laboratories')->fetchColumn();
 $activeSessions = $pdo->query('SELECT COUNT(*) FROM attendance_sessions WHERE is_active = 1')->fetchColumn();
 $todayPresent = $pdo->query('SELECT COUNT(*) FROM attendance_records WHERE DATE(time_in) = CURDATE() AND status = "Present"')->fetchColumn();

@@ -65,7 +65,7 @@ unset($o);
 
 $programs = $pdo->query("SELECT program_id, program_code FROM programs WHERE status = 'active' ORDER BY program_code")->fetchAll();
 $sections = $pdo->query("SELECT DISTINCT section FROM teacher_subjects WHERE status = 'active' AND section IS NOT NULL ORDER BY section")->fetchAll(PDO::FETCH_COLUMN);
-$teachers = $pdo->query('SELECT teacher_id, full_name FROM teachers ORDER BY full_name')->fetchAll();
+$teachers = $pdo->query('SELECT t.teacher_id, t.full_name FROM teachers t WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.user_id = t.user_id AND u.deleted_at IS NOT NULL) ORDER BY t.full_name')->fetchAll();
 $labs = $pdo->query("SELECT lab_id, lab_name FROM laboratories WHERE status = 'active' ORDER BY lab_name")->fetchAll();
 $subjects = $pdo->query("SELECT subject_id, subject_code, subject_name FROM subjects WHERE status = 'active' ORDER BY subject_code")->fetchAll();
 

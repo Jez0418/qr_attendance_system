@@ -36,6 +36,11 @@ check('inactive student with history may go', admin_delete_blocker('student', 'i
 check('summary for a student is enrollments and records only', admin_delete_summary('student', $busy) === '28 enrollments, 392 attendance records');
 check('every kind has a column, noun and two status words', count(array_filter(ADMIN_DELETE_KINDS, fn($k) => count($k) === 4)) === 5);
 
+function admin_delete_preview_text(string $kind): string {
+    $src = file_get_contents(__DIR__ . '/../includes/admin_delete.php');
+    return str_contains($src, 'ADMIN_ARCHIVE_KINDS, true)) {') ? $src : '';
+}
+
 // ---- Wiring: endpoints use the helper, pages go through deleteDisabled(), the old "in use" blocks are gone
 foreach (['assignments' => ['class', 'ajax_assignments.php'], 'teachers' => ['teacher', 'ajax_teachers.php'],
           'students' => ['student', 'ajax_students.php'], 'subjects' => ['subject', 'ajax_subjects.php'], 'laboratories' => ['lab', 'ajax_laboratories.php']] as $page => [$kind, $endpoint]) {
@@ -46,6 +51,12 @@ foreach (['assignments' => ['class', 'ajax_assignments.php'], 'teachers' => ['te
     $pageSrc = file_get_contents("$root/admin/$page.php");
     check("$page.php deletes through deleteDisabled()", str_contains($pageSrc, "deleteDisabled('$endpoint'") && !str_contains($pageSrc, "action: 'delete'"));
 }
+$adminSrc = file_get_contents("$root/includes/admin_delete.php");
+check('teacher and student are archived, not removed', ADMIN_ARCHIVE_KINDS === ['teacher', 'student']
+    && str_contains($adminSrc, 'admin_archive_user(') && !str_contains($adminSrc, "'users', 'user_id'"));
+check('archive keeps history: it never deletes attendance rows', preg_match('/function admin_archive_user.*?\n\}/s', $adminSrc, $m) && !str_contains($m[0], 'DELETE FROM'));
+check('archive drops a student\'s enrollments', str_contains($adminSrc, "UPDATE enrollments SET status = 'dropped'"));
+check('archived preview says history stays', str_contains(admin_delete_preview_text('teacher'), 'stay in the history'));
 check('teacher delete signs the account out', str_contains(file_get_contents("$root/includes/admin_delete.php"), "destroy_user_sessions(\$pdo, \$target['user_id'])"));
 
 // ---- Teacher history: the two override actions sit in one Actions menu
