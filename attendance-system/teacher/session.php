@@ -5,7 +5,8 @@
  * substitute for). Attendance opens by itself: whenever a meeting is
  * ACTIVE, ensure_session_for_occurrence() (qr/session_manager.php) makes
  * sure it has a session that expires at the meeting's end. Students scan the
- * permanent QR code posted in the laboratory (nothing to show here). The teacher
+ * permanent QR code of the laboratory (the one posted on its wall); it is shown
+ * here too so the teacher can display it. The teacher
  * can close it early and reopen it while the meeting is still in progress.
  * The page reloads itself at the next start/end time so attendance opens and
  * closes on schedule.
@@ -38,6 +39,12 @@ $sessionOpen = $session && (int) $session['is_active'] === 1;
 $canReopen = $session && !$sessionOpen && $selected['status'] === OCCURRENCE_ACTIVE;
 
 $reloadIn = seconds_until_next_change(array_column($meetings, 'occurrence'), $now);
+
+// The lab's permanent QR code (same one as on the wall). Not shown on Vercel while QR_SECRET_KEY is unset.
+$labQrPayload = null;
+if ($occ && $sessionOpen && !(getenv('VERCEL') && !qr_key_is_configured())) {
+    $labQrPayload = qr_build_lab_payload((int) $occ['lab_id'], lab_qr_version($pdo, (int) $occ['lab_id']));
+}
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -100,9 +107,12 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card-header"><h3>Check-in</h3></div>
         <div class="card-body qr-display">
             <?php if ($sessionOpen): ?>
-                <div class="empty-state"><i class="fa-solid fa-qrcode"></i>
-                    <p>Students scan the QR code posted in <strong><?php echo e($occ['lab_name']); ?></strong>.</p></div>
+                <?php if ($labQrPayload !== null): ?>
+                    <div id="qrcodeCanvas"></div>
+                <?php endif; ?>
                 <div class="qr-session-meta">
+                    <div>This is the permanent code of <strong><?php echo e($occ['lab_name']); ?></strong> (also posted on its wall).
+                        Students scan it from <strong>Scan Attendance</strong> in the app.</div>
                     <div>Late after: <?php echo date('g:i A', strtotime($session['scheduled_start']) + $graceMinutes * 60); ?> · Closes: <?php echo date('g:i A', strtotime($session['session_end'])); ?></div>
                     <div>Geofence radius: <?php echo (int) $session['allowed_radius_meters']; ?>m</div>
                 </div>
@@ -165,6 +175,9 @@ const RELOAD_IN = <?php echo $reloadIn !== null ? (int) $reloadIn : 'null'; ?>; 
 let pollTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    <?php if ($labQrPayload !== null): ?>
+    safeRenderQr(document.getElementById('qrcodeCanvas'), <?php echo json_encode($labQrPayload); ?>, 200);
+    <?php endif; ?>
     if (SESSION_ID) {
         fetchLiveScans();
         if (SESSION_OPEN) pollTimer = setInterval(fetchLiveScans, 4000);

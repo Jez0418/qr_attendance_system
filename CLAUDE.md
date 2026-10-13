@@ -58,7 +58,7 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   `resolve_lab_occurrence()` finds the meeting that is ACTIVE in that lab now (`get_todays_occurrences` with the `lab_id` filter, so a
   meeting rescheduled INTO the lab counts), preferring the student's own enrolled class; two of the student's classes at once is refused.
   Admin > Attendance Sessions shows one printable code per active lab and "Regenerate" (`admin/ajax_lab_qr.php`, bumps the version, old
-  printouts stop working); codes are not shown on Vercel while `QR_SECRET_KEY` is unset. Teachers no longer display a QR. The old
+  printouts stop working); codes are not shown on Vercel while `QR_SECRET_KEY` is unset. `teacher/session.php` shows the SAME lab code while attendance is open (the teacher can display it). The old
   per-meeting `qr_token` stays on `attendance_sessions` (internal only, not shown or checked). Two classes may never overlap in a lab
   (`find_schedule_conflict()`). Test: `php attendance-system/tests/lab_qr_test.php`.
 - Attendance sessions are automatic: `qr/session_manager.php` `ensure_session_for_occurrence()` opens one session per
