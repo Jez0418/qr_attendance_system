@@ -107,8 +107,11 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   activity log gets a line. Test: `php attendance-system/tests/attendance_override_test.php`.
 - Laboratory deactivation: an Active lab cannot be set to Inactive while enabled classes are assigned to it or enabled classes have upcoming
   meetings rescheduled into it (`lab_deactivation_blocker()` / `lab_deactivation_counts()` in `includes/admin_delete.php`, used by
-  `admin/ajax_laboratories.php`); an already inactive lab stays editable. Scans of an inactive lab are refused (`student/ajax_scan.php`).
-  Test: `php attendance-system/tests/lab_deactivate_test.php`.
+  `admin/ajax_laboratories.php`); an already inactive lab stays editable. A meeting whose EFFECTIVE lab is inactive (incl. one moved into/out
+  of it) counts as CANCELLED until it ends, reason "Laboratory unavailable" (`schedule_build_occurrence()`: computed, nothing stored, reactivating
+  the lab restores it; `lab_unavailable` flag), so no session opens, a scan says why, and `create_missed_sessions()` skips inactive labs
+  (`includes/absences.php`) so nobody is marked Absent. Past meetings are untouched. Tests: `php attendance-system/tests/lab_deactivate_test.php`,
+  `php attendance-system/tests/schedule_test.php`.
 - Admin deletes (`includes/admin_delete.php`, used by `admin/ajax_assignments|teachers|subjects|laboratories.php`): only a DISABLED
   class / INACTIVE teacher, subject or laboratory can be deleted. The foreign keys cascade, so a delete also removes the item's enrollments, sessions
   and attendance records (a subject/lab/teacher takes its classes too); it is refused while one of those classes is still enabled. The page calls

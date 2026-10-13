@@ -125,7 +125,8 @@ function create_missed_sessions(PDO $pdo, string $after, string $until): array {
     $st->execute([$fromDate, $toDate]);
     $existing = $st->fetchAll();
     $labs = [];
-    foreach ($pdo->query('SELECT lab_id, allowed_radius_meters FROM laboratories WHERE latitude IS NOT NULL AND longitude IS NOT NULL')->fetchAll() as $r) {
+    // Inactive labs are left out like labs without GPS: their meetings cannot be held, so nobody is marked absent.
+    foreach ($pdo->query("SELECT lab_id, allowed_radius_meters FROM laboratories WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND status = 'active'")->fetchAll() as $r) {
         $labs[(int) $r['lab_id']] = (int) $r['allowed_radius_meters'];
     }
 

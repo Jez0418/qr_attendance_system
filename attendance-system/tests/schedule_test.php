@@ -102,6 +102,49 @@ $sum = summarize_class_occurrences($window, '2026-10-22 08:00:00');
 check('summary with nothing left', [$sum['status'], $sum['next']], ['EXPIRED', null]);
 
 // ------------------------------------------------------------------ database
+// ------------------------------------------------------------------ inactive laboratory
+// A meeting in an INACTIVE lab counts as cancelled until it ends (computed, nothing stored); past ones are untouched.
+echo "
+== inactive laboratory
+";
+$labInactive = $class + ['lab_status' => 'inactive'];
+$labActive = $class + ['lab_status' => 'active'];
+$future = expand_occurrences([$labInactive], $rules, [], '2099-01-01', '2099-01-31');
+check('future meetings of an inactive lab are cancelled', array_unique(array_column($future, 'is_cancelled')), [true]);
+check('...with the reason "Laboratory unavailable"', array_unique(array_column($future, 'exception_reason')), ['Laboratory unavailable']);
+check('...and so never ACTIVE', array_unique(array_map(fn($o) => get_occurrence_status($o, '2099-01-05 16:00:00'), $future)), ['CANCELLED']);
+check('lab_unavailable is flagged', array_unique(array_column($future, 'lab_unavailable')), [true]);
+$past = expand_occurrences([$labInactive], $rules, [], '2020-01-01', '2020-01-31');
+check('meetings that already ended are left alone', array_unique(array_column($past, 'is_cancelled')), [false]);
+check('an active lab is unaffected', array_unique(array_column(expand_occurrences([$labActive], $rules, [], '2099-01-01', '2099-01-31'), 'is_cancelled')), [false]);
+check('a row without lab_status behaves as active', array_unique(array_column(expand_occurrences([$class], $rules, [], '2099-01-01', '2099-01-31'), 'is_cancelled')), [false]);
+check('include_cancelled=false drops them', expand_occurrences([$labInactive], $rules, [], '2099-01-01', '2099-01-31', ['include_cancelled' => false]), []);
+
+$mon = null;
+for ($d = 1; $d <= 7; $d++) { $t = sprintf('2099-01-%02d', $d); if ((int) date('N', strtotime($t)) === 1) { $mon = $t; break; } }
+$movedTo = fn(string $newStatus) => [[
+    'exception_id' => 9, 'teacher_subject_id' => 101, 'original_date' => $mon, 'exception_type' => 'RESCHEDULED',
+    'new_date' => null, 'new_start_time' => null, 'new_end_time' => null, 'new_lab_id' => 2, 'new_teacher_id' => null,
+    'reason' => 'Room change', 'new_lab_name' => 'Lab B', 'new_lab_status' => $newStatus,
+]];
+$byDate = fn(array $occs) => array_column($occs, null, 'date');
+$into = $byDate(expand_occurrences([$labActive], $rules, $movedTo('inactive'), $mon, $mon));
+check('a meeting moved INTO an inactive lab is cancelled', [$into[$mon]['is_cancelled'], $into[$mon]['lab_id']], [true, 2]);
+$into = $byDate(expand_occurrences([$labActive], $rules, $movedTo('active'), $mon, $mon));
+check('a meeting moved into an active lab is not', $into[$mon]['is_cancelled'], false);
+$out = $byDate(expand_occurrences([$labInactive], $rules, $movedTo('active'), $mon, $mon));
+check('a meeting moved OUT of an inactive lab into an active one is held', [$out[$mon]['is_cancelled'], $out[$mon]['lab_id']], [false, 2]);
+$cancelled = [[
+    'exception_id' => 10, 'teacher_subject_id' => 101, 'original_date' => $mon, 'exception_type' => 'CANCELLED',
+    'new_date' => null, 'new_start_time' => null, 'new_end_time' => null, 'new_lab_id' => null, 'new_teacher_id' => null, 'reason' => 'Holiday',
+]];
+$both = $byDate(expand_occurrences([$labInactive], $rules, $cancelled, $mon, $mon));
+check('an explicit cancellation keeps its own reason', [$both[$mon]['is_cancelled'], $both[$mon]['exception_reason']], [true, 'Holiday']);
+
+// The absence job leaves inactive labs out, like labs without GPS.
+$abs = file_get_contents(__DIR__ . '/../includes/absences.php');
+check('absence job only considers active labs', strpos($abs, "AND status = 'active'") !== false, true);
+
 if ($useDb) {
     echo "\n== Database (DB_HOST=" . getenv('DB_HOST') . ", port " . getenv('DB_PORT') . "), rolled back afterwards\n";
     $pdo->beginTransaction();
