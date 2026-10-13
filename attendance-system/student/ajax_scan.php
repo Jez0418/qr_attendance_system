@@ -8,13 +8,14 @@
  * claims (identity, time, location) are never trusted on their own:
  *
  *   1.  Student authenticated?                     require_role
- *   2.  QR payload well-formed?                    qr_parse_session_payload()
- *   3.  Session exists and the token matches it?   hash_equals
- *   4.  Status recomputed from the class schedule (includes/schedule.php):
- *       the meeting this session belongs to must exist, not be CANCELLED,
- *       and be ACTIVE right now (start <= now < end)
- *   5.  The scanned session IS that meeting's session?
- *                                                  ensure_session_for_occurrence()
+ *   2.  QR payload a genuine, signed laboratory code?
+ *                                                  qr_parse_lab_payload()
+ *   3.  Laboratory active and the code its current version?
+ *                                                  lab_qr_version() (Regenerate revokes a printout)
+ *   4.  Which meeting is ACTIVE in that lab now? Recomputed from the class
+ *       schedule (includes/schedule.php), cancelled meetings never match,
+ *       one moved into this lab does:                resolve_lab_occurrence()
+ *   5.  That meeting's attendance session           ensure_session_for_occurrence()
  *   6.  Session still open (not closed early, not past session_end)?
  *   7.  Student enrolled in the class?
  *   8.  Location provided, accuracy reported and good enough, inside the lab's radius?
@@ -23,7 +24,7 @@
  *  10.  This phone hasn't already checked in another student for this session?
  *                                                  device_conflict() (includes/device.php)
  *
- * Every rejected scan that got as far as a valid QR (step 3) is also saved in
+ * Every rejected scan that got as far as a meeting's session (step 5) is also saved in
  * `scan_attempts` with the student's distance from the laboratory, so the teacher
  * can see who tried to check in from where (database/supabase_scan_attempts.sql).
  *
@@ -76,53 +77,41 @@ $lon = $_POST['longitude'] ?? null;
 $accuracy = $_POST['accuracy'] ?? null;
 
 try {
-    // ---- 2. QR payload well-formed? ----
+    // ---- 2. QR payload a genuine laboratory code? ----
     $rawPayload = $_POST['qr_payload'] ?? '';
     if ($rawPayload === '') throw new Exception('No QR data received.');
-    $parsed = qr_parse_session_payload($rawPayload);
+    $parsed = qr_parse_lab_payload($rawPayload);
     if (!$parsed) throw new Exception(INVALID_QR);
 
-    // ---- 3. Session exists and the token matches it? ----
-    $stmt = $pdo->prepare('
-        SELECT s.*, sub.subject_name
-        FROM attendance_sessions s
-        JOIN teacher_subjects ts ON ts.teacher_subject_id = s.teacher_subject_id
-        JOIN subjects sub ON sub.subject_id = ts.subject_id
-        WHERE s.session_id = ?
-    ');
-    $stmt->execute([$parsed['session_id']]);
-    $session = $stmt->fetch();
-    if (!$session || empty($session['qr_token']) || !hash_equals((string) $session['qr_token'], (string) $parsed['token'])) {
-        throw new Exception(INVALID_QR);
-    }
-    $attemptSessionId = (int) $session['session_id'];   // a genuine QR: from here on a rejection is logged
-
-    // ---- 4. Recompute the meeting's status from the schedule, server-side ----
-    $now = schedule_now();
-    $occ = find_occurrence_for_session($pdo, $session, $now);   // also re-attaches a session whose class start moved
-    if (!$occ) throw new Exception('This class is not scheduled at this time.');
-
-    // Where is the student relative to the meeting's lab? Worked out now (best effort) so that even a
-    // scan rejected for another reason records the distance.
-    $labStmt = $pdo->prepare('SELECT latitude, longitude FROM laboratories WHERE lab_id = ?');   // the meeting's lab (may be a rescheduled room)
-    $labStmt->execute([$occ['lab_id']]);
+    // ---- 3. Laboratory exists, is in use, and the printed code is its current version? ----
+    $labStmt = $pdo->prepare("SELECT lab_id, latitude, longitude FROM laboratories WHERE lab_id = ? AND status = 'active'");
+    $labStmt->execute([$parsed['lab_id']]);
     $lab = $labStmt->fetch();
-    if ($lab && $lab['latitude'] !== null && $lab['longitude'] !== null && is_numeric($lat) && is_numeric($lon)) {
+    if (!$lab || $parsed['version'] !== lab_qr_version($pdo, (int) $lab['lab_id'])) {
+        throw new Exception(INVALID_QR);   // unknown lab, or a code that was regenerated and reprinted
+    }
+
+    // ---- 4. Which meeting is ACTIVE in this lab right now (status recomputed from the schedule)? ----
+    $now = schedule_now();
+    $pick = resolve_lab_occurrence($pdo, (int) $lab['lab_id'], $studentId, $now);
+    $occ = $pick['occurrence'];
+    if (!$occ) throw new Exception($pick['error']);
+
+    // Where is the student relative to the lab? Worked out now (best effort) so that even a
+    // scan rejected for another reason records the distance.
+    if ($lab['latitude'] !== null && $lab['longitude'] !== null && is_numeric($lat) && is_numeric($lon)) {
         $distance = round(haversine_distance_meters((float) $lat, (float) $lon, (float) $lab['latitude'], (float) $lab['longitude']), 2);
     }
-    $status = get_occurrence_status($occ, $now);
-    if ($status === OCCURRENCE_CANCELLED) {
-        throw new Exception('This class has been cancelled' . ($occ['exception_reason'] ? ': ' . $occ['exception_reason'] : '.'));
-    }
-    if ($status !== OCCURRENCE_ACTIVE) {
-        throw new Exception($status === OCCURRENCE_UPCOMING ? 'This class has not started yet.' : 'This class has already ended.');
-    }
 
-    // ---- 5. Is the scanned session this meeting's session? ----
+    // ---- 5. That meeting's attendance session (opened by the first look while the meeting is ACTIVE) ----
     $current = ensure_session_for_occurrence($pdo, $occ, $now);
-    if (!$current || (int) $current['session_id'] !== (int) $session['session_id']) {
-        throw new Exception(INVALID_QR);
+    if (!$current) {
+        throw new Exception($lab['latitude'] === null || $lab['longitude'] === null
+            ? 'This laboratory has no GPS coordinates configured. Please contact your administrator.'
+            : INVALID_QR);
     }
+    $session = $current;
+    $attemptSessionId = (int) $current['session_id'];   // from here on a rejection is logged for the teacher
 
     // ---- 6. Session still open? ----
     if ((int) $current['is_active'] !== 1) {

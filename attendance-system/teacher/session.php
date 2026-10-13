@@ -4,10 +4,11 @@
  * Today's meetings for this teacher (own classes, plus any meeting they
  * substitute for). Attendance opens by itself: whenever a meeting is
  * ACTIVE, ensure_session_for_occurrence() (qr/session_manager.php) makes
- * sure it has a session with a fresh one-time QR token that expires at
- * the meeting's end. The teacher can close it early and reopen it (same
- * QR code) while the meeting is still in progress. The page reloads itself at the next start/end time so the QR
- * appears and disappears on schedule.
+ * sure it has a session that expires at the meeting's end. Students scan the
+ * permanent QR code posted in the laboratory (nothing to show here). The teacher
+ * can close it early and reopen it while the meeting is still in progress.
+ * The page reloads itself at the next start/end time so attendance opens and
+ * closes on schedule.
  *
  * Late logic: a scan more than the class's late grace (Admin > Class Assignments, else Admin > Settings)
  * after the meeting's start is marked "Late".
@@ -96,13 +97,13 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="grid-2" style="margin-top:20px">
     <div class="card">
-        <div class="card-header"><h3>Attendance QR Code</h3></div>
+        <div class="card-header"><h3>Check-in</h3></div>
         <div class="card-body qr-display">
             <?php if ($sessionOpen): ?>
-                <div id="qrcodeCanvas"></div>
+                <div class="empty-state"><i class="fa-solid fa-qrcode"></i>
+                    <p>Students scan the QR code posted in <strong><?php echo e($occ['lab_name']); ?></strong>.</p></div>
                 <div class="qr-session-meta">
-                    <div>This code is <strong>temporary</strong> — generated for this meeting only. It stops working when the class ends or attendance is closed.</div>
-                    <div style="margin-top:8px">Late after: <?php echo date('g:i A', strtotime($session['scheduled_start']) + $graceMinutes * 60); ?> · Expires: <?php echo date('g:i A', strtotime($session['session_end'])); ?></div>
+                    <div>Late after: <?php echo date('g:i A', strtotime($session['scheduled_start']) + $graceMinutes * 60); ?> · Closes: <?php echo date('g:i A', strtotime($session['session_end'])); ?></div>
                     <div>Geofence radius: <?php echo (int) $session['allowed_radius_meters']; ?>m</div>
                 </div>
             <?php else: ?>
@@ -164,9 +165,6 @@ const RELOAD_IN = <?php echo $reloadIn !== null ? (int) $reloadIn : 'null'; ?>; 
 let pollTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    <?php if ($sessionOpen): ?>
-    safeRenderQr(document.getElementById('qrcodeCanvas'), <?php echo json_encode(qr_build_session_payload($session['session_id'], $session['qr_token'])); ?>, 200);
-    <?php endif; ?>
     if (SESSION_ID) {
         fetchLiveScans();
         if (SESSION_OPEN) pollTimer = setInterval(fetchLiveScans, 4000);
@@ -185,7 +183,7 @@ async function closeAttendance() {
 }
 
 async function reopenAttendance() {
-    if (!confirm('Reopen attendance? The same QR code will work again until the class ends.')) return;
+    if (!confirm('Reopen attendance? Students can check in again until the class ends.')) return;
     const btn = document.getElementById('reopenBtn');
     btn.disabled = true;
     const res = await ajaxPost('ajax_session.php', { action: 'reopen', session_id: SESSION_ID });
