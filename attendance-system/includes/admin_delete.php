@@ -1,11 +1,11 @@
 <?php
 /**
- * includes/admin_delete.php — the admin deleting a class assignment, teacher, subject or laboratory.
+ * includes/admin_delete.php — the admin deleting a class assignment, teacher, student, subject or laboratory.
  *
- * One rule for all four: only a DISABLED item can be deleted (class: Disabled, the others: Inactive).
+ * One rule for all five: only a DISABLED item can be deleted (class: Disabled, the others: Inactive).
  * The foreign keys are ON DELETE CASCADE, so deleting removes everything under the item: a class takes its
  * enrollments, sessions and attendance records with it; a teacher, subject or laboratory takes its classes (and
- * those) with it. Because that is permanent, the page first asks `admin_delete_preview()` what would go and
+ * those) with it; a student takes their enrollments and attendance records. Because that is permanent, the page first asks `admin_delete_preview()` what would go and
  * shows those numbers in the confirmation.
  *
  * A subject, laboratory or teacher is also refused while one of its classes is still ENABLED: that class
@@ -48,6 +48,8 @@ const ADMIN_DELETE_KINDS = [
     'teacher' => ['ts.teacher_id',         'teacher',          'active',  'inactive'],
     'subject' => ['ts.subject_id',         'subject',          'active',  'inactive'],
     'lab'     => ['ts.lab_id',             'laboratory',       'active',  'inactive'],
+    // A student has no classes of their own: impact is counted from enrollments (see admin_delete_impact()).
+    'student' => ['e.student_id',          'student',          'active',  'inactive'],
 ];
 
 /** The item's status and a display name, or null when it no longer exists. ['status', 'name', 'user_id'] */
@@ -60,6 +62,8 @@ function admin_delete_target(PDO $pdo, string $kind, int $id): ?array {
                       FROM teachers t JOIN users u ON u.user_id = t.user_id WHERE t.teacher_id = ?",
         'subject' => "SELECT status, subject_name AS label, '' AS extra, 0 AS user_id FROM subjects WHERE subject_id = ?",
         'lab'     => "SELECT status, lab_name AS label, '' AS extra, 0 AS user_id FROM laboratories WHERE lab_id = ?",
+        'student' => "SELECT u.status, st.full_name AS label, '' AS extra, st.user_id
+                      FROM students st JOIN users u ON u.user_id = st.user_id WHERE st.student_id = ?",
     };
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$id]);
@@ -71,6 +75,15 @@ function admin_delete_target(PDO $pdo, string $kind, int $id): ?array {
 
 /** What deleting the item would remove: classes (and how many are enabled), enrollments, sessions, attendance records. */
 function admin_delete_impact(PDO $pdo, string $kind, int $id): array {
+    if ($kind === 'student') {
+        $n = function (string $table) use ($pdo, $id): int {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM $table WHERE student_id = ?");
+            $stmt->execute([$id]);
+            return (int) $stmt->fetchColumn();
+        };
+        return ['classes' => 0, 'enabled_classes' => 0, 'enrollments' => $n('enrollments'),
+                'sessions' => 0, 'records' => $n('attendance_records')];
+    }
     $col = ADMIN_DELETE_KINDS[$kind][0];   // from the constant above, never from the request
     $one = function (string $sql) use ($pdo, $id) {
         $stmt = $pdo->prepare($sql);
@@ -109,9 +122,9 @@ function admin_delete_count(int $n, string $singular, string $plural = ''): stri
 /** The numbers shown in the confirmation and the activity log, e.g. "2 classes, 28 enrollments, 14 sessions, 392 attendance records". */
 function admin_delete_summary(string $kind, array $impact): string {
     $parts = [];
-    if ($kind !== 'class') $parts[] = admin_delete_count($impact['classes'], 'class assignment');
+    if ($kind !== 'class' && $kind !== 'student') $parts[] = admin_delete_count($impact['classes'], 'class assignment');
     $parts[] = admin_delete_count($impact['enrollments'], 'enrollment');
-    $parts[] = admin_delete_count($impact['sessions'], 'attendance session');
+    if ($kind !== 'student') $parts[] = admin_delete_count($impact['sessions'], 'attendance session');
     $parts[] = admin_delete_count($impact['records'], 'attendance record');
     return implode(', ', $parts);
 }
@@ -143,10 +156,10 @@ function admin_delete_perform(PDO $pdo, string $kind, int $id, int $adminUserId)
         $impact = admin_delete_impact($pdo, $kind, $id);
         if ($blocker = admin_delete_blocker($kind, $target['status'], $impact)) throw new Exception($blocker);
 
-        // A teacher is a users row (teachers/classes/... cascade from it); the others are deleted directly.
+        // A teacher or student is a users row (their rows cascade from it); the others are deleted directly.
         [$table, $column, $value] = match ($kind) {
             'class'   => ['teacher_subjects', 'teacher_subject_id', $id],
-            'teacher' => ['users', 'user_id', $target['user_id']],
+            'teacher', 'student' => ['users', 'user_id', $target['user_id']],
             'subject' => ['subjects', 'subject_id', $id],
             'lab'     => ['laboratories', 'lab_id', $id],
         };
@@ -157,7 +170,7 @@ function admin_delete_perform(PDO $pdo, string $kind, int $id, int $adminUserId)
         if ($pdo->inTransaction()) $pdo->rollBack();
         throw $e;
     }
-    // A deleted teacher's open logins must end (sessions are DB rows; require_login() doesn't re-check the account).
-    if ($kind === 'teacher') destroy_user_sessions($pdo, $target['user_id']);
+    // A deleted teacher's or student's open logins must end (sessions are DB rows; require_login() doesn't re-check the account).
+    if ($kind === 'teacher' || $kind === 'student') destroy_user_sessions($pdo, $target['user_id']);
     return ucfirst($noun) . ' deleted.';
 }

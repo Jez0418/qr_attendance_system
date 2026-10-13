@@ -6,6 +6,7 @@
  */
 require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
+require_once __DIR__ . '/../includes/admin_delete.php';
 header('Content-Type: application/json');
 
 $action = $_POST['action'] ?? '';
@@ -151,36 +152,15 @@ try {
         if ($status === 'inactive' || $password !== '') destroy_user_sessions($pdo, (int) $userId);
         echo json_encode(['success' => true, 'message' => 'Student updated successfully.']);
 
-    } elseif ($action === 'delete') {
+    } elseif ($action === 'delete_preview' || $action === 'delete') {
+        // Only an Inactive student can go; their enrollments and attendance records go with them (includes/admin_delete.php).
         $studentId = (int) ($_POST['student_id'] ?? 0);
         if (!$studentId) throw new Exception('Invalid student.');
-
-        $find = $pdo->prepare('SELECT user_id, full_name FROM students WHERE student_id = ?');
-        $find->execute([$studentId]);
-        $row = $find->fetch();
-        if (!$row) throw new Exception('Student not found.');
-
-        $used = $pdo->prepare("SELECT COUNT(*) FROM enrollments WHERE student_id = ? AND status = 'enrolled'");
-        $used->execute([$studentId]);
-        $count = (int) $used->fetchColumn();
-        if ($count > 0) {
-            throw new Exception("This student is enrolled in $count class(es). Set their account to Inactive instead of deleting it.");
+        if ($action === 'delete_preview') {
+            echo json_encode(['success' => true] + admin_delete_preview($pdo, 'student', $studentId));
+        } else {
+            echo json_encode(['success' => true, 'message' => admin_delete_perform($pdo, 'student', $studentId, (int) $_SESSION['user_id'])]);
         }
-        // Past attendance is kept even after a student drops every class.
-        $history = $pdo->prepare('SELECT COUNT(*) FROM attendance_records WHERE student_id = ?');
-        $history->execute([$studentId]);
-        $records = (int) $history->fetchColumn();
-        if ($records > 0) {
-            throw new Exception("This student has $records attendance record(s). Set their account to Inactive instead of deleting it.");
-        }
-
-        // Deleting the user cascades to students, enrollments, attendance_records via FK
-        destroy_user_sessions($pdo, (int) $row['user_id']);
-        $del = $pdo->prepare('DELETE FROM users WHERE user_id = ?');
-        $del->execute([$row['user_id']]);
-
-        log_activity($pdo, $_SESSION['user_id'], "Deleted student: {$row['full_name']}");
-        echo json_encode(['success' => true, 'message' => 'Student deleted successfully.']);
 
     } else {
         throw new Exception('Unknown action.');
