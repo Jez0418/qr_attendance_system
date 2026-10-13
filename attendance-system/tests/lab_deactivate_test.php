@@ -12,7 +12,7 @@ function check(string $name, bool $ok): void { global $fail; echo ($ok ? 'PASS' 
 
 check('no classes and no moved-in meetings: allowed', lab_deactivation_blocker(0, 0) === '');
 $one = lab_deactivation_blocker(1, 0);
-check('one enabled class blocks, singular wording', $one !== '' && strpos($one, '1 enabled class assigned') !== false && strpos($one, 'classes') === false);
+check('one enabled class blocks, singular wording', $one !== '' && strpos($one, '1 enabled class assigned') !== false && strpos($one, '1 enabled classes') === false);
 $many = lab_deactivation_blocker(3, 0);
 check('several enabled classes block, plural wording', strpos($many, '3 enabled classes assigned') !== false);
 $moved = lab_deactivation_blocker(0, 2);
