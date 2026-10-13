@@ -130,7 +130,7 @@ function get_occurrences(PDO $pdo, $from, $to, array $filters = []): array {
     $stmt = $pdo->prepare("
         SELECT ts.teacher_subject_id, ts.teacher_id, ts.lab_id, ts.subject_id, ts.section, ts.year_level,
                ts.program_id, ts.institution_id, ts.department_id, ts.max_students, ts.status, ts.late_grace_minutes,
-               sub.subject_code, sub.subject_name, t.full_name AS teacher_name, lab.lab_name, pr.program_code
+               sub.subject_code, sub.subject_name, t.full_name AS teacher_name, lab.lab_name, lab.status AS lab_status, pr.program_code
         FROM teacher_subjects ts
         JOIN subjects sub ON sub.subject_id = ts.subject_id
         JOIN teachers t ON t.teacher_id = ts.teacher_id
@@ -151,7 +151,7 @@ function get_occurrences(PDO $pdo, $from, $to, array $filters = []): array {
     $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $stmt = $pdo->prepare("
-        SELECT x.*, nl.lab_name AS new_lab_name, nt.full_name AS new_teacher_name
+        SELECT x.*, nl.lab_name AS new_lab_name, nl.status AS new_lab_status, nt.full_name AS new_teacher_name
         FROM schedule_exceptions x
         LEFT JOIN laboratories nl ON nl.lab_id = x.new_lab_id
         LEFT JOIN teachers nt ON nt.teacher_id = x.new_teacher_id
@@ -249,6 +249,15 @@ function schedule_build_occurrence(array $a, array $rule, string $date, $start, 
     $rescheduled = $x && $x['exception_type'] === 'RESCHEDULED';
     $newLab = $rescheduled && !empty($x['new_lab_id']);
     $newTeacher = $rescheduled && !empty($x['new_teacher_id']);
+    // A meeting in an INACTIVE laboratory (the effective one, so a move into or out of it counts) cannot be held:
+    // scans there are refused. Until it ends it counts as cancelled (computed, nothing is stored, and
+    // reactivating the lab brings the class back). Past meetings are left alone; the absence job skips inactive
+    // labs itself (includes/absences.php).
+    $labStatus = $newLab ? ($x['new_lab_status'] ?? 'active') : ($a['lab_status'] ?? 'active');
+    $labUnavailable = $labStatus === 'inactive';
+    $cancelledByException = $x !== null && $x['exception_type'] === 'CANCELLED';
+    $cancelledByLab = $labUnavailable && !$cancelledByException
+        && new DateTimeImmutable("$date $end", schedule_tz()) > schedule_now();
     return [
         'occurrence_key'      => $a['teacher_subject_id'] . ':' . $date . ':' . $start,
         'teacher_subject_id'  => (int) $a['teacher_subject_id'],
@@ -275,10 +284,11 @@ function schedule_build_occurrence(array $a, array $rule, string $date, $start, 
         'max_students'        => (int) $a['max_students'],
         'late_grace_minutes'  => isset($a['late_grace_minutes']) ? (int) $a['late_grace_minutes'] : null,   // null = settings default
         'assignment_status'   => $a['status'],
-        'is_cancelled'        => $x !== null && $x['exception_type'] === 'CANCELLED',
+        'is_cancelled'        => $cancelledByException || $cancelledByLab,
+        'lab_unavailable'     => $labUnavailable,
         'is_rescheduled'      => $rescheduled,
         'exception_id'        => $x ? (int) $x['exception_id'] : null,
-        'exception_reason'    => $x['reason'] ?? null,
+        'exception_reason'    => $x['reason'] ?? ($cancelledByLab ? 'Laboratory unavailable' : null),
         'original_date'       => $originalDate,
         'original_start_time' => schedule_time($rule['start_time']),
         'original_end_time'   => schedule_time($rule['end_time']),

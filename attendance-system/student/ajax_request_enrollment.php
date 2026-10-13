@@ -14,6 +14,7 @@ require_once __DIR__ . '/../includes/schedule.php';
 require_role('student');
 header('Content-Type: application/json');
 
+global $pdo;   // opened by includes/db.php through auth.php (no-op here; tells the IDE it exists)
 $studentId = $_SESSION['profile_id'];
 
 try {
@@ -40,7 +41,7 @@ try {
     // One request at a time per student and class: the pending check and the insert below must not interleave
     // with a second click or tab (the table has no unique index for this).
     $pdo->beginTransaction();
-    $pdo->prepare('SELECT pg_advisory_xact_lock(hashtext(?))')->execute(['enroll-request:' . $studentId . ':' . $classId]);
+    $pdo->prepare('SELECT pg_advisory_xact_lock(hashtext(?))')->execute(["enroll-request:$studentId:$classId"]);
 
     // Rule 2: already enrolled?
     $enrolledCheck = $pdo->prepare('SELECT COUNT(*) FROM enrollments WHERE student_id = ? AND teacher_subject_id = ? AND status = "enrolled"');

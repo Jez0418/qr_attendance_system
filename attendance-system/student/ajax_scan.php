@@ -10,7 +10,7 @@
  *   1.  Student authenticated?                     require_role
  *   2.  QR payload a genuine, signed laboratory code?
  *                                                  qr_parse_lab_payload()
- *   3.  Laboratory active and the code its current version?
+ *   3.  Laboratory exists and the code is its current version?
  *                                                  lab_qr_version() (Regenerate revokes a printout)
  *   4.  Which meeting is ACTIVE in that lab now? Recomputed from the class
  *       schedule (includes/schedule.php), cancelled meetings never match,
@@ -83,8 +83,9 @@ try {
     $parsed = qr_parse_lab_payload($rawPayload);
     if (!$parsed) throw new Exception(INVALID_QR);
 
-    // ---- 3. Laboratory exists, is in use, and the printed code is its current version? ----
-    $labStmt = $pdo->prepare("SELECT lab_id, latitude, longitude FROM laboratories WHERE lab_id = ? AND status = 'active'");
+    // ---- 3. Laboratory exists and the printed code is its current version? ----
+    // (An inactive lab is not refused here: its meetings count as cancelled, so the student is told why.)
+    $labStmt = $pdo->prepare('SELECT lab_id, latitude, longitude FROM laboratories WHERE lab_id = ?');
     $labStmt->execute([$parsed['lab_id']]);
     $lab = $labStmt->fetch();
     if (!$lab || $parsed['version'] !== lab_qr_version($pdo, (int) $lab['lab_id'])) {
