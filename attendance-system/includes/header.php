@@ -132,5 +132,5 @@ $headerPhotoSrc = is_logged_in() ? current_photo_url($pdo) : '';
         <?php endif; ?>
         <main class="page-content">
         <?php if (($_SESSION['role'] ?? '') === 'admin' && !qr_key_is_configured()): ?>
-        <div class="alert alert-error"><strong>QR_SECRET_KEY is not set.</strong> QR codes are signed with a key derived from the database credentials, so changing the database password would break every QR code. Set <code>QR_SECRET_KEY</code> (a long random string) in Vercel and redeploy. See the README.</div>
+        <div class="alert alert-error"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span><strong>QR_SECRET_KEY is not set.</strong> QR codes are signed with a key derived from the database credentials, so changing the database password would break every QR code. Set <code>QR_SECRET_KEY</code> (a long random string) in Vercel and redeploy. See the README.</span></div>
         <?php endif; ?>

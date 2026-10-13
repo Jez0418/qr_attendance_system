@@ -185,7 +185,7 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
                     <div class="form-group">
                         <label id="passwordLabel">Password *</label>
-                        <input type="text" name="password" id="password" class="form-control" placeholder="Leave blank to keep unchanged">
+                        <input type="text" name="password" id="password" class="form-control" placeholder="Initial password">
                         <small class="text-muted">Tip: use the student number as the password so students can log in with their ID.</small>
                     </div>
                 </div>
@@ -279,6 +279,7 @@ function openAddModal() {
     document.getElementById('studentModalTitle').textContent = 'Add Student';
     document.getElementById('passwordLabel').textContent = 'Password *';
     document.getElementById('password').required = true;
+    document.getElementById('password').placeholder = 'Initial password';
     openModal('studentModal');
 }
 // Convenience: auto-fill password with the student number as it's typed (new students only)
@@ -305,6 +306,7 @@ function openEditModal(s) {
     document.getElementById('studentModalTitle').textContent = 'Edit Student';
     document.getElementById('passwordLabel').textContent = 'Password';
     document.getElementById('password').required = false;
+    document.getElementById('password').placeholder = 'Leave blank to keep unchanged';
     openModal('studentModal');
 }
 

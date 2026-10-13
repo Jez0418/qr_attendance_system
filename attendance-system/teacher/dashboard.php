@@ -89,7 +89,7 @@ require_once __DIR__ . '/../includes/header.php';
 <?php if ($activeSession): ?>
 <div class="alert alert-success" style="margin-bottom:20px">
     <i class="fa-solid fa-circle-play"></i>
-    You have an <strong>active QR session</strong> right now for <strong><?php echo e($activeSession['subject_name']); ?></strong> in <?php echo e($activeSession['lab_name']); ?>.
+    <span>You have an <strong>active QR session</strong> right now for <strong><?php echo e($activeSession['subject_name']); ?></strong> in <?php echo e($activeSession['lab_name']); ?>.</span>
     <a href="session.php" class="btn btn-primary btn-sm" style="margin-left:auto">Manage Session</a>
 </div>
 <?php endif; ?>
