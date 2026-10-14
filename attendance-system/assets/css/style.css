@@ -662,9 +662,11 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .assignments-table td.nowrap{white-space:nowrap}
 .assignments-table td.col-subject{min-width:200px}
 .assignments-table tbody tr:hover td{background:var(--slate-100)}
-/* Ten columns do not fit beside the sidebar: keep the row actions in view while the rest scrolls sideways */
-.assignments-table th:last-child,.assignments-table td:last-child{position:sticky;right:0;background:var(--surface);box-shadow:-10px 0 10px -10px rgba(15,23,42,.2)}
-.assignments-table tbody tr:hover td:last-child{background:var(--slate-100)}
+/* Ten columns: tighter cells and wrapping text so the whole row, Actions included, fits beside the sidebar.
+   The Actions column is a normal column right after "Next class status" (it no longer floats at the edge). */
+.assignments-table th,.assignments-table td{padding-left:10px;padding-right:10px}
+.assignments-table td.nowrap{white-space:normal}
+.assignments-table td:nth-child(1),.assignments-table td:nth-child(8){white-space:nowrap}
 .cell-sub{font-size:12px;color:var(--slate-600);margin-top:2px}
 
 /* ================= ASSIGNMENT MODAL (admin/assignments.php) ================= */
@@ -1134,4 +1136,4 @@ td:has(> .row-actions),td:has(> .btn-icon){white-space:nowrap}
 .badge > i.fa-solid{font-size:.9em}
 .card-header h3 > i.fa-solid,.form-section-title > i.fa-solid{width:1.2em;text-align:center}
 /* Class Assignments: the Actions column no longer hugs the status badge or the scroll edge. */
-.assignments-table th:last-child,.assignments-table td:last-child{padding-left:18px;padding-right:20px;min-width:118px}
+.assignments-table th:last-child,.assignments-table td:last-child{width:1%;white-space:nowrap}
