@@ -1146,3 +1146,18 @@ td:has(> .row-actions),td:has(> .btn-icon){white-space:nowrap}
 .trend-kpi.tone-green strong{color:var(--green-fg)}
 .trend-kpi.tone-red strong{color:var(--red-fg)}
 .chart-box.chart-box-tall{height:320px}
+
+/* Attendance graph, minimalist: one headline figure, quiet facts, a single hairline chart (admin/dashboard.php) */
+.trend-card{padding-top:8px}
+.trend-top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 28px;margin-bottom:18px}
+.trend-hero strong{display:block;font-size:44px;line-height:1;font-weight:800;letter-spacing:-.03em;color:var(--slate-900);font-variant-numeric:tabular-nums}
+.trend-hero strong small{font-size:.5em;font-weight:700;margin-left:2px;color:var(--slate-500)}
+.trend-hero span{display:block;margin-top:6px;font-size:13px;font-weight:600;color:var(--slate-500)}
+.trend-facts{display:flex;margin:0}
+.trend-facts > div{padding:0 18px;border-left:1px solid var(--line)}
+.trend-facts > div:first-child{border-left:0;padding-left:0}
+.trend-facts > div:last-child{padding-right:0}
+.trend-facts dt{font-size:12px;font-weight:600;color:var(--slate-500)}
+.trend-facts dd{margin:2px 0 0;font-size:17px;font-weight:700;color:var(--slate-900);font-variant-numeric:tabular-nums}
+.trend-chart{position:relative;height:230px}
+.trend-chart[hidden]{display:none}

@@ -172,14 +172,22 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="grid-2">
     <div class="card">
         <div class="card-header"><h3>Attendance Graph</h3><span class="text-muted card-header-note">Last 7 days</span></div>
-        <div class="card-body">
-            <div class="trend-kpis">
-                <div class="trend-kpi"><span>Records</span><strong><?php echo number_format($trendTotal); ?></strong></div>
-                <div class="trend-kpi tone-green"><span>Attendance rate</span><strong><?php echo $trendWeekRate === null ? '&mdash;' : $trendWeekRate + 0 . '%'; ?></strong></div>
-                <div class="trend-kpi tone-red"><span>Absences</span><strong><?php echo number_format(array_sum($trendAbsent)); ?></strong></div>
-                <div class="trend-kpi"><span>Best day</span><strong><?php echo $bestIdx === null ? '&mdash;' : e($trendLabels[$bestIdx]); ?></strong></div>
+        <div class="card-body trend-card">
+            <div class="trend-top">
+                <div class="trend-hero">
+                    <strong><?php echo $trendWeekRate === null ? '&mdash;' : ($trendWeekRate + 0) . '<small>%</small>'; ?></strong>
+                    <span>attendance rate this week</span>
+                </div>
+                <dl class="trend-facts">
+                    <div><dt>Records</dt><dd><?php echo number_format($trendTotal); ?></dd></div>
+                    <div><dt>Absences</dt><dd><?php echo number_format(array_sum($trendAbsent)); ?></dd></div>
+                    <div><dt>Best day</dt><dd><?php echo $bestIdx === null ? '&mdash;' : e($trendLabels[$bestIdx]); ?></dd></div>
+                </dl>
             </div>
-            <div class="chart-box chart-box-tall"><canvas id="trendChart" role="img" aria-label="Attendance over the last 7 days: stacked daily counts of present, late, excused and absent students with the daily attendance rate as a line."></canvas></div>
+            <div class="trend-chart" id="trendWrap">
+                <canvas id="trendChart" role="img" aria-label="Daily attendance rate for the last 7 days. Hover or focus a day for the Present, Late, Excused and Absent counts."></canvas>
+            </div>
+            <p class="text-muted text-center chart-empty" id="trendEmpty" hidden>No attendance recorded in the last 7 days.</p>
         </div>
     </div>
     <div class="card">
@@ -362,6 +370,10 @@ const labData = {
     labels: <?php echo json_encode(array_column($labUsage, 'lab_name')); ?>,
     counts: <?php echo json_encode(array_map('intval', array_column($labUsage, 'cnt'))); ?>
 };
+if (trendData.rate.every(r => r === null)) {
+    document.getElementById('trendWrap').hidden = true;
+    document.getElementById('trendEmpty').hidden = false;
+}
 let charts = [];
 
 function buildCharts() {
@@ -369,48 +381,53 @@ function buildCharts() {
     charts.forEach(ch => ch.destroy());
     charts = [
         new Chart(document.getElementById('trendChart'), {
+            type: 'line',
             data: {
                 labels: trendData.labels,
-                datasets: [
-                    { type: 'line', label: 'Attendance rate', data: trendData.rate, yAxisID: 'rate', order: 0,
-                      borderColor: c.accent, backgroundColor: c.accent, borderWidth: 2.5, tension: .35, spanGaps: true,
-                      pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: c.surface, pointBorderColor: c.accent, pointBorderWidth: 2 },
-                    { type: 'bar', label: 'Present', data: trendData.present, backgroundColor: c.green, stack: 'day', order: 1 },
-                    { type: 'bar', label: 'Late', data: trendData.late, backgroundColor: c.amber, stack: 'day', order: 1 },
-                    { type: 'bar', label: 'Excused', data: trendData.excused, backgroundColor: c.excused, stack: 'day', order: 1 },
-                    { type: 'bar', label: 'Absent', data: trendData.absent, backgroundColor: c.red, stack: 'day', order: 1, borderRadius: { topLeft: 8, topRight: 8 } }
-                ]
+                datasets: [{
+                    label: 'Attendance rate', data: trendData.rate, spanGaps: true,
+                    borderColor: c.accent, borderWidth: 2, tension: 0.3, fill: false,
+                    pointRadius: 0, pointHoverRadius: 5, pointHitRadius: 24,
+                    pointBackgroundColor: c.surface, pointBorderColor: c.accent, pointBorderWidth: 2
+                }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
-                datasets: { bar: { maxBarThickness: 40, borderSkipped: false, borderRadius: 0 } },
-                animation: { duration: 700, easing: 'easeOutQuart' },
+                layout: { padding: { top: 8, right: 4 } },
+                animation: { duration: 600, easing: 'easeOutCubic' },
                 plugins: {
-                    legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 14, font: { size: 12.5, weight: '600' } } },
+                    legend: { display: false },
                     tooltip: {
                         backgroundColor: c.surface, titleColor: c.text, bodyColor: c.text, borderColor: c.grid, borderWidth: 1,
-                        padding: 12, cornerRadius: 12, boxPadding: 5, usePointStyle: true,
+                        padding: 12, cornerRadius: 10, displayColors: false, titleFont: { weight: '700' },
                         callbacks: {
-                            label(ctx) {
-                                if (ctx.dataset.yAxisID === 'rate') return ' Attendance rate: ' + (ctx.parsed.y === null ? 'no records' : ctx.parsed.y + '%');
-                                return ' ' + ctx.dataset.label + ': ' + ctx.parsed.y;
-                            },
-                            footer(items) {
-                                const t = items.filter(i => i.dataset.type === 'bar').reduce((n, i) => n + i.parsed.y, 0);
-                                return t + (t === 1 ? ' record' : ' records');
+                            label(ctx) { return ctx.parsed.y === null ? 'No records' : 'Attendance rate  ' + ctx.parsed.y + '%'; },
+                            afterBody(items) {
+                                const i = items[0].dataIndex;
+                                return ['', 'Present   ' + trendData.present[i], 'Late        ' + trendData.late[i],
+                                        'Excused  ' + trendData.excused[i], 'Absent     ' + trendData.absent[i]];
                             }
                         }
                     }
                 },
                 scales: {
-                    x: { stacked: true, grid: { display: false }, border: { display: false }, ticks: { font: { weight: '600' } } },
-                    y: { stacked: true, beginAtZero: true, border: { display: false }, grid: { color: c.grid, borderDash: [4, 4] },
-                         ticks: { precision: 0, maxTicksLimit: 6 }, title: { display: true, text: 'Students', color: c.text, font: { size: 12, weight: '600' } } },
-                    rate: { position: 'right', min: 0, max: 100, border: { display: false }, grid: { display: false },
-                            ticks: { stepSize: 25, callback: v => v + '%' } }
+                    x: { grid: { display: false }, border: { display: false }, ticks: { padding: 8 } },
+                    y: { min: 0, max: 100, border: { display: false }, grid: { color: c.grid },
+                         ticks: { stepSize: 50, padding: 10, callback: v => v + '%' } }
                 }
-            }
+            },
+            // A single hairline under the hovered day instead of a heavy crosshair.
+            plugins: [{
+                id: 'dayGuide',
+                afterDatasetsDraw(chart) {
+                    const a = chart.tooltip && chart.tooltip.getActiveElements();
+                    if (!a || !a.length) return;
+                    const x = a[0].element.x, { top, bottom } = chart.chartArea, ctx = chart.ctx;
+                    ctx.save(); ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom);
+                    ctx.lineWidth = 1; ctx.strokeStyle = c.grid; ctx.stroke(); ctx.restore();
+                }
+            }]
         }),
         new Chart(document.getElementById('statusChart'), {
             type: 'doughnut',
