@@ -17,8 +17,14 @@ function showToast(type, message) {
     toast.innerHTML = `<i class="fa-solid ${icon}"></i><span class="toast-msg">${message}</span><span class="toast-close">&times;</span>`;
     container.appendChild(toast);
 
-    toast.querySelector('.toast-close').addEventListener('click', () => toast.remove());
-    setTimeout(() => toast.remove(), 5000);
+    // Leave with a short fade-out (is-leaving, style.css) instead of vanishing.
+    const dismiss = () => {
+        if (toast.classList.contains('is-leaving')) return;
+        toast.classList.add('is-leaving');
+        setTimeout(() => toast.remove(), 200);
+    };
+    toast.querySelector('.toast-close').addEventListener('click', dismiss);
+    setTimeout(dismiss, 5000);
 }
 
 /* ---------------- SIDEBAR TOGGLE (mobile) ---------------- */
@@ -446,6 +452,90 @@ document.addEventListener('DOMContentLoaded', initLiveFilters);
                 }
             }
         }).observe(document.body, { childList: true, subtree: true });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+
+
+/* ---------------- MOTION ----------------
+ * Small cues for everything that changes on a page (styles: "MOTION" at the end of style.css). Modals and toasts are
+ * handled in CSS/showToast; this adds: rows appended to a table, content that becomes visible (hidden / display / class
+ * toggles), numbers and badges whose text changes, and a count-up for dashboard numbers on load. Everything is
+ * additive and skipped when the visitor prefers reduced motion (the CSS then only fades). */
+(function () {
+    const reduce = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+    const once = (el, cls) => {
+        el.classList.remove(cls);
+        void el.offsetWidth;                       // restart the animation if it is already running
+        el.classList.add(cls);
+        el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+    };
+    window.animateIn = (el) => { if (el) once(el, 'swap-in'); };
+
+    // Count a dashboard number up from 0. Only plain numbers ("1,204", "85%", "7"); anything else is left alone.
+    const NUM = /^([^\d-]*)(-?\d[\d,]*\.?\d*)([^\d]*)$/;
+    function countUp(el) {
+        if (reduce.matches) return;
+        const m = NUM.exec(el.textContent.trim());
+        if (!m) return;
+        const target = parseFloat(m[2].replace(/,/g, ''));
+        if (!isFinite(target) || target === 0 || Math.abs(target) > 1e6) return;
+        const decimals = (m[2].split('.')[1] || '').length;
+        const comma = m[2].indexOf(',') !== -1;
+        const fmt = (v) => {
+            let t = v.toFixed(decimals);
+            if (comma) t = Number(t).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+            return m[1] + t + m[3];
+        };
+        const final = el.textContent;
+        const t0 = performance.now();
+        const dur = 700;
+        el._counting = true;
+        (function tick(now) {
+            const k = Math.min(1, (now - t0) / dur);
+            const eased = 1 - Math.pow(1 - k, 4);
+            el.textContent = k < 1 ? fmt(target * eased) : final;
+            if (k < 1) requestAnimationFrame(tick); else setTimeout(() => { el._counting = false; }, 0);  // after the observer has seen the last write
+        })(t0);
+    }
+
+    function start() {
+        document.querySelectorAll('.stat-value').forEach(countUp);
+        const root = document.querySelector('.page-content');
+        if (!root) return;
+
+        const seen = (n) => n.nodeType === 1;
+        new MutationObserver((muts) => {
+            let rows = 0;
+            for (const m of muts) {
+                if (m.type === 'childList') {
+                    // A row added to a table body (a record appended by script) drops in with a highlight.
+                    if (m.target.tagName === 'TBODY') {
+                        m.addedNodes.forEach((n) => {
+                            if (seen(n) && n.tagName === 'TR' && rows < 12) { n.style.animationDelay = (rows++ * 35) + 'ms'; once(n, 'row-in'); }
+                        });
+                    } else if (m.target.closest && m.target.closest('.stat-value, .badge')) {
+                        const el = m.target.closest('.stat-value, .badge');
+                        if (!el._counting) once(el, 'value-changed');
+                    }
+                } else if (m.type === 'characterData') {
+                    const el = m.target.parentElement && m.target.parentElement.closest('.stat-value, .badge');
+                    if (el && !el._counting) once(el, 'value-changed');
+                } else if (m.type === 'attributes') {
+                    const t = m.target;
+                    if (!seen(t) || t.closest('.dd-menu, .modal-backdrop, .toast, .sidebar')) continue;
+                    const was = m.oldValue || '';
+                    let shown = false;
+                    if (m.attributeName === 'hidden') shown = !t.hidden && m.oldValue !== null;
+                    else if (m.attributeName === 'style') shown = /display:\s*none/.test(was) && t.style.display !== 'none';
+                    else if (m.attributeName === 'class') shown = /(^|\s)(hidden|d-none)(\s|$)/.test(was) && !t.classList.contains('hidden') && !t.classList.contains('d-none');
+                    if (shown && t.offsetParent !== null) once(t, 'reveal-in');
+                }
+            }
+        }).observe(root, {
+            subtree: true, childList: true, characterData: true,
+            attributes: true, attributeOldValue: true, attributeFilter: ['hidden', 'style', 'class'],
+        });
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

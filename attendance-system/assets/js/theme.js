@@ -25,6 +25,12 @@
     function apply() {
         var pref = getPref(), theme = resolve(pref);
         var changed = root.getAttribute('data-theme') !== theme;
+        // Cross-fade the colours (style.css "theme-switching") when the theme changes after the page has loaded.
+        if (changed && root.hasAttribute('data-theme') && document.readyState === 'complete') {
+            root.classList.add('theme-switching');
+            clearTimeout(apply._t);
+            apply._t = setTimeout(function () { root.classList.remove('theme-switching'); }, 380);
+        }
         root.setAttribute('data-theme', theme);
         root.setAttribute('data-theme-pref', pref);
         syncSwitchers(pref);
