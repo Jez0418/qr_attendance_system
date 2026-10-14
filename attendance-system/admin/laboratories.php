@@ -17,6 +17,25 @@ require_once __DIR__ . '/../includes/header.php';
         <button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> Add Laboratory</button>
     </div>
     <div class="card-body">
+        <?php
+        $labTotal = count($labs);
+        $labActive = count(array_filter($labs, fn($l) => $l['status'] === 'active'));
+        $labNoGps = count(array_filter($labs, fn($l) => ($l['latitude'] ?? '') === '' || ($l['longitude'] ?? '') === ''));
+        $labSummary = [
+            ['blue', 'fa-flask', $labTotal, 'Laboratories'],
+            ['green', 'fa-circle-check', $labActive, 'Active'],
+            ['slate', 'fa-circle-pause', $labTotal - $labActive, 'Inactive'],
+            ['amber', 'fa-location-crosshairs', $labNoGps, 'Without GPS'],
+        ];
+        ?>
+        <div class="lab-summary">
+            <?php foreach ($labSummary as $k => [$tone, $icon, $n, $text]): ?>
+                <div class="lab-sum tone-<?php echo $tone; ?>" style="--i:<?php echo $k; ?>">
+                    <span class="lab-sum-icon"><i class="fa-solid <?php echo $icon; ?>"></i></span>
+                    <div><strong><?php echo (int) $n; ?></strong><span><?php echo $text; ?></span></div>
+                </div>
+            <?php endforeach; ?>
+        </div>
         <div class="toolbar">
             <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i>
                 <input type="search" class="form-control" id="labSearch" placeholder="Search code or name..." aria-label="Search laboratories by code or name"></div>
