@@ -48,11 +48,11 @@ require_once __DIR__ . '/../includes/header.php';
                             <span class="badge badge-late"><i class="fa-solid fa-hourglass-half"></i> Pending</span>
                         <?php elseif ($r['status'] === 'approved'): ?>
                             <span class="badge badge-active"><i class="fa-solid fa-check"></i> Approved</span>
-                            <?php if ($r['reviewed_by_role']): ?><div class="text-muted" style="font-size:11px;margin-top:4px">by <?php echo $r['reviewed_by_role'] === 'admin' ? 'Administrator' : 'Teacher'; ?></div><?php endif; ?>
+                            <?php if ($r['reviewed_by_role']): ?><div class="text-muted" style="font-size:12px;margin-top:4px">by <?php echo $r['reviewed_by_role'] === 'admin' ? 'Administrator' : 'Teacher'; ?></div><?php endif; ?>
                         <?php elseif ($r['status'] === 'rejected'): ?>
                             <span class="badge badge-absent"><i class="fa-solid fa-xmark"></i> Rejected</span>
-                            <?php if ($r['reviewed_by_role']): ?><div class="text-muted" style="font-size:11px;margin-top:4px">by <?php echo $r['reviewed_by_role'] === 'admin' ? 'Administrator' : 'Teacher'; ?></div><?php endif; ?>
-                            <?php if ($r['rejection_reason']): ?><div class="text-muted" style="font-size:11.5px;margin-top:4px;max-width:220px">Reason: <?php echo e($r['rejection_reason']); ?></div><?php endif; ?>
+                            <?php if ($r['reviewed_by_role']): ?><div class="text-muted" style="font-size:12px;margin-top:4px">by <?php echo $r['reviewed_by_role'] === 'admin' ? 'Administrator' : 'Teacher'; ?></div><?php endif; ?>
+                            <?php if ($r['rejection_reason']): ?><div class="text-muted" style="font-size:12px;margin-top:4px;max-width:220px">Reason: <?php echo e($r['rejection_reason']); ?></div><?php endif; ?>
                         <?php else: ?>
                             <span class="badge badge-inactive"><i class="fa-solid fa-ban"></i> Cancelled</span>
                         <?php endif; ?>

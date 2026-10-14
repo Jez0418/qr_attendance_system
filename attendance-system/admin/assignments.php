@@ -170,7 +170,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <td class="nowrap">
                             <?php echo e(assignment_next_text($next, $now)); ?>
                             <?php if ($next && $next['is_rescheduled']): ?>
-                                <div class="text-muted" style="font-size:11px">Rescheduled<?php echo $next['lab_id'] !== (int) $a['lab_id'] ? ' · ' . e($next['lab_name']) : ''; ?></div>
+                                <div class="text-muted" style="font-size:12px">Rescheduled<?php echo $next['lab_id'] !== (int) $a['lab_id'] ? ' · ' . e($next['lab_name']) : ''; ?></div>
                             <?php endif; ?>
                         </td>
                         <td class="nowrap"><?php echo (int) $a['enrolled_count']; ?>/<?php echo (int) $a['max_students']; ?></td>

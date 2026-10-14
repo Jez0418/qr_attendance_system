@@ -98,12 +98,12 @@ require_once __DIR__ . '/../includes/header.php';
             <div><div class="text-muted" style="font-size:12px">Weekly Schedule</div><div style="font-weight:700">
                 <?php echo $sum['label'] !== '' ? e($sum['label']) : 'No schedule set'; ?>
                 <?php foreach ($sum['rules'] as $r): if ($r['effective_start_date'] || $r['effective_end_date']): ?>
-                    <div class="text-muted" style="font-size:11.5px;font-weight:500"><?php echo SCHEDULE_DAYS[$r['day_of_week']]; ?>: <?php echo $r['effective_start_date'] ? format_date($r['effective_start_date']) : '…'; ?> – <?php echo $r['effective_end_date'] ? format_date($r['effective_end_date']) : '…'; ?></div>
+                    <div class="text-muted" style="font-size:12px;font-weight:500"><?php echo SCHEDULE_DAYS[$r['day_of_week']]; ?>: <?php echo $r['effective_start_date'] ? format_date($r['effective_start_date']) : '…'; ?> – <?php echo $r['effective_end_date'] ? format_date($r['effective_end_date']) : '…'; ?></div>
                 <?php endif; endforeach; ?>
             </div></div>
-            <div><div class="text-muted" style="font-size:12px">Next Class</div><div style="font-weight:700"><?php echo e($sum['next_label']); ?><?php if ($sum['next']): ?><div class="text-muted" style="font-size:11.5px;font-weight:500"><?php echo e($sum['next']['lab_name']); ?><?php echo $sum['next']['is_rescheduled'] ? ' · Rescheduled' : ''; ?></div><?php endif; ?></div></div>
+            <div><div class="text-muted" style="font-size:12px">Next Class</div><div style="font-weight:700"><?php echo e($sum['next_label']); ?><?php if ($sum['next']): ?><div class="text-muted" style="font-size:12px;font-weight:500"><?php echo e($sum['next']['lab_name']); ?><?php echo $sum['next']['is_rescheduled'] ? ' · Rescheduled' : ''; ?></div><?php endif; ?></div></div>
             <div><div class="text-muted" style="font-size:12px">Enrollment</div><div style="font-weight:700"><?php echo $enrolledCount; ?>/<?php echo (int) $class['max_students']; ?> students</div></div>
-            <div><div class="text-muted" style="font-size:12px">Late After</div><div style="font-weight:700"><?php echo $graceMinutes; ?> min from the start<?php if ($class['late_grace_minutes'] === null): ?><div class="text-muted" style="font-size:11.5px;font-weight:500">School default</div><?php endif; ?></div></div>
+            <div><div class="text-muted" style="font-size:12px">Late After</div><div style="font-weight:700"><?php echo $graceMinutes; ?> min from the start<?php if ($class['late_grace_minutes'] === null): ?><div class="text-muted" style="font-size:12px;font-weight:500">School default</div><?php endif; ?></div></div>
         </div>
         <span class="badge <?php echo $sum['badge'][1]; ?>" style="margin-top:14px;display:inline-block"><?php echo $sum['badge'][0]; ?></span>
     </div>
@@ -125,8 +125,8 @@ require_once __DIR__ . '/../includes/header.php';
                     <td><?php echo e($o['teacher_name']); ?><?php echo $o['teacher_id'] !== $o['original_teacher_id'] ? ' <span class="text-muted">(substitute)</span>' : ''; ?></td>
                     <td>
                         <span class="badge <?php echo $bc; ?>"><?php echo $bl; ?></span>
-                        <?php if ($o['is_rescheduled']): ?><span class="badge badge-rescheduled">Rescheduled</span><div class="text-muted" style="font-size:11px">from <?php echo e((new DateTimeImmutable($o['original_date']))->format('D, M d') . ' ' . format_time_range($o['original_start_time'], $o['original_end_time'])); ?></div><?php endif; ?>
-                        <?php if ($o['exception_reason']): ?><div class="text-muted" style="font-size:11px"><?php echo e($o['exception_reason']); ?></div><?php endif; ?>
+                        <?php if ($o['is_rescheduled']): ?><span class="badge badge-rescheduled">Rescheduled</span><div class="text-muted" style="font-size:12px">from <?php echo e((new DateTimeImmutable($o['original_date']))->format('D, M d') . ' ' . format_time_range($o['original_start_time'], $o['original_end_time'])); ?></div><?php endif; ?>
+                        <?php if ($o['exception_reason']): ?><div class="text-muted" style="font-size:12px"><?php echo e($o['exception_reason']); ?></div><?php endif; ?>
                     </td>
                 </tr>
             <?php endforeach; endif; ?>

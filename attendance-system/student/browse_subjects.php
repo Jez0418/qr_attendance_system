@@ -112,7 +112,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card-body">
             <div class="flex-between" style="align-items:flex-start">
                 <h3 style="margin:0 0 4px"><?php echo e($c['subject_code']); ?></h3>
-                <?php if ($offCohort): ?><span class="badge badge-late" style="font-size:10px">Different Cohort</span><?php endif; ?>
+                <?php if ($offCohort): ?><span class="badge badge-late" style="font-size:11.5px">Different Cohort</span><?php endif; ?>
             </div>
             <p style="margin:0 0 12px;color:var(--slate-600)"><?php echo e($c['subject_name']); ?></p>
             <div style="font-size:13.5px;color:var(--slate-700);line-height:1.9">

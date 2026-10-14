@@ -59,7 +59,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <tr>
                         <td><?php echo e($r['student_name']); ?></td>
                         <td><?php echo e($r['student_number']); ?></td>
-                        <td><?php echo e($r['subject_code'] . ' - ' . $r['subject_name']); ?><div class="text-muted" style="font-size:11px"><?php echo e($r['section']); ?></div></td>
+                        <td><?php echo e($r['subject_code'] . ' - ' . $r['subject_name']); ?><div class="text-muted" style="font-size:12px"><?php echo e($r['section']); ?></div></td>
                         <td><?php echo e($r['program_code'] ?? '—'); ?> / Yr <?php echo e($r['year_level']); ?></td>
                         <td><?php echo format_datetime($r['requested_at']); ?></td>
                         <td>

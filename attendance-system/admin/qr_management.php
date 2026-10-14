@@ -82,9 +82,9 @@ require_once __DIR__ . '/../includes/header.php';
             ?>
                 <tr>
                     <td style="white-space:nowrap"><?php echo e(format_time_range($o['start_time'], $o['end_time'])); ?></td>
-                    <td><?php echo e($o['subject_code'] . ' - ' . $o['subject_name']); ?><div class="text-muted" style="font-size:11.5px"><?php echo e($o['section']); ?></div></td>
-                    <td><?php echo e($o['teacher_name']); ?><?php if ($o['teacher_id'] !== $o['original_teacher_id']): ?><div class="text-muted" style="font-size:11px">Substitute</div><?php endif; ?></td>
-                    <td><?php echo e($o['lab_name']); ?><?php if (empty($labCoords[$o['lab_id']])): ?><div style="font-size:11px;color:var(--red-600)"><i class="fa-solid fa-triangle-exclamation"></i> No GPS set</div><?php endif; ?></td>
+                    <td><?php echo e($o['subject_code'] . ' - ' . $o['subject_name']); ?><div class="text-muted" style="font-size:12px"><?php echo e($o['section']); ?></div></td>
+                    <td><?php echo e($o['teacher_name']); ?><?php if ($o['teacher_id'] !== $o['original_teacher_id']): ?><div class="text-muted" style="font-size:12px">Substitute</div><?php endif; ?></td>
+                    <td><?php echo e($o['lab_name']); ?><?php if (empty($labCoords[$o['lab_id']])): ?><div style="font-size:12px;color:var(--red-600)"><i class="fa-solid fa-triangle-exclamation"></i> No GPS set</div><?php endif; ?></td>
                     <td><span class="badge <?php echo $cls; ?>"><?php echo $label; ?></span><?php if ($o['is_rescheduled']): ?> <span class="badge badge-rescheduled">Rescheduled</span><?php endif; ?></td>
                     <td style="font-size:12.5px"><?php echo e(attendance_state_label($m)); ?></td>
                     <td>
@@ -140,7 +140,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <p class="text-muted" style="font-size:13px;margin:0"><?php echo e($q['code']); ?></p>
                     <p class="print-only" style="font-size:15px;margin:10px 0 0">To record your attendance, open the attendance app, go to <strong>Scan Attendance</strong> and scan this code.</p>
                     <?php if (!$q['has_coords']): ?><p class="no-print" style="font-size:12px;color:var(--red-600);margin:8px 0 0"><i class="fa-solid fa-triangle-exclamation"></i> No GPS set: attendance can't be verified here until coordinates are added.</p><?php endif; ?>
-                    <p class="text-muted no-print" style="font-size:11.5px;margin:6px 0 12px">Code version <?php echo (int) $q['version']; ?></p>
+                    <p class="text-muted no-print" style="font-size:12px;margin:6px 0 12px">Code version <?php echo (int) $q['version']; ?></p>
                     <button class="btn btn-outline btn-sm no-print" onclick='regenerateLabQr(<?php echo (int) $q['id']; ?>, <?php echo js_attr_json($q['name']); ?>)'><i class="fa-solid fa-rotate"></i> Regenerate</button>
                 </div>
             </div>

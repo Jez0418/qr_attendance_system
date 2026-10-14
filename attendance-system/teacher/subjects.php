@@ -35,23 +35,25 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="empty-state" style="grid-column:1/-1"><i class="fa-solid fa-book"></i><p>You have no assigned subjects yet. Please contact the administrator.</p></div>
 <?php else: foreach ($classes as $c): ?>
     <?php $sum = $summaries[(int) $c['teacher_subject_id']]; ?>
-    <a href="class_view.php?id=<?php echo $c['teacher_subject_id']; ?>" class="card" style="display:block;color:inherit;transition:box-shadow .15s,transform .15s" onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow='var(--shadow-sm)'">
+    <a href="class_view.php?id=<?php echo $c['teacher_subject_id']; ?>" class="card class-card is-link">
         <div class="card-body">
-            <div class="flex-between" style="align-items:flex-start">
-                <h3 style="margin:0 0 4px"><?php echo e($c['subject_code']); ?></h3>
+            <div class="class-card-head">
+                <div>
+                    <h3><?php echo e($c['subject_code']); ?></h3>
+                    <p><?php echo e($c['subject_name']); ?></p>
+                </div>
                 <?php if ($c['pending_count'] > 0): ?><span class="badge badge-late"><?php echo (int) $c['pending_count']; ?> pending</span><?php endif; ?>
             </div>
-            <p style="margin:0 0 12px;color:var(--slate-600)"><?php echo e($c['subject_name']); ?></p>
-            <div style="font-size:13.5px;color:var(--slate-700);line-height:1.9">
-                <div><i class="fa-solid fa-flask" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['lab_name']); ?></div>
-                <div><i class="fa-solid fa-location-dot" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['location']); ?></div>
-                <div><i class="fa-solid fa-calendar-week" style="width:18px;color:var(--indigo-600)"></i> <?php echo $sum['label'] !== '' ? e($sum['label']) : 'No schedule set'; ?></div>
-                <div><i class="fa-solid fa-clock" style="width:18px;color:var(--indigo-600)"></i> Next: <?php echo e($sum['next_label']); ?><?php echo $sum['next'] && $sum['next']['is_rescheduled'] ? ' (rescheduled)' : ''; ?></div>
-                <div><i class="fa-solid fa-users" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['section']); ?> (<?php echo (int) $c['enrolled_count']; ?>/<?php echo (int) $c['max_students']; ?> enrolled)</div>
-            </div>
-            <div class="flex-between" style="margin-top:12px">
+            <ul class="class-meta">
+                <li><i class="fa-solid fa-flask"></i><span><?php echo e($c['lab_name']); ?></span></li>
+                <li><i class="fa-solid fa-location-dot"></i><span><?php echo e($c['location']); ?></span></li>
+                <li><i class="fa-solid fa-calendar-week"></i><span><?php echo $sum['label'] !== '' ? e($sum['label']) : 'No schedule set'; ?></span></li>
+                <li><i class="fa-solid fa-clock"></i><span>Next: <?php echo e($sum['next_label']); ?><?php echo $sum['next'] && $sum['next']['is_rescheduled'] ? ' (rescheduled)' : ''; ?></span></li>
+                <li><i class="fa-solid fa-users"></i><span><?php echo e($c['section']); ?> (<?php echo (int) $c['enrolled_count']; ?>/<?php echo (int) $c['max_students']; ?> enrolled)</span></li>
+            </ul>
+            <div class="class-foot">
                 <span class="badge <?php echo $sum['badge'][1]; ?>"><?php echo $sum['badge'][0]; ?></span>
-                <span class="text-muted" style="font-size:12.5px">View details <i class="fa-solid fa-arrow-right"></i></span>
+                <span class="class-go">View details <i class="fa-solid fa-arrow-right"></i></span>
             </div>
         </div>
     </a>

@@ -143,7 +143,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <td><?php echo e($c['section']); ?></td>
                     <td><?php echo e($c['lab_name']); ?></td>
                     <td style="white-space:nowrap"><?php echo $sum['label'] !== '' ? e($sum['label']) : '<span class="text-muted">Not set</span>'; ?></td>
-                    <td style="white-space:nowrap"><?php echo e($sum['next_label']); ?><?php if ($sum['next'] && $sum['next']['is_rescheduled']): ?><div class="text-muted" style="font-size:11px">Rescheduled</div><?php endif; ?></td>
+                    <td style="white-space:nowrap"><?php echo e($sum['next_label']); ?><?php if ($sum['next'] && $sum['next']['is_rescheduled']): ?><div class="text-muted" style="font-size:12px">Rescheduled</div><?php endif; ?></td>
                     <td><?php echo (int) $c['enrolled_count']; ?></td>
                     <td><span class="badge <?php echo $sum['badge'][1]; ?>"><?php echo $sum['badge'][0]; ?></span></td>
                 </tr>

@@ -145,7 +145,7 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="text-muted" style="font-size:12px;margin-top:2px"><span id="tcDate"></span> · <span id="tcSummary"></span></div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
-            <span class="text-muted" id="tcUpdated" style="font-size:11.5px" aria-live="polite"></span>
+            <span class="text-muted" id="tcUpdated" style="font-size:12px" aria-live="polite"></span>
             <a href="schedule.php?view=day" class="btn btn-outline btn-sm"><i class="fa-solid fa-calendar-day"></i> Schedule</a>
         </div>
     </div>

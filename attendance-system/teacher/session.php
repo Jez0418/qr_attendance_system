@@ -64,7 +64,7 @@ require_once __DIR__ . '/../includes/header.php';
             <?php foreach ($meetings as $m): $o = $m['occurrence']; [$label, $cls] = OCCURRENCE_BADGES[$m['status']]; $isSel = $occ && $o['occurrence_key'] === $occ['occurrence_key']; ?>
                 <tr<?php echo $isSel ? ' style="background:var(--indigo-50)"' : ''; ?>>
                     <td style="white-space:nowrap"><?php echo e(format_time_range($o['start_time'], $o['end_time'])); ?></td>
-                    <td><?php echo e($o['subject_code'] . ' - ' . $o['subject_name']); ?><?php if ($o['teacher_id'] !== $o['original_teacher_id']): ?><div class="text-muted" style="font-size:11px">You are substituting</div><?php endif; ?></td>
+                    <td><?php echo e($o['subject_code'] . ' - ' . $o['subject_name']); ?><?php if ($o['teacher_id'] !== $o['original_teacher_id']): ?><div class="text-muted" style="font-size:12px">You are substituting</div><?php endif; ?></td>
                     <td><?php echo e($o['section']); ?></td>
                     <td><?php echo e($o['lab_name']); ?></td>
                     <td><span class="badge <?php echo $cls; ?>"><?php echo $label; ?></span><?php if ($o['is_rescheduled']): ?> <span class="badge badge-rescheduled">Rescheduled</span><?php endif; ?></td>

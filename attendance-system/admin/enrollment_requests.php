@@ -70,8 +70,8 @@ require_once __DIR__ . '/../includes/header.php';
                     <tr><td colspan="6" class="text-center text-muted">No requests found.</td></tr>
                 <?php else: foreach ($requests as $r): ?>
                     <tr>
-                        <td><?php echo e($r['student_name']); ?><div class="text-muted" style="font-size:11px"><?php echo e($r['student_number']); ?></div></td>
-                        <td><?php echo e($r['subject_code'] . ' - ' . $r['subject_name']); ?><div class="text-muted" style="font-size:11px"><?php echo e($r['section']); ?></div></td>
+                        <td><?php echo e($r['student_name']); ?><div class="text-muted" style="font-size:12px"><?php echo e($r['student_number']); ?></div></td>
+                        <td><?php echo e($r['subject_code'] . ' - ' . $r['subject_name']); ?><div class="text-muted" style="font-size:12px"><?php echo e($r['section']); ?></div></td>
                         <td><?php echo e($r['teacher_name']); ?></td>
                         <td><?php echo format_datetime($r['requested_at']); ?></td>
                         <td>
