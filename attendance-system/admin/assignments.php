@@ -124,23 +124,22 @@ require_once __DIR__ . '/../includes/header.php';
         <button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> New Assignment</button>
     </div>
     <div class="card-body">
-        <form method="GET" class="list-filters">
+        <form method="GET" class="list-filters" data-live-filter>
             <div class="search-row">
                 <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i>
                     <input type="text" class="form-control" name="search" placeholder="Search teacher, subject, section..." aria-label="Search teacher, subject or section" value="<?php echo e($search); ?>"></div>
-                <button class="btn btn-outline" type="submit">Search</button>
-                <?php if ($isFiltered): ?><a href="assignments.php" class="btn btn-outline">Reset</a><?php endif; ?>
+                <a href="assignments.php" class="btn btn-outline" data-live-reset<?php echo $isFiltered ? '' : ' hidden'; ?>>Reset</a>
             </div>
             <div class="filter-row">
-                <select name="program_id" class="form-control" aria-label="Filter by program" onchange="this.form.submit()">
+                <select name="program_id" class="form-control" aria-label="Filter by program">
                     <option value="">All programs</option>
                     <?php foreach ($programs as $pr): ?><option value="<?php echo $pr['program_id']; ?>" <?php echo $filterProgram === (int) $pr['program_id'] ? 'selected' : ''; ?>><?php echo e($pr['program_code']); ?></option><?php endforeach; ?>
                 </select>
-                <select name="teacher_id" class="form-control" aria-label="Filter by teacher" onchange="this.form.submit()">
+                <select name="teacher_id" class="form-control" aria-label="Filter by teacher">
                     <option value="">All teachers</option>
                     <?php foreach ($teachers as $t): ?><option value="<?php echo $t['teacher_id']; ?>" <?php echo $filterTeacher === (int) $t['teacher_id'] ? 'selected' : ''; ?>><?php echo e($t['full_name']); ?></option><?php endforeach; ?>
                 </select>
-                <select name="lab_id" class="form-control" aria-label="Filter by laboratory" onchange="this.form.submit()">
+                <select name="lab_id" class="form-control" aria-label="Filter by laboratory">
                     <option value="">All laboratories</option>
                     <?php foreach ($filterLabs as $l): ?><option value="<?php echo $l['lab_id']; ?>" <?php echo $filterLab === (int) $l['lab_id'] ? 'selected' : ''; ?>><?php echo e($l['lab_name']); ?></option><?php endforeach; ?>
                 </select>

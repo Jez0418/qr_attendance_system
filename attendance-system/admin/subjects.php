@@ -34,11 +34,10 @@ require_once __DIR__ . '/../includes/header.php';
         <button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> Add Subject</button>
     </div>
     <div class="card-body">
-        <form method="GET" class="toolbar subject-search">
+        <form method="GET" class="toolbar subject-search" data-live-filter>
             <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" class="form-control" name="search" placeholder="Search code or name..." value="<?php echo e($search); ?>"></div>
-            <button class="btn btn-outline btn-sm" type="submit">Search</button>
-            <?php if ($search): ?><a href="subjects.php" class="btn btn-outline btn-sm">Reset</a><?php endif; ?>
+            <a href="subjects.php" class="btn btn-outline btn-sm" data-live-reset<?php echo $search ? '' : ' hidden'; ?>>Reset</a>
         </form>
         <div class="table-wrapper">
             <table class="data-table subjects-table">

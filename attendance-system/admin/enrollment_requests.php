@@ -52,16 +52,15 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="card">
     <div class="card-header"><h3>Enrollment Requests — All Classes (<?php echo $totalRows; ?>)</h3></div>
     <div class="card-body">
-        <form method="GET" class="toolbar">
+        <form method="GET" class="toolbar" data-live-filter>
             <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" name="search" class="form-control" placeholder="Search student, subject..." value="<?php echo e($search); ?>"></div>
-            <select name="status" class="form-control" style="max-width:180px" onchange="this.form.submit()">
+            <select name="status" class="form-control" style="max-width:180px">
                 <option value="pending" <?php echo $statusFilter === 'pending' ? 'selected' : ''; ?>>Pending</option>
                 <option value="approved" <?php echo $statusFilter === 'approved' ? 'selected' : ''; ?>>Approved</option>
                 <option value="rejected" <?php echo $statusFilter === 'rejected' ? 'selected' : ''; ?>>Rejected</option>
                 <option value="all" <?php echo $statusFilter === 'all' ? 'selected' : ''; ?>>All</option>
             </select>
-            <button class="btn btn-outline btn-sm" type="submit">Filter</button>
         </form>
         <div class="table-wrapper">
             <table class="data-table">

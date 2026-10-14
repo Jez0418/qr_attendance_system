@@ -59,19 +59,18 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
     </div>
     <div class="card-body">
-        <form method="GET" class="toolbar">
+        <form method="GET" class="toolbar" data-live-filter>
             <div class="search-box">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" class="form-control" name="search" placeholder="Search name, ID, email..." value="<?php echo e($search); ?>">
             </div>
-            <select name="program" class="form-control" style="max-width:200px" onchange="this.form.submit()">
+            <select name="program" class="form-control" style="max-width:200px">
                 <option value="">All Programs</option>
                 <?php foreach ($programs as $pr): ?>
                     <option value="<?php echo $pr['program_id']; ?>" <?php echo $programFilter == $pr['program_id'] ? 'selected' : ''; ?>><?php echo e($pr['program_code']); ?></option>
                 <?php endforeach; ?>
             </select>
-            <button class="btn btn-outline btn-sm" type="submit"><i class="fa-solid fa-filter"></i> Filter</button>
-            <?php if ($search || $programFilter): ?><a href="students.php" class="btn btn-outline btn-sm">Reset</a><?php endif; ?>
+            <a href="students.php" class="btn btn-outline btn-sm" data-live-reset<?php echo ($search || $programFilter) ? '' : ' hidden'; ?>>Reset</a>
         </form>
 
         <div class="table-wrapper">

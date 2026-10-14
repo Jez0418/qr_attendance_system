@@ -61,7 +61,7 @@ require_once __DIR__ . '/../includes/header.php';
         <a class="btn btn-outline btn-sm" href="reports.php"><i class="fa-solid fa-chart-column"></i> Go to Reports</a>
     </div>
     <div class="card-body">
-        <form method="GET" class="toolbar">
+        <form method="GET" class="toolbar" data-live-filter>
             <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" class="form-control" name="search" placeholder="Search student..." value="<?php echo e($search); ?>"></div>
             <select name="lab_id" class="form-control" style="max-width:180px">
@@ -81,8 +81,7 @@ require_once __DIR__ . '/../includes/header.php';
             </select>
             <input type="date" name="date_from" class="form-control" style="max-width:160px" value="<?php echo e($dateFrom); ?>">
             <input type="date" name="date_to" class="form-control" style="max-width:160px" value="<?php echo e($dateTo); ?>">
-            <button class="btn btn-outline btn-sm" type="submit"><i class="fa-solid fa-filter"></i> Filter</button>
-            <a href="attendance_monitoring.php" class="btn btn-outline btn-sm">Reset</a>
+            <a href="attendance_monitoring.php" class="btn btn-outline btn-sm" data-live-reset<?php echo ($search !== '' || $labId !== '' || $subjectId !== '' || $status !== '' || $dateFrom !== '' || $dateTo !== '') ? '' : ' hidden'; ?>>Reset</a>
         </form>
 
         <div class="table-wrapper">
