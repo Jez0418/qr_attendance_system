@@ -1105,3 +1105,18 @@ img.greeting-avatar-photo{object-fit:cover;background:var(--slate-100);flex-shri
 .row-updated td{animation:rowFlash 1.4s ease-out}
 @keyframes rowFlash{from{background:var(--green-100)}to{background:transparent}}
 @media (prefers-reduced-motion:reduce){.row-updated td{animation:none}}
+
+/* ============ Tables, empty states and subject cards: shared polish ============ */
+.data-table thead th{background:var(--slate-50);font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--slate-600);border-bottom:1px solid var(--line)}
+.data-table thead th:first-child{border-top-left-radius:var(--radius-sm)}
+.data-table thead th:last-child{border-top-right-radius:var(--radius-sm)}
+.data-table tbody tr{transition:background-color .15s}
+.data-table tbody td{font-variant-numeric:tabular-nums}
+.empty-state{padding:44px 20px}
+.empty-state i{display:inline-flex;align-items:center;justify-content:center;width:76px;height:76px;margin-bottom:14px;border-radius:50%;
+    font-size:30px;color:var(--indigo-600);background:var(--indigo-50)}
+.empty-state p{margin:0 auto;max-width:440px;font-size:14.5px;line-height:1.55;color:var(--slate-600)}
+.slots-bar{height:6px;border-radius:99px;background:var(--slate-100);margin-top:14px;overflow:hidden}
+.slots-bar span{display:block;height:100%;border-radius:inherit;background:var(--indigo-500);transition:width .6s cubic-bezier(.16,1,.3,1)}
+#browseGrid.is-loading{opacity:.5;transition:opacity .15s}

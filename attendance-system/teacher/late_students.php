@@ -31,10 +31,9 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="card">
     <div class="card-header"><h3>Late Students Summary</h3></div>
     <div class="card-body">
-        <form method="GET" class="toolbar">
+        <form method="GET" class="toolbar" data-live-filter>
             <input type="date" name="date_from" class="form-control" style="max-width:170px" value="<?php echo e($dateFrom); ?>">
             <input type="date" name="date_to" class="form-control" style="max-width:170px" value="<?php echo e($dateTo); ?>">
-            <button class="btn btn-outline btn-sm" type="submit">Filter</button>
         </form>
         <div class="table-wrapper">
             <table class="data-table">

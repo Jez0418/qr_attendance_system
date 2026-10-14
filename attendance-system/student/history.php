@@ -81,18 +81,17 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="card">
     <div class="card-header"><h3>My Attendance History (<?php echo $totalRows; ?>)</h3></div>
     <div class="card-body">
-        <form method="GET" class="toolbar">
+        <form method="GET" class="toolbar" data-live-filter>
             <select name="subject_id" class="form-control" style="max-width:220px">
                 <option value="">All Subjects</option>
                 <?php foreach ($subjects as $s): ?><option value="<?php echo $s['subject_id']; ?>" <?php echo $subjectId == $s['subject_id'] ? 'selected' : ''; ?>><?php echo e($s['subject_name']); ?></option><?php endforeach; ?>
             </select>
             <input type="date" name="date_from" class="form-control" style="max-width:160px" value="<?php echo e($dateFrom); ?>">
             <input type="date" name="date_to" class="form-control" style="max-width:160px" value="<?php echo e($dateTo); ?>">
-            <button class="btn btn-outline btn-sm" type="submit">Filter</button>
-            <a href="history.php" class="btn btn-outline btn-sm">Reset</a>
+            <a href="history.php" class="btn btn-outline btn-sm" data-live-reset<?php echo ($subjectId !== '' || $dateFrom !== '' || $dateTo !== '') ? '' : ' hidden'; ?>>Reset</a>
             <div class="toolbar-spacer"></div>
-            <a class="btn btn-outline btn-sm" target="_blank" href="history.php?<?php echo e(export_query('pdf')); ?>"><i class="fa-solid fa-file-pdf"></i> Export PDF</a>
-            <a class="btn btn-outline btn-sm" href="history.php?<?php echo e(export_query('excel')); ?>"><i class="fa-solid fa-file-excel"></i> Export Excel</a>
+            <a class="btn btn-outline btn-sm" data-live-sync target="_blank" href="history.php?<?php echo e(export_query('pdf')); ?>"><i class="fa-solid fa-file-pdf"></i> Export PDF</a>
+            <a class="btn btn-outline btn-sm" data-live-sync href="history.php?<?php echo e(export_query('excel')); ?>"><i class="fa-solid fa-file-excel"></i> Export Excel</a>
         </form>
         <div class="table-wrapper">
             <table class="data-table">

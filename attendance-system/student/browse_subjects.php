@@ -88,16 +88,14 @@ require_once __DIR__ . '/../includes/header.php';
                 — you can see subjects from other year levels, sections, programs and institutions.
             <?php endif; ?>
         </p>
-        <form method="GET" class="toolbar">
+        <form method="GET" class="toolbar" id="browseForm" style="margin-bottom:0">
             <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" class="form-control" name="search" placeholder="Search subject or teacher..." value="<?php echo e($search); ?>"></div>
-            <button class="btn btn-outline btn-sm" type="submit">Search</button>
-            <?php if ($search): ?><a href="browse_subjects.php" class="btn btn-outline btn-sm">Reset</a><?php endif; ?>
+                <input type="search" class="form-control" name="search" id="browseSearch" placeholder="Search subject or teacher..." value="<?php echo e($search); ?>" autocomplete="off" aria-label="Search subjects"></div>
         </form>
     </div>
 </div>
 
-<div class="grid-3" style="margin-top:18px">
+<div class="grid-3" id="browseGrid" style="margin-top:18px">
 <?php if (empty($classes)): ?>
     <div class="empty-state" style="grid-column:1/-1"><i class="fa-solid fa-book"></i><p>No subjects available right now for your course/year/section.</p></div>
 <?php else: foreach ($classes as $c):
@@ -108,21 +106,24 @@ require_once __DIR__ . '/../includes/header.php';
     // Same rule the server uses (a regular student would be refused this class), so the badge never disagrees with it.
     $offCohort = $isIrregular && class_cohort_mismatch(array_merge($me, ['student_type' => 'regular']), $c) !== '';
 ?>
-    <div class="card">
+    <div class="card class-card">
         <div class="card-body">
-            <div class="flex-between" style="align-items:flex-start">
-                <h3 style="margin:0 0 4px"><?php echo e($c['subject_code']); ?></h3>
-                <?php if ($offCohort): ?><span class="badge badge-late" style="font-size:11.5px">Different Cohort</span><?php endif; ?>
+            <div class="class-card-head">
+                <div>
+                    <h3><?php echo e($c['subject_code']); ?></h3>
+                    <p><?php echo e($c['subject_name']); ?></p>
+                </div>
+                <?php if ($offCohort): ?><span class="badge badge-late">Different Cohort</span><?php endif; ?>
             </div>
-            <p style="margin:0 0 12px;color:var(--slate-600)"><?php echo e($c['subject_name']); ?></p>
-            <div style="font-size:13.5px;color:var(--slate-700);line-height:1.9">
-                <div><i class="fa-solid fa-chalkboard-user" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['teacher_name']); ?></div>
-                <div><i class="fa-solid fa-building-columns" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['institution_code'] ?? 'Any'); ?></div>
-                <div><i class="fa-solid fa-flask" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['lab_name']); ?></div>
-                <div><i class="fa-solid fa-calendar-week" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['schedule_label']); ?></div>
-                <div><i class="fa-solid fa-graduation-cap" style="width:18px;color:var(--indigo-600)"></i> <?php echo e($c['program_code'] ?? 'Any Course'); ?><?php echo $c['year_level'] ? ' · Year ' . e($c['year_level']) : ''; ?> · <?php echo e($c['section']); ?></div>
-                <div><i class="fa-solid fa-users" style="width:18px;color:var(--indigo-600)"></i> <?php echo (int) $c['enrolled_count']; ?>/<?php echo (int) $c['max_students']; ?> slots filled</div>
-            </div>
+            <ul class="class-meta">
+                <li><i class="fa-solid fa-chalkboard-user"></i><span><?php echo e($c['teacher_name']); ?></span></li>
+                <li><i class="fa-solid fa-building-columns"></i><span><?php echo e($c['institution_code'] ?? 'Any'); ?></span></li>
+                <li><i class="fa-solid fa-flask"></i><span><?php echo e($c['lab_name']); ?></span></li>
+                <li><i class="fa-solid fa-calendar-week"></i><span><?php echo e($c['schedule_label']); ?></span></li>
+                <li><i class="fa-solid fa-graduation-cap"></i><span><?php echo e($c['program_code'] ?? 'Any Course'); ?><?php echo $c['year_level'] ? ' · Year ' . e($c['year_level']) : ''; ?> · <?php echo e($c['section']); ?></span></li>
+                <li><i class="fa-solid fa-users"></i><span><?php echo (int) $c['enrolled_count']; ?>/<?php echo (int) $c['max_students']; ?> slots filled</span></li>
+            </ul>
+            <div class="slots-bar" aria-hidden="true"><span style="width:<?php echo (int) $c['max_students'] > 0 ? min(100, round($c['enrolled_count'] / $c['max_students'] * 100)) : 0; ?>%"></span></div>
             <div style="margin-top:14px">
                 <?php if ($isEnrolled): ?>
                     <span class="badge badge-active" style="width:100%;justify-content:center;padding:9px"><i class="fa-solid fa-check"></i> Already Enrolled</span>
@@ -138,6 +139,40 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 <?php endforeach; endif; ?>
 </div>
+
+<script>
+// Live search: the matching subjects load as soon as a letter or number is typed (app.js loads after this
+// script, so wait for DOMContentLoaded before using debounce).
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('browseSearch');
+    const grid = document.getElementById('browseGrid');
+    if (!input || !grid) return;
+    let ctrl = null, seq = 0;
+    async function load() {
+        const q = input.value.trim();
+        const url = location.pathname + (q ? '?search=' + encodeURIComponent(q) : '');
+        if (ctrl) ctrl.abort();
+        ctrl = new AbortController();
+        const mine = ++seq;
+        grid.classList.add('is-loading');
+        try {
+            const res = await fetch(url, { signal: ctrl.signal, credentials: 'same-origin' });
+            const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+            const next = doc.getElementById('browseGrid');
+            if (!res.ok || !next) { location.href = url; return; }
+            if (mine !== seq) return;
+            grid.innerHTML = next.innerHTML;
+            history.replaceState(null, '', url);
+        } catch (err) {
+            if (err.name !== 'AbortError') showToast('error', 'Could not load subjects. Please try again.');
+        } finally {
+            if (mine === seq) grid.classList.remove('is-loading');
+        }
+    }
+    input.addEventListener('input', debounce(load, 250));
+    document.getElementById('browseForm').addEventListener('submit', (e) => { e.preventDefault(); load(); });
+});
+</script>
 
 <!-- ===================== REQUEST MODAL ===================== -->
 <div class="modal-backdrop" id="requestModal">

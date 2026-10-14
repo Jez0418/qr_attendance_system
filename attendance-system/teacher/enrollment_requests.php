@@ -41,8 +41,8 @@ require_once __DIR__ . '/../includes/header.php';
         <h3>Enrollment Requests</h3>
     </div>
     <div class="card-body">
-        <form method="GET" class="toolbar">
-            <select name="status" class="form-control" style="max-width:200px" onchange="this.form.submit()">
+        <form method="GET" class="toolbar" data-live-filter>
+            <select name="status" class="form-control" style="max-width:200px">
                 <option value="pending" <?php echo $statusFilter === 'pending' ? 'selected' : ''; ?>>Pending</option>
                 <option value="approved" <?php echo $statusFilter === 'approved' ? 'selected' : ''; ?>>Approved</option>
                 <option value="rejected" <?php echo $statusFilter === 'rejected' ? 'selected' : ''; ?>>Rejected</option>
