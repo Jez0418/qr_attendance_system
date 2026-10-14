@@ -51,7 +51,7 @@ $trend = $trendStmt->fetchAll();
 $trendLabels = []; $trendPresent = []; $trendLate = []; $trendAbsent = []; $trendExcused = [];
 for ($i = 6; $i >= 0; $i--) {
     $d = date('Y-m-d', strtotime("-$i day"));
-    $trendLabels[] = date('M d', strtotime($d));
+    $trendLabels[] = date('D j', strtotime($d));   // "Mon 12": the weekday matters more than the month here
     $found = null;
     foreach ($trend as $row) if ($row['d'] === $d) $found = $row;
     $trendPresent[] = $found ? (int) $found['present'] : 0;
@@ -59,6 +59,18 @@ for ($i = 6; $i >= 0; $i--) {
     $trendAbsent[] = $found ? (int) $found['absent'] : 0;
     $trendExcused[] = $found ? (int) $found['excused'] : 0;
 }
+// Attendance rate per day = (Present + Late) / (Present + Late + Absent); Excused counts as neither (as everywhere else).
+$trendRate = [];
+foreach ($trendLabels as $i => $_) {
+    $den = $trendPresent[$i] + $trendLate[$i] + $trendAbsent[$i];
+    $trendRate[] = $den > 0 ? round(($trendPresent[$i] + $trendLate[$i]) / $den * 100, 1) : null;
+}
+$trendAttended = array_sum($trendPresent) + array_sum($trendLate);
+$trendDen = $trendAttended + array_sum($trendAbsent);
+$trendWeekRate = $trendDen > 0 ? round($trendAttended / $trendDen * 100, 1) : null;
+$trendTotal = $trendDen + array_sum($trendExcused);
+$bestIdx = null;
+foreach ($trendRate as $i => $r) if ($r !== null && ($bestIdx === null || $r > $trendRate[$bestIdx])) $bestIdx = $i;
 
 // ---- Status distribution (all-time) ----
 $statusStmt = $pdo->query('SELECT status, COUNT(*) c FROM attendance_records GROUP BY status');
@@ -159,8 +171,16 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="grid-2">
     <div class="card">
-        <div class="card-header"><h3>Attendance Graph</h3></div>
-        <div class="card-body"><div class="chart-box"><canvas id="trendChart"></canvas></div></div>
+        <div class="card-header"><h3>Attendance Graph</h3><span class="text-muted card-header-note">Last 7 days</span></div>
+        <div class="card-body">
+            <div class="trend-kpis">
+                <div class="trend-kpi"><span>Records</span><strong><?php echo number_format($trendTotal); ?></strong></div>
+                <div class="trend-kpi tone-green"><span>Attendance rate</span><strong><?php echo $trendWeekRate === null ? '&mdash;' : $trendWeekRate + 0 . '%'; ?></strong></div>
+                <div class="trend-kpi tone-red"><span>Absences</span><strong><?php echo number_format(array_sum($trendAbsent)); ?></strong></div>
+                <div class="trend-kpi"><span>Best day</span><strong><?php echo $bestIdx === null ? '&mdash;' : e($trendLabels[$bestIdx]); ?></strong></div>
+            </div>
+            <div class="chart-box chart-box-tall"><canvas id="trendChart" role="img" aria-label="Attendance over the last 7 days: stacked daily counts of present, late, excused and absent students with the daily attendance rate as a line."></canvas></div>
+        </div>
     </div>
     <div class="card">
         <div class="card-header"><h3>Recent Attendance Activity</h3></div>
@@ -334,7 +354,8 @@ const trendData = {
     present: <?php echo json_encode($trendPresent); ?>,
     late: <?php echo json_encode($trendLate); ?>,
     absent: <?php echo json_encode($trendAbsent); ?>,
-    excused: <?php echo json_encode($trendExcused); ?>
+    excused: <?php echo json_encode($trendExcused); ?>,
+    rate: <?php echo json_encode($trendRate); ?>
 };
 const statusData = [<?php echo $statusCounts['Present']; ?>, <?php echo $statusCounts['Late']; ?>, <?php echo $statusCounts['Absent']; ?>, <?php echo $statusCounts['Excused']; ?>];
 const labData = {
@@ -348,17 +369,48 @@ function buildCharts() {
     charts.forEach(ch => ch.destroy());
     charts = [
         new Chart(document.getElementById('trendChart'), {
-            type: 'line',
             data: {
                 labels: trendData.labels,
                 datasets: [
-                    { label: 'Present', data: trendData.present, borderColor: c.green, backgroundColor: c.greenFill, tension:.35, fill:true },
-                    { label: 'Late', data: trendData.late, borderColor: c.amber, backgroundColor: c.amberFill, tension:.35, fill:true },
-                    { label: 'Absent', data: trendData.absent, borderColor: c.red, backgroundColor: c.redFill, tension:.35, fill:true },
-                    { label: 'Excused', data: trendData.excused, borderColor: c.excused, backgroundColor: c.excusedFill, tension:.35, fill:true }
+                    { type: 'line', label: 'Attendance rate', data: trendData.rate, yAxisID: 'rate', order: 0,
+                      borderColor: c.accent, backgroundColor: c.accent, borderWidth: 2.5, tension: .35, spanGaps: true,
+                      pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: c.surface, pointBorderColor: c.accent, pointBorderWidth: 2 },
+                    { type: 'bar', label: 'Present', data: trendData.present, backgroundColor: c.green, stack: 'day', order: 1 },
+                    { type: 'bar', label: 'Late', data: trendData.late, backgroundColor: c.amber, stack: 'day', order: 1 },
+                    { type: 'bar', label: 'Excused', data: trendData.excused, backgroundColor: c.excused, stack: 'day', order: 1 },
+                    { type: 'bar', label: 'Absent', data: trendData.absent, backgroundColor: c.red, stack: 'day', order: 1, borderRadius: { topLeft: 8, topRight: 8 } }
                 ]
             },
-            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16}}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} }
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                datasets: { bar: { maxBarThickness: 40, borderSkipped: false, borderRadius: 0 } },
+                animation: { duration: 700, easing: 'easeOutQuart' },
+                plugins: {
+                    legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 14, font: { size: 12.5, weight: '600' } } },
+                    tooltip: {
+                        backgroundColor: c.surface, titleColor: c.text, bodyColor: c.text, borderColor: c.grid, borderWidth: 1,
+                        padding: 12, cornerRadius: 12, boxPadding: 5, usePointStyle: true,
+                        callbacks: {
+                            label(ctx) {
+                                if (ctx.dataset.yAxisID === 'rate') return ' Attendance rate: ' + (ctx.parsed.y === null ? 'no records' : ctx.parsed.y + '%');
+                                return ' ' + ctx.dataset.label + ': ' + ctx.parsed.y;
+                            },
+                            footer(items) {
+                                const t = items.filter(i => i.dataset.type === 'bar').reduce((n, i) => n + i.parsed.y, 0);
+                                return t + (t === 1 ? ' record' : ' records');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { stacked: true, grid: { display: false }, border: { display: false }, ticks: { font: { weight: '600' } } },
+                    y: { stacked: true, beginAtZero: true, border: { display: false }, grid: { color: c.grid, borderDash: [4, 4] },
+                         ticks: { precision: 0, maxTicksLimit: 6 }, title: { display: true, text: 'Students', color: c.text, font: { size: 12, weight: '600' } } },
+                    rate: { position: 'right', min: 0, max: 100, border: { display: false }, grid: { display: false },
+                            ticks: { stepSize: 25, callback: v => v + '%' } }
+                }
+            }
         }),
         new Chart(document.getElementById('statusChart'), {
             type: 'doughnut',

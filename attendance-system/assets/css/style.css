@@ -1137,3 +1137,12 @@ td:has(> .row-actions),td:has(> .btn-icon){white-space:nowrap}
 .card-header h3 > i.fa-solid,.form-section-title > i.fa-solid{width:1.2em;text-align:center}
 /* Class Assignments: the Actions column no longer hugs the status badge or the scroll edge. */
 .assignments-table th:last-child,.assignments-table td:last-child{width:1%;white-space:nowrap}
+
+/* Dashboard attendance graph: KPI strip above a taller chart (admin/dashboard.php) */
+.trend-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px}
+.trend-kpi{padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--slate-50)}
+.trend-kpi span{display:block;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate-500)}
+.trend-kpi strong{display:block;margin-top:2px;font-size:20px;font-weight:800;letter-spacing:-.01em;color:var(--slate-900);font-variant-numeric:tabular-nums}
+.trend-kpi.tone-green strong{color:var(--green-fg)}
+.trend-kpi.tone-red strong{color:var(--red-fg)}
+.chart-box.chart-box-tall{height:320px}
