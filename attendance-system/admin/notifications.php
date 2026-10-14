@@ -63,16 +63,20 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card-body">
             <?php if (empty($notifications)): ?>
                 <div class="empty-state"><i class="fa-solid fa-bell"></i><p>No notifications yet.</p></div>
-            <?php else: foreach ($notifications as $n): ?>
-                <div class="alert <?php echo $n['is_read'] ? 'alert-info' : 'alert-success'; ?>" style="align-items:flex-start">
-                    <i class="fa-solid <?php echo $n['is_read'] ? 'fa-envelope-open' : 'fa-envelope'; ?>"></i>
-                    <div>
-                        <strong><?php echo e($n['title']); ?></strong>
-                        <div><?php echo e($n['message']); ?></div>
-                        <small class="text-muted"><?php echo format_datetime($n['created_at']); ?></small>
-                    </div>
-                </div>
-            <?php endforeach; endif; ?>
+            <?php else: ?>
+                <ul class="notif-list">
+                <?php foreach ($notifications as $k => $n): ?>
+                    <li class="notif<?php echo $n['is_read'] ? '' : ' is-unread'; ?>" style="--i:<?php echo min($k, 8); ?>">
+                        <span class="notif-icon"><i class="fa-solid <?php echo $n['is_read'] ? 'fa-envelope-open' : 'fa-envelope'; ?>"></i></span>
+                        <div class="notif-main">
+                            <div class="notif-top"><strong><?php echo e($n['title']); ?></strong><?php if (!$n['is_read']): ?><span class="notif-new">New</span><?php endif; ?></div>
+                            <div class="notif-msg"><?php echo e($n['message']); ?></div>
+                            <time class="notif-time"><?php echo format_datetime($n['created_at']); ?></time>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
             <?php render_pagination($p['page'], $p['totalPages']); ?>
         </div>
     </div>

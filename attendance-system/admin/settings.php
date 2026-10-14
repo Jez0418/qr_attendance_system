@@ -51,7 +51,7 @@ require_once __DIR__ . '/../includes/header.php';
 ?>
 <div class="grid-2">
     <div class="card">
-        <div class="card-header"><h3>Attendance Settings</h3></div>
+        <div class="card-header"><h3><i class="fa-solid fa-sliders"></i> Attendance Settings</h3></div>
         <div class="card-body">
             <form method="POST">
                 <?php echo csrf_field(); ?>
@@ -70,7 +70,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <input type="number" name="late_grace_minutes" class="form-control" value="<?php echo e($lateGrace); ?>" min="0" max="180" required>
                     <small class="text-muted">Students who scan more than this many minutes after a class starts are marked <strong>Late</strong>; earlier scans are <strong>Present</strong>. A class can set its own value in <a href="assignments.php">Class Assignments</a><?php echo $overriddenClasses ? ' (' . $overriddenClasses . ' ' . ($overriddenClasses === 1 ? 'class does' : 'classes do') . ' now)' : ''; ?>. Attendance opens automatically at the start time and closes at the end time.</small>
                 </div>
-                <h4 class="form-section-title">Attendance Warnings</h4>
+                <h4 class="form-section-title"><i class="fa-solid fa-bell"></i> Attendance Warnings</h4>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="absence_limit">Absence Limit (per class)</label>
@@ -88,7 +88,7 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 
     <div class="card">
-        <div class="card-header"><h3>Geofencing Status</h3></div>
+        <div class="card-header"><h3><i class="fa-solid fa-location-crosshairs"></i> Geofencing Status</h3></div>
         <div class="card-body">
             <?php if ($missingGeoCount > 0): ?>
                 <div class="alert alert-error">

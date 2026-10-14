@@ -972,3 +972,30 @@ img.greeting-avatar-photo{object-fit:cover;background:var(--slate-100);flex-shri
 .form-row>*,.form-group,.dd{min-width:0}
 .dd-btn{overflow:hidden}
 .modal{overflow-x:hidden}
+
+/* Notifications list (admin/notifications.php) */
+.notif-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.notif{display:flex;gap:14px;padding:14px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface);
+    animation:statusIn .4s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 45ms);transition:border-color .2s,box-shadow .2s,transform .2s}
+.notif:hover{border-color:var(--indigo-500);box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+.notif-icon{flex:none;width:40px;height:40px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:15px;
+    background:var(--slate-100);color:var(--slate-500)}
+.notif.is-unread{background:var(--indigo-50);border-color:var(--indigo-100)}
+.notif.is-unread .notif-icon{background:var(--indigo-600);color:#fff}
+.notif-main{min-width:0;flex:1}
+.notif-top{display:flex;align-items:center;gap:8px}
+.notif-top strong{font-size:14px;color:var(--slate-900)}
+.notif-new{padding:2px 8px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:var(--indigo-600);color:#fff}
+.notif-msg{margin-top:2px;font-size:13.5px;line-height:1.5;color:var(--slate-700);overflow-wrap:anywhere}
+.notif-time{display:block;margin-top:6px;font-size:12px;color:var(--slate-500)}
+
+/* Settings: icon-led headers */
+.card-header h3 > i{margin-right:8px;color:var(--indigo-600);font-size:.9em}
+.form-section-title > i{margin-right:6px;color:var(--indigo-600)}
+.form-group small.text-muted{display:block;margin-top:6px;line-height:1.5}
+
+/* Laboratory QR cards (admin/qr_management.php) */
+.lab-qr-card{transition:transform .2s,box-shadow .2s,border-color .2s}
+.lab-qr-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:var(--indigo-500)}
+.lab-qr-box{border-radius:var(--radius-md)!important;box-shadow:var(--shadow-sm)}
+@media (prefers-reduced-motion:reduce){.notif,.lab-qr-card{animation:none;transition:none}}

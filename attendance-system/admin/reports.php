@@ -98,7 +98,32 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
     <div class="card">
         <div class="card-header"><h3>Status Share</h3></div>
-        <div class="card-body"><div class="chart-box"><canvas id="shareChart"></canvas></div><p class="text-muted text-center chart-empty" hidden>No attendance records yet.</p></div>
+        <div class="card-body">
+            <?php
+            $shareTotal = (int) array_sum($counts);
+            $shareMeta = ['Present' => ['green', 'fa-check'], 'Late' => ['amber', 'fa-clock'], 'Absent' => ['red', 'fa-xmark'], 'Excused' => ['excused', 'fa-file-medical']];
+            ?>
+            <div class="status-dist" id="shareDist">
+                <div class="status-ring">
+                    <div class="chart-box"><canvas id="shareChart" role="img" aria-label="Status share"></canvas></div>
+                    <div class="status-center"><strong><?php echo number_format($shareTotal); ?></strong><span>records</span></div>
+                </div>
+                <ul class="status-list">
+                    <?php $i = 0; foreach ($shareMeta as $name => [$tone, $icon]):
+                        $n = (int) $counts[$name];
+                        $pct = $shareTotal > 0 ? round($n / $shareTotal * 100, 1) : 0; ?>
+                        <li class="status-row tone-<?php echo $tone; ?>" style="--i:<?php echo $i++; ?>">
+                            <span class="status-icon"><i class="fa-solid <?php echo $icon; ?>"></i></span>
+                            <div class="status-info">
+                                <div class="status-top"><span class="status-name"><?php echo $name; ?></span><span class="status-num"><strong><?php echo number_format($n); ?></strong><em><?php echo $pct + 0; ?>%</em></span></div>
+                                <div class="status-bar"><i style="--w:<?php echo $pct; ?>%"></i></div>
+                            </div>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+            <p class="text-muted text-center chart-empty" hidden>No attendance records yet.</p>
+        </div>
     </div>
 </div>
 
@@ -157,14 +182,14 @@ function buildCharts() {
             options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16}}}, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}} }
         }),
         new Chart(document.getElementById('shareChart'), {
-            type: 'pie',
-            data: { labels:['Present','Late','Absent','Excused'], datasets:[{ data: shareData, backgroundColor:[c.green, c.amber, c.red, c.excused], borderColor: c.surface }] },
-            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16}}} }
+            type: 'doughnut',
+            data: { labels:['Present','Late','Absent','Excused'], datasets:[{ data: shareData, backgroundColor:[c.green, c.amber, c.red, c.excused], borderColor: c.surface, borderWidth: 2, hoverOffset: 6 }] },
+            options: { responsive:true, maintainAspectRatio:false, cutout:'74%', spacing:3, borderRadius:6, plugins:{legend:{display:false}} }
         })
     ];
 }
 if (shareData.every(n => n === 0)) {
-    const box = document.getElementById('shareChart').closest('.chart-box');
+    const box = document.getElementById('shareDist');
     box.hidden = true; box.nextElementSibling.hidden = false;
 }
 buildCharts();
