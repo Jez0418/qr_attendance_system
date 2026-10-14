@@ -183,7 +183,8 @@ const CLASS_ID = <?php echo (int) $selectedClass; ?>;
 
 // Live search: as soon as a letter or number is typed, the matching students are loaded from the server
 // (name or student number) and swapped into the Available list. The URL follows, so a refresh keeps the search.
-(function () {
+// app.js is loaded at the end of the page, after this script: wait for it (debounce, showToast) before wiring up.
+document.addEventListener('DOMContentLoaded', function () {
     const input = document.getElementById('availableSearch');
     if (!input) return;
     const body = document.getElementById('availableBody');
@@ -221,7 +222,7 @@ const CLASS_ID = <?php echo (int) $selectedClass; ?>;
     }
     input.addEventListener('input', debounce(load, 250));
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
-})();
+});
 
 async function enroll(studentId) {
     const res = await ajaxPost('ajax_enrollment.php', { action: 'enroll', student_id: studentId, teacher_subject_id: CLASS_ID });
