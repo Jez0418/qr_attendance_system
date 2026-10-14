@@ -54,7 +54,7 @@ auth_page_start('Forgot password');
                 <div class="lg-field">
                     <label for="identifier">Username or email</label>
                     <div class="lg-input">
-                        <i class="fa-regular fa-envelope" aria-hidden="true"></i>
+                        <i class="fa-solid fa-envelope" aria-hidden="true"></i>
                         <input type="text" id="identifier" name="identifier" maxlength="100" value="<?php echo e($identifier); ?>" autocomplete="username" required autofocus>
                     </div>
                 </div>

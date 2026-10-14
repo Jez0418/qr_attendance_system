@@ -108,7 +108,7 @@ $headerPhotoSrc = is_logged_in() ? current_photo_url($pdo) : '';
                 <?php if ($pageSubtitleText !== ''): ?><span class="page-subtitle"><?php echo e($pageSubtitleText); ?></span><?php endif; ?>
             </div>
             <div class="topbar-right">
-                <span class="date-chip"><i class="fa-regular fa-calendar" aria-hidden="true"></i> <?php echo date('D, M j, Y'); ?></span>
+                <span class="date-chip"><i class="fa-solid fa-calendar" aria-hidden="true"></i> <?php echo date('D, M j, Y'); ?></span>
                 <?php echo theme_switcher(); ?>
                 <div class="notif-wrapper">
                     <a href="<?php echo BASE_URL . $notifPage; ?>" class="icon-btn notif-link" id="notifBellBtn">

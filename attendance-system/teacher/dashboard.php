@@ -117,7 +117,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <td><?php echo e($r['subject_code']); ?> <span class="text-muted">· <?php echo e($r['section']); ?></span></td>
                     <td class="rate-cell"><?php echo $st['absent']; ?><?php echo $limits['absence_limit'] ? ' / ' . $limits['absence_limit'] : ''; ?></td>
                     <td class="rate-cell"><?php echo $st['rate']; ?>%<span class="badge <?php echo $st['badge']; ?>"><?php echo e($st['label']); ?></span></td>
-                    <td><a href="history.php?class=<?php echo (int) $r['teacher_subject_id']; ?>&amp;search=<?php echo urlencode($r['student_number']); ?>" class="btn btn-outline btn-sm" title="View attendance records" aria-label="View attendance records for <?php echo e($r['full_name']); ?>"><i class="fa-solid fa-clock-rotate-left"></i></a></td>
+                    <td><a href="history.php?class=<?php echo (int) $r['teacher_subject_id']; ?>&amp;search=<?php echo urlencode($r['student_number']); ?>" class="btn btn-icon btn-outline btn-sm" title="View attendance records" aria-label="View attendance records for <?php echo e($r['full_name']); ?>"><i class="fa-solid fa-clock-rotate-left"></i></a></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

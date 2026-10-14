@@ -113,7 +113,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><?php echo e($s['student_number']); ?></td>
                         <td><?php echo e($s['full_name']); ?></td>
                         <td><?php echo e($s['program_name'] ?? '—'); ?></td>
-                        <td><button class="btn btn-danger btn-sm" onclick="unenroll(<?php echo $s['student_id']; ?>)"><i class="fa-solid fa-user-minus"></i></button></td>
+                        <td><button class="btn btn-icon btn-danger btn-sm" onclick="unenroll(<?php echo $s['student_id']; ?>)"><i class="fa-solid fa-user-minus"></i></button></td>
                     </tr>
                 <?php endforeach; endif; ?>
                 </tbody>
@@ -168,7 +168,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><?php echo e($s['student_number']); ?></td>
                         <td><?php echo e($s['full_name']); ?></td>
                         <td><?php echo e($s['program_name'] ?? '—'); ?><?php if ($s['student_type'] === 'irregular'): ?> <span class="badge badge-late" style="font-size:11.5px">Irregular</span><?php endif; ?></td>
-                        <td><button class="btn btn-success btn-sm" onclick="enroll(<?php echo $s['student_id']; ?>)"><i class="fa-solid fa-user-plus"></i></button></td>
+                        <td><button class="btn btn-icon btn-success btn-sm" onclick="enroll(<?php echo $s['student_id']; ?>)"><i class="fa-solid fa-user-plus"></i></button></td>
                     </tr>
                 <?php endforeach; endif; ?>
                 </tbody>

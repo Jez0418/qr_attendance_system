@@ -54,9 +54,9 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><?php echo e($s['units']); ?></td>
                         <td><span class="badge badge-<?php echo $s['status'] === 'active' ? 'active' : 'inactive'; ?>"><?php echo ucfirst($s['status']); ?></span></td>
                         <td>
-                            <div style="display:flex;gap:8px">
-                                <button class="btn btn-outline btn-sm" style="width:40px;height:40px;padding:0" title="Edit subject" aria-label="Edit subject" onclick='openEditModal(<?php echo js_attr_json($s); ?>)'><i class="fa-solid fa-pen"></i></button>
-                                <button class="btn btn-danger btn-sm<?php echo $s['status'] === 'active' ? ' is-dimmed' : ''; ?>" style="width:40px;height:40px;padding:0" title="<?php echo $s['status'] === 'active' ? 'Set this subject to Inactive first to delete it' : 'Delete subject'; ?>" aria-label="Delete subject" onclick="deleteSubject(<?php echo $s['subject_id']; ?>)"><i class="fa-solid fa-trash"></i></button>
+                            <div class="row-actions">
+                                <button class="btn btn-icon btn-outline btn-sm" title="Edit subject" aria-label="Edit subject" onclick='openEditModal(<?php echo js_attr_json($s); ?>)'><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn btn-icon btn-danger btn-sm<?php echo $s['status'] === 'active' ? ' is-dimmed' : ''; ?>" title="<?php echo $s['status'] === 'active' ? 'Set this subject to Inactive first to delete it' : 'Delete subject'; ?>" aria-label="Delete subject" onclick="deleteSubject(<?php echo $s['subject_id']; ?>)"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </td>
                     </tr>

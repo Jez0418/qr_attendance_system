@@ -150,8 +150,8 @@ require_once __DIR__ . '/../includes/header.php';
                     <td><?php echo format_datetime($r['requested_at']); ?></td>
                     <td class="text-muted" style="max-width:200px"><?php echo e($r['remarks'] ?: '—'); ?></td>
                     <td>
-                        <button class="btn btn-success btn-sm" onclick="approveRequest(<?php echo $r['request_id']; ?>)"><i class="fa-solid fa-check"></i></button>
-                        <button class="btn btn-danger btn-sm" onclick="openRejectModal(<?php echo $r['request_id']; ?>)"><i class="fa-solid fa-xmark"></i></button>
+                        <button class="btn btn-icon btn-success btn-sm" onclick="approveRequest(<?php echo $r['request_id']; ?>)"><i class="fa-solid fa-check"></i></button>
+                        <button class="btn btn-icon btn-danger btn-sm" onclick="openRejectModal(<?php echo $r['request_id']; ?>)"><i class="fa-solid fa-xmark"></i></button>
                     </td>
                 </tr>
             <?php endforeach; ?>
@@ -181,8 +181,8 @@ require_once __DIR__ . '/../includes/header.php';
                     <td class="rate-cell"><?php echo $st['absent']; ?><?php echo $limits['absence_limit'] ? ' / ' . $limits['absence_limit'] : ''; ?><?php $exc = (int) ($st['excused'] ?? 0); if ($exc > 0): ?><small class="text-muted"> · <?php echo $exc; ?> excused</small><?php endif; ?></td>
                     <td class="rate-cell"><?php if ($st['rate'] === null): ?><span class="text-muted">—</span><?php else: ?><?php echo $st['rate']; ?>%<?php if ($st['level'] !== STANDING_OK): ?><span class="badge <?php echo $st['badge']; ?>"><?php echo e($st['label']); ?></span><?php endif; ?><?php endif; ?></td>
                     <td>
-                        <a href="history.php?class=<?php echo $classId; ?>&search=<?php echo urlencode($s['student_number']); ?>" class="btn btn-outline btn-sm" title="View Attendance"><i class="fa-solid fa-clock-rotate-left"></i></a>
-                        <button class="btn btn-danger btn-sm" title="Unenroll" onclick="unenroll(<?php echo $s['student_id']; ?>, '<?php echo e(addslashes($s['full_name'])); ?>')"><i class="fa-solid fa-user-minus"></i></button>
+                        <a href="history.php?class=<?php echo $classId; ?>&search=<?php echo urlencode($s['student_number']); ?>" class="btn btn-icon btn-outline btn-sm" title="View Attendance"><i class="fa-solid fa-clock-rotate-left"></i></a>
+                        <button class="btn btn-icon btn-danger btn-sm" title="Unenroll" onclick="unenroll(<?php echo $s['student_id']; ?>, '<?php echo e(addslashes($s['full_name'])); ?>')"><i class="fa-solid fa-user-minus"></i></button>
                     </td>
                 </tr>
             <?php endforeach; endif; ?>

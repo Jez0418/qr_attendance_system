@@ -114,9 +114,9 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="card">
     <div class="card-header cal-header">
         <div class="cal-nav">
-            <a class="btn btn-outline btn-sm" href="<?php echo e(schedule_url(['date' => $prev->format('Y-m-d')])); ?>" title="Previous" aria-label="Previous"><i class="fa-solid fa-chevron-left"></i></a>
+            <a class="btn btn-icon btn-outline btn-sm" href="<?php echo e(schedule_url(['date' => $prev->format('Y-m-d')])); ?>" title="Previous" aria-label="Previous"><i class="fa-solid fa-chevron-left"></i></a>
             <a class="btn btn-outline btn-sm" href="<?php echo e(schedule_url(['date' => $today])); ?>">Today</a>
-            <a class="btn btn-outline btn-sm" href="<?php echo e(schedule_url(['date' => $next->format('Y-m-d')])); ?>" title="Next" aria-label="Next"><i class="fa-solid fa-chevron-right"></i></a>
+            <a class="btn btn-icon btn-outline btn-sm" href="<?php echo e(schedule_url(['date' => $next->format('Y-m-d')])); ?>" title="Next" aria-label="Next"><i class="fa-solid fa-chevron-right"></i></a>
             <h3><?php echo e($title); ?></h3>
         </div>
         <div class="seg" role="group" aria-label="Calendar view">

@@ -176,9 +176,9 @@ require_once __DIR__ . '/../includes/header.php';
                         <td class="nowrap"><?php echo (int) $a['enrolled_count']; ?>/<?php echo (int) $a['max_students']; ?></td>
                         <td><span class="badge <?php echo $statusClass; ?>"><?php echo $statusLabel; ?></span></td>
                         <td>
-                            <div style="display:flex;gap:8px">
-                                <button class="btn btn-outline btn-sm" style="width:40px;height:40px;padding:0" title="Edit assignment" aria-label="Edit assignment" onclick="openEditModal(<?php echo e(json_encode($a)); ?>)"><i class="fa-solid fa-pen"></i></button>
-                                <button class="btn btn-danger btn-sm<?php echo $a['status'] === 'active' ? ' is-dimmed' : ''; ?>" style="width:40px;height:40px;padding:0" title="<?php echo $a['status'] === 'active' ? 'Disable this class first to delete it' : 'Delete assignment'; ?>" aria-label="Delete assignment" onclick="deleteAssignment(<?php echo $id; ?>)"><i class="fa-solid fa-trash"></i></button>
+                            <div class="row-actions">
+                                <button class="btn btn-icon btn-outline btn-sm" title="Edit assignment" aria-label="Edit assignment" onclick="openEditModal(<?php echo e(json_encode($a)); ?>)"><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn btn-icon btn-danger btn-sm<?php echo $a['status'] === 'active' ? ' is-dimmed' : ''; ?>" title="<?php echo $a['status'] === 'active' ? 'Disable this class first to delete it' : 'Delete assignment'; ?>" aria-label="Delete assignment" onclick="deleteAssignment(<?php echo $id; ?>)"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </td>
                     </tr>
@@ -426,7 +426,7 @@ function updateClassLength() {
     const parts = [];
     if (h) parts.push(h + (h === 1 ? ' hour' : ' hours'));
     if (m) parts.push(m + (m === 1 ? ' minute' : ' minutes'));
-    out.innerHTML = '<i class="fa-regular fa-clock"></i> Class length: ' + parts.join(' ');
+    out.innerHTML = '<i class="fa-solid fa-clock"></i> Class length: ' + parts.join(' ');
     out.hidden = false;
 }
 ['start_time', 'end_time'].forEach(id => document.getElementById(id).addEventListener('input', updateClassLength));

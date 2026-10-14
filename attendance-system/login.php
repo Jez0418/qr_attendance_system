@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="lg-field">
                 <label for="username">Username</label>
                 <div class="lg-input">
-                    <i class="fa-regular fa-user" aria-hidden="true"></i>
+                    <i class="fa-solid fa-user" aria-hidden="true"></i>
                     <input type="text" id="username" name="username" placeholder="Enter your username" value="<?php echo e($_POST['username'] ?? ''); ?>" autocomplete="username" required autofocus>
                 </div>
             </div>
@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="lg-input">
                     <i class="fa-solid fa-lock" aria-hidden="true"></i>
                     <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
-                    <button type="button" class="lg-eye" id="pwToggle" aria-label="Show password" aria-pressed="false"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
+                    <button type="button" class="lg-eye" id="pwToggle" aria-label="Show password" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
                 </div>
             </div>
 
@@ -149,7 +149,7 @@ pwToggle.addEventListener('click', () => {
     pw.type = show ? 'text' : 'password';
     pwToggle.setAttribute('aria-pressed', show ? 'true' : 'false');
     pwToggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
-    pwToggle.firstElementChild.className = show ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+    pwToggle.firstElementChild.className = show ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
 });
 
 // Demo logins fill the form

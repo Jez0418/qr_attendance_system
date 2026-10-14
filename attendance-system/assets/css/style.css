@@ -1120,3 +1120,18 @@ img.greeting-avatar-photo{object-fit:cover;background:var(--slate-100);flex-shri
 .slots-bar{height:6px;border-radius:99px;background:var(--slate-100);margin-top:14px;overflow:hidden}
 .slots-bar span{display:block;height:100%;border-radius:inherit;background:var(--indigo-500);transition:width .6s cubic-bezier(.16,1,.3,1)}
 #browseGrid.is-loading{opacity:.5;transition:opacity .15s}
+
+/* ============ Uniform icons and icon buttons ============ */
+/* Every icon-only button (edit, delete, approve, unenroll, previous/next ...) is the same 38px circle with a centred
+   14px glyph; groups of them sit in .row-actions with one fixed gap. */
+.btn-icon,.btn-icon.btn-sm{width:38px;height:38px;min-width:38px;padding:0;gap:0;font-size:14px;flex:none}
+.btn-icon i{font-size:14px;line-height:1;width:auto;margin:0}
+.row-actions{display:inline-flex;align-items:center;gap:10px}
+td:has(> .row-actions),td:has(> .btn-icon){white-space:nowrap}
+.btn-icon.is-dimmed:hover{opacity:.65}
+/* Icons that sit before a label share one box width, so labels line up across buttons, menus and badges. */
+.btn:not(.btn-icon) > i.fa-solid{width:1.1em;text-align:center;font-size:.95em}
+.badge > i.fa-solid{font-size:.9em}
+.card-header h3 > i.fa-solid,.form-section-title > i.fa-solid{width:1.2em;text-align:center}
+/* Class Assignments: the Actions column no longer hugs the status badge or the scroll edge. */
+.assignments-table th:last-child,.assignments-table td:last-child{padding-left:18px;padding-right:20px;min-width:118px}

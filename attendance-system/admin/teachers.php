@@ -69,8 +69,10 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><?php echo e($t['email']); ?></td>
                         <td><span class="badge badge-<?php echo $t['status'] === 'active' ? 'active' : 'inactive'; ?>"><?php echo ucfirst($t['status']); ?></span></td>
                         <td>
-                            <button class="btn btn-outline btn-sm" onclick='openEditModal(<?php echo js_attr_json($t); ?>)'><i class="fa-solid fa-pen"></i></button>
-                            <button class="btn btn-danger btn-sm<?php echo $t['status'] === 'active' ? ' is-dimmed' : ''; ?>" title="<?php echo $t['status'] === 'active' ? 'Set the account to Inactive first to delete it' : 'Delete teacher'; ?>" aria-label="Delete teacher" onclick="deleteTeacher(<?php echo $t['teacher_id']; ?>)"><i class="fa-solid fa-trash"></i></button>
+                            <div class="row-actions">
+                                <button class="btn btn-icon btn-outline btn-sm" title="Edit teacher" aria-label="Edit teacher" onclick='openEditModal(<?php echo js_attr_json($t); ?>)'><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn btn-icon btn-danger btn-sm<?php echo $t['status'] === 'active' ? ' is-dimmed' : ''; ?>" title="<?php echo $t['status'] === 'active' ? 'Set the account to Inactive first to delete it' : 'Delete teacher'; ?>" aria-label="Delete teacher" onclick="deleteTeacher(<?php echo $t['teacher_id']; ?>)"><i class="fa-solid fa-trash"></i></button>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; endif; ?>
