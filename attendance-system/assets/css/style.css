@@ -241,7 +241,7 @@ textarea.form-control{resize:vertical}
     background:var(--slate-50);color:var(--slate-600);font-size:14px;font-weight:600;
 }
 .input-prefix .form-control{border-radius:0 var(--radius-sm) var(--radius-sm) 0}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
 @media(max-width:700px){.form-row{grid-template-columns:1fr}}
 .form-section-title{margin:18px 0 10px;font-size:12px;color:var(--slate-500);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
 .day-picker{display:flex;flex-wrap:wrap;gap:8px}
@@ -934,3 +934,41 @@ img.greeting-avatar-photo{object-fit:cover;background:var(--slate-100);flex-shri
 @media (max-width:700px){
     .toolbar .dd,.cal-filters .dd{max-width:none;flex:1 1 100%}
 }
+
+/* Overall status distribution (admin/dashboard.php): ring with the total in the middle + a breakdown list. */
+.status-dist{display:grid;grid-template-columns:minmax(190px,240px) 1fr;gap:28px;align-items:center}
+.status-dist[hidden]{display:none}
+.status-ring{position:relative;height:230px}
+.status-ring .chart-box{height:100%}
+.status-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.status-center strong{font-size:30px;line-height:1.1;font-weight:800;letter-spacing:-.02em;color:var(--slate-900)}
+.status-center span{font-size:12px;font-weight:600;color:var(--slate-500);text-transform:uppercase;letter-spacing:.06em}
+.status-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.status-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-md);
+    background:var(--surface);animation:statusIn .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 70ms);
+    transition:transform .2s,box-shadow .2s,border-color .2s}
+.status-row:hover{transform:translateX(3px);box-shadow:var(--shadow-sm);border-color:var(--tone)}
+.status-icon{flex:none;width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;
+    color:var(--tone);background:color-mix(in srgb,var(--tone) 14%,transparent)}
+.status-info{flex:1;min-width:0}
+.status-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
+.status-name{font-size:13.5px;font-weight:700;color:var(--slate-800,var(--slate-700))}
+.status-num strong{font-size:15px;font-weight:800;color:var(--slate-900)}
+.status-num em{margin-left:6px;font-style:normal;font-size:12px;font-weight:600;color:var(--slate-500)}
+.status-bar{height:6px;border-radius:99px;background:var(--slate-100);overflow:hidden}
+.status-bar i{display:block;height:100%;width:var(--w);border-radius:99px;background:var(--tone);
+    animation:statusBar .8s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 70ms + 150ms)}
+.status-row.tone-green{--tone:var(--chart-green)}
+.status-row.tone-amber{--tone:var(--chart-amber)}
+.status-row.tone-red{--tone:var(--chart-red)}
+.status-row.tone-excused{--tone:var(--chart-excused)}
+@keyframes statusIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes statusBar{from{width:0}to{width:var(--w)}}
+@media (max-width:640px){.status-dist{grid-template-columns:1fr}.status-ring{height:210px}}
+@media (prefers-reduced-motion:reduce){.status-row,.status-bar i{animation:none}.status-row{transition:none}}
+
+/* Long option text (e.g. "ISAP - Institute of ...") must not widen a form column: grid/flex children may shrink,
+   the dropdown label truncates, and a modal scrolls vertically only. */
+.form-row>*,.form-group,.dd{min-width:0}
+.dd-btn{overflow:hidden}
+.modal{overflow-x:hidden}

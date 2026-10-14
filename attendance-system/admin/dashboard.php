@@ -208,7 +208,32 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="grid-2" style="margin-top:20px">
     <div class="card">
         <div class="card-header"><h3>Overall Status Distribution</h3></div>
-        <div class="card-body"><div class="chart-box"><canvas id="statusChart"></canvas></div><p class="text-muted text-center chart-empty" hidden>No attendance records yet.</p></div>
+        <div class="card-body">
+            <?php
+            $statusTotal = array_sum($statusCounts);
+            $statusMeta = ['Present' => ['green', 'fa-check'], 'Late' => ['amber', 'fa-clock'], 'Absent' => ['red', 'fa-xmark'], 'Excused' => ['excused', 'fa-file-medical']];
+            ?>
+            <div class="status-dist" id="statusDist">
+                <div class="status-ring">
+                    <div class="chart-box"><canvas id="statusChart" aria-label="Attendance status distribution" role="img"></canvas></div>
+                    <div class="status-center"><strong><?php echo number_format($statusTotal); ?></strong><span>records</span></div>
+                </div>
+                <ul class="status-list">
+                    <?php $i = 0; foreach ($statusMeta as $name => [$tone, $icon]):
+                        $n = (int) $statusCounts[$name];
+                        $pct = $statusTotal > 0 ? round($n / $statusTotal * 100, 1) : 0; ?>
+                        <li class="status-row tone-<?php echo $tone; ?>" style="--i:<?php echo $i++; ?>">
+                            <span class="status-icon"><i class="fa-solid <?php echo $icon; ?>"></i></span>
+                            <div class="status-info">
+                                <div class="status-top"><span class="status-name"><?php echo $name; ?></span><span class="status-num"><strong><?php echo number_format($n); ?></strong><em><?php echo $pct + 0; ?>%</em></span></div>
+                                <div class="status-bar"><i style="--w:<?php echo $pct; ?>%"></i></div>
+                            </div>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+            <p class="text-muted text-center chart-empty" hidden>No attendance records yet.</p>
+        </div>
     </div>
     <div class="card">
         <div class="card-header"><h3>Laboratory Usage Today</h3></div>
@@ -339,9 +364,9 @@ function buildCharts() {
             type: 'doughnut',
             data: {
                 labels: ['Present','Late','Absent','Excused'],
-                datasets: [{ data: statusData, backgroundColor: [c.green, c.amber, c.red, c.excused], borderColor: c.surface }]
+                datasets: [{ data: statusData, backgroundColor: [c.green, c.amber, c.red, c.excused], borderColor: c.surface, borderWidth: 2, hoverOffset: 6 }]
             },
-            options: { responsive:true, maintainAspectRatio:false, cutout:'68%', plugins:{legend:{position:'bottom', labels:{usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16}}} }
+            options: { responsive:true, maintainAspectRatio:false, cutout:'74%', spacing:3, borderRadius:6, plugins:{legend:{display:false}} }
         }),
         new Chart(document.getElementById('labChart'), {
             type: 'bar',
@@ -353,7 +378,7 @@ function buildCharts() {
 }
 // Nothing recorded yet: say so instead of drawing an empty ring.
 if (statusData.every(n => n === 0)) {
-    const box = document.getElementById('statusChart').closest('.chart-box');
+    const box = document.getElementById('statusDist');
     box.hidden = true; box.nextElementSibling.hidden = false;
 }
 buildCharts();
