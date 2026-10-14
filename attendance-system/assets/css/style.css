@@ -1097,3 +1097,11 @@ img.greeting-avatar-photo{object-fit:cover;background:var(--slate-100);flex-shri
 .standing-row:hover{background:var(--slate-50)}
 .standing-bar{height:8px}
 @media (prefers-reduced-motion:reduce){.stat-card,.class-card,.class-go i{animation:none;transition:none}}
+
+/* Live search results dim while the next list loads (teacher/enrollment.php) */
+#availableBody.is-loading{opacity:.5;transition:opacity .15s}
+
+/* A row the teacher just changed (teacher/history.php) */
+.row-updated td{animation:rowFlash 1.4s ease-out}
+@keyframes rowFlash{from{background:var(--green-100)}to{background:transparent}}
+@media (prefers-reduced-motion:reduce){.row-updated td{animation:none}}

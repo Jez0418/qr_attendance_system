@@ -31,6 +31,7 @@ $notEnrolled = [];
 $hiddenCount = 0;   // regular students outside this class's program/year/section (can't be enrolled)
 $filterProgram = id_param($_GET['filter_program'] ?? '');   // a non-number would make Postgres fail
 $filterYear = id_param($_GET['filter_year'] ?? '');
+$search = clean($_GET['search'] ?? '');   // typed in the search box; the page reloads the list as the teacher types
 
 if ($selectedClass) {
     $enrolledStmt = $pdo->prepare('
@@ -48,6 +49,11 @@ if ($selectedClass) {
     $naParams = [$selectedClass];
     if ($filterProgram !== '') { $naWhere[] = 's.program_id = ?'; $naParams[] = $filterProgram; }
     if ($filterYear !== '') { $naWhere[] = 's.year_level = ?'; $naParams[] = $filterYear; }
+    if ($search !== '') {
+        $naWhere[] = '(s.full_name LIKE ? OR s.student_number LIKE ?)';
+        $naParams[] = '%' . $search . '%';
+        $naParams[] = '%' . $search . '%';
+    }
 
     $sortMap = ['name' => 's.full_name', 'id' => 's.student_number', 'course' => 'pr.program_name', 'year' => 's.year_level'];
     $sortCol = $sortMap[$_GET['sort'] ?? 'name'] ?? 's.full_name';
@@ -115,10 +121,11 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
     </div>
     <div class="card">
-        <div class="card-header"><h3>Available Students (<?php echo count($notEnrolled); ?>)</h3></div>
+        <div class="card-header"><h3>Available Students (<span id="availableCount"><?php echo count($notEnrolled); ?></span>)</h3></div>
         <div class="card-body">
             <form method="GET" class="toolbar" style="margin-bottom:12px">
                 <input type="hidden" name="class" value="<?php echo (int) $selectedClass; ?>">
+                <input type="hidden" name="search" id="searchCarry" value="<?php echo e($search); ?>">
                 <select name="filter_program" class="form-control" style="max-width:150px" onchange="this.form.submit()">
                     <option value="">All Courses</option>
                     <?php foreach ($programs as $pr): ?><option value="<?php echo $pr['program_id']; ?>" <?php echo $filterProgram == $pr['program_id'] ? 'selected' : ''; ?>><?php echo e($pr['program_code']); ?></option><?php endforeach; ?>
@@ -140,20 +147,22 @@ require_once __DIR__ . '/../includes/header.php';
             </form>
             <div class="search-box" style="max-width:100%;margin-bottom:12px">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="availableSearch" class="form-control" placeholder="Search students by name or ID...">
+                <input type="search" id="availableSearch" name="search" class="form-control" placeholder="Search students by name or ID..." value="<?php echo e($search); ?>" autocomplete="off" aria-label="Search available students">
             </div>
-            <?php if ($hiddenCount > 0): ?>
+            <div id="availableNote">
+            <?php if ($hiddenCount > 0 && $search === ''): ?>
                 <p class="text-muted" style="margin:0;font-size:12.5px"><i class="fa-solid fa-circle-info"></i>
                     <?php echo $hiddenCount; ?> student(s) not shown: they are in a different course, year level or section than this class.
                     Only irregular students can be enrolled in another course's class.</p>
             <?php endif; ?>
+            </div>
         </div>
         <div class="table-wrapper">
             <table class="data-table">
                 <thead><tr><th>Student No.</th><th>Name</th><th>Program</th><th></th></tr></thead>
                 <tbody id="availableBody">
                 <?php if (empty($notEnrolled)): ?>
-                    <tr><td colspan="4" class="text-center text-muted">No students available to enroll in this class.</td></tr>
+                    <tr><td colspan="4" class="text-center text-muted"><?php echo $search !== '' ? 'No available students match &ldquo;' . e($search) . '&rdquo;.' : 'No students available to enroll in this class.'; ?></td></tr>
                 <?php else: foreach ($notEnrolled as $s): ?>
                     <tr data-student="<?php echo $s['student_id']; ?>" data-search="<?php echo e(strtolower($s['full_name'] . ' ' . $s['student_number'])); ?>">
                         <td><?php echo e($s['student_number']); ?></td>
@@ -172,12 +181,47 @@ require_once __DIR__ . '/../includes/header.php';
 <script>
 const CLASS_ID = <?php echo (int) $selectedClass; ?>;
 
-document.getElementById('availableSearch')?.addEventListener('input', debounce((e) => {
-    const q = e.target.value.toLowerCase();
-    document.querySelectorAll('#availableBody tr[data-search]').forEach(row => {
-        row.style.display = row.dataset.search.includes(q) ? '' : 'none';
-    });
-}, 200));
+// Live search: as soon as a letter or number is typed, the matching students are loaded from the server
+// (name or student number) and swapped into the Available list. The URL follows, so a refresh keeps the search.
+(function () {
+    const input = document.getElementById('availableSearch');
+    if (!input) return;
+    const body = document.getElementById('availableBody');
+    const count = document.getElementById('availableCount');
+    const note = document.getElementById('availableNote');
+    const carry = document.getElementById('searchCarry');
+    let ctrl = null;
+    let seq = 0;
+
+    async function load() {
+        const q = input.value.trim();
+        if (carry) carry.value = q;
+        const params = new URLSearchParams(location.search);
+        if (q === '') params.delete('search'); else params.set('search', q);
+        const url = location.pathname + (params.toString() ? '?' + params.toString() : '');
+        if (ctrl) ctrl.abort();
+        ctrl = new AbortController();
+        const mine = ++seq;
+        body.classList.add('is-loading');
+        try {
+            const res = await fetch(url, { signal: ctrl.signal, credentials: 'same-origin' });
+            const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+            const nBody = doc.getElementById('availableBody');
+            if (!res.ok || !nBody) { location.href = url; return; }
+            if (mine !== seq) return;
+            body.innerHTML = nBody.innerHTML;
+            count.textContent = doc.getElementById('availableCount').textContent;
+            note.innerHTML = doc.getElementById('availableNote').innerHTML;
+            history.replaceState(null, '', url);
+        } catch (err) {
+            if (err.name !== 'AbortError') showToast('error', 'Could not load students. Please try again.');
+        } finally {
+            if (mine === seq) body.classList.remove('is-loading');
+        }
+    }
+    input.addEventListener('input', debounce(load, 250));
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+})();
 
 async function enroll(studentId) {
     const res = await ajaxPost('ajax_enrollment.php', { action: 'enroll', student_id: studentId, teacher_subject_id: CLASS_ID });

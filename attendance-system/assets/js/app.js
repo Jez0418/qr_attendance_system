@@ -227,6 +227,9 @@ function initLiveFilters() {
                 while (form.nextSibling) form.nextSibling.remove();
                 for (let n = nForm.nextSibling; n; n = n.nextSibling) body.appendChild(document.importNode(n, true));
                 body.querySelectorAll('.table-wrapper').forEach((w) => w.classList.add('live-fade'));
+                // Links that depend on the filters (export buttons) are taken from the new page.
+                const fresh = nForm.querySelectorAll('a[data-live-sync]');
+                form.querySelectorAll('a[data-live-sync]').forEach((a, i) => { if (fresh[i]) a.href = fresh[i].getAttribute('href'); });
                 history.replaceState(null, '', url);
                 if (reset) reset.hidden = !hasFilter();
             } catch (err) {

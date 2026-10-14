@@ -16,7 +16,12 @@ try {
     $target = $_POST['target'] ?? 'Present';
     if (!is_string($target)) $target = '';   // target[]=x: refused by override_problem(), not a PHP error
     $name = override_absent($pdo, $recordId, $target, (int) $_SESSION['profile_id'], (int) $_SESSION['user_id'], $reason);
-    echo json_encode(['success' => true, 'message' => "$name is now marked $target."]);
+    // Read the row back: the page shows what is stored, and a success is only reported when it really changed.
+    $check = $pdo->prepare('SELECT status FROM attendance_records WHERE record_id = ?');
+    $check->execute([$recordId]);
+    $stored = (string) $check->fetchColumn();
+    if ($stored !== $target) throw new Exception('The change could not be saved. Please try again.');
+    echo json_encode(['success' => true, 'message' => "$name is now marked $target.", 'record_id' => $recordId, 'status' => $stored]);
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => safe_error_message($e)]);
 }

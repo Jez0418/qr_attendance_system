@@ -62,7 +62,7 @@ $p = paginate($totalRows, 15);
 
 $stmt = $pdo->prepare("
     SELECT ar.*, st.full_name, st.student_number, sub.subject_name, lab.lab_name
-    $baseQuery ORDER BY ar.time_in DESC LIMIT {$p['limit']} OFFSET {$p['offset']}
+    $baseQuery ORDER BY ar.time_in DESC, ar.record_id DESC LIMIT {$p['limit']} OFFSET {$p['offset']}
 ");
 $stmt->execute($params);
 $records = $stmt->fetchAll();
@@ -76,7 +76,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="card">
     <div class="card-header"><h3>Attendance History (<?php echo $totalRows; ?>)</h3></div>
     <div class="card-body">
-        <form method="GET" class="toolbar">
+        <form method="GET" class="toolbar" data-live-filter>
             <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" name="search" class="form-control" placeholder="Search student..." value="<?php echo e($search); ?>"></div>
             <select name="class" class="form-control" style="max-width:220px">
@@ -85,12 +85,11 @@ require_once __DIR__ . '/../includes/header.php';
             </select>
             <input type="date" name="date_from" class="form-control" style="max-width:160px" value="<?php echo e($dateFrom); ?>">
             <input type="date" name="date_to" class="form-control" style="max-width:160px" value="<?php echo e($dateTo); ?>">
-            <button class="btn btn-outline btn-sm" type="submit">Filter</button>
-            <a href="history.php" class="btn btn-outline btn-sm">Reset</a>
+            <a href="history.php" class="btn btn-outline btn-sm" data-live-reset<?php echo ($search !== '' || $classId !== '' || $dateFrom !== '' || $dateTo !== '') ? '' : ' hidden'; ?>>Reset</a>
             <div class="toolbar-spacer"></div>
             <span class="toolbar-actions">
-                <a class="btn btn-outline btn-sm" target="_blank" href="history.php?<?php echo e(export_query('pdf')); ?>"><i class="fa-solid fa-file-pdf"></i> Export PDF</a>
-                <a class="btn btn-outline btn-sm" href="history.php?<?php echo e(export_query('excel')); ?>"><i class="fa-solid fa-file-excel"></i> Export Excel</a>
+                <a class="btn btn-outline btn-sm" data-live-sync target="_blank" href="history.php?<?php echo e(export_query('pdf')); ?>"><i class="fa-solid fa-file-pdf"></i> Export PDF</a>
+                <a class="btn btn-outline btn-sm" data-live-sync href="history.php?<?php echo e(export_query('excel')); ?>"><i class="fa-solid fa-file-excel"></i> Export Excel</a>
             </span>
         </form>
         <div class="table-wrapper">
@@ -100,7 +99,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php if (empty($records)): ?>
                     <tr><td colspan="7" class="text-center text-muted">No records found.</td></tr>
                 <?php else: foreach ($records as $r): ?>
-                    <tr>
+                    <tr data-record="<?php echo (int) $r['record_id']; ?>">
                         <td><?php echo e($r['full_name']); ?></td>
                         <td><?php echo e($r['student_number']); ?></td>
                         <td><?php echo e($r['subject_name']); ?></td>
@@ -193,6 +192,23 @@ document.addEventListener('keydown', e => {
 window.addEventListener('resize', closeRowMenus);
 window.addEventListener('scroll', closeRowMenus, true);
 
+// Show the stored result in the row straight away (status badge, time text, no more Actions) instead of waiting
+// for a reload; the row was changed in the database before this is called.
+function showOverrideResult(recordId, status, reason) {
+    const row = document.querySelector('tr[data-record="' + recordId + '"]');
+    if (!row) { location.reload(); return; }
+    const cells = row.children;
+    const badge = document.createElement('span');
+    badge.className = 'badge badge-' + String(status).toLowerCase();
+    badge.textContent = status;
+    badge.title = 'Marked by teacher: ' + reason;
+    cells[5].replaceChildren(badge);
+    const day = cells[4].textContent.split(' · ')[0];
+    cells[4].textContent = day + (status === 'Excused' ? ' · excused' : ' · marked by teacher');
+    cells[6].innerHTML = '<span class="text-muted">\u2014</span>';
+    row.classList.add('row-updated');
+}
+
 let overrideRecordId = null;
 let overrideTarget = 'Present';
 function openOverride(recordId, who, target) {
@@ -217,8 +233,12 @@ async function submitOverride() {
     try {
         const target = overrideTarget;
         const res = await ajaxPost('ajax_attendance_override.php', { record_id: overrideRecordId, reason, target });
-        if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 600); }
-        else { showToast('error', res.message); btn.disabled = false; }
+        if (res.success) {
+            showToast('success', res.message);
+            closeModal('overrideModal');
+            btn.disabled = false;
+            showOverrideResult(res.record_id, res.status, reason);
+        } else { showToast('error', res.message); btn.disabled = false; }
     } catch (err) { showToast('error', 'Something went wrong. Please try again.'); btn.disabled = false; }
 }
 </script>
