@@ -9,6 +9,8 @@
 (function () {
     var KEY = 'theme';
     var root = document.documentElement;
+    // No cross-page View Transitions here: style.css then animates the content's arrival itself.
+    if (!('onpagereveal' in window)) root.classList.add('no-vt');
     var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
     function getPref() {

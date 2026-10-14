@@ -1173,7 +1173,8 @@ td:has(> .row-actions),td:has(> .btn-icon){white-space:nowrap}
  * Every change on a page gets a short, quiet cue: arrival of the page, rows added or removed, content shown or swapped,
  * numbers that change, theme switch. Transform + opacity only; exits are faster than entrances. */
 @keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.page-content{animation:pageIn .36s cubic-bezier(.16,1,.3,1) both}
+/* Browsers without cross-page View Transitions (see below) get the arrival animation on the content instead. */
+.no-vt .page-content{animation:pageIn .36s cubic-bezier(.16,1,.3,1) both}
 
 @keyframes rowIn{from{opacity:0;transform:translateY(-6px);background:var(--indigo-50)}to{opacity:1;transform:none}}
 .row-in{animation:rowIn .45s cubic-bezier(.16,1,.3,1) both}
@@ -1193,7 +1194,7 @@ html.theme-switching *,html.theme-switching *::before,html.theme-switching *::af
 
 /* Reduced motion: no travel or scaling, but changes still fade so they stay noticeable. */
 @media (prefers-reduced-motion:reduce){
-    .page-content,.toast,.row-in,.reveal-in,.swap-in{animation:fadeOnly .15s linear both!important}
+    .no-vt .page-content,.toast,.row-in,.reveal-in,.swap-in{animation:fadeOnly .15s linear both!important}
     .toast.is-leaving,.row-out{animation:fadeOut .12s linear forwards!important}
     .value-changed{animation:none!important}
     .modal-backdrop,.modal-backdrop.show{transition:opacity .15s linear!important}
@@ -1202,3 +1203,26 @@ html.theme-switching *,html.theme-switching *::before,html.theme-switching *::af
 }
 @keyframes fadeOnly{from{opacity:0}to{opacity:1}}
 @keyframes fadeOut{to{opacity:0}}
+
+
+/* ================= PAGE TRANSITIONS (cross-document View Transitions) =================
+ * Going from one page to another (e.g. Dashboard -> Class Assignments) keeps the sidebar, top bar and bottom nav in
+ * place, so only the content moves: the old content fades out quickly and the new content rises in. Both pages must
+ * opt in, and style.css is on every page. Browsers without support just navigate (theme.js adds .no-vt, which restores
+ * the content's own arrival animation). The snapshot is taken after the new page's first render, so nothing flashes. */
+@view-transition{navigation:auto}
+.sidebar{view-transition-name:vt-sidebar}
+.topbar{view-transition-name:vt-topbar}
+.mobile-bottom-nav{view-transition-name:vt-bottomnav}
+.page-content{view-transition-name:vt-page}
+
+::view-transition-group(*){animation-duration:.3s;animation-timing-function:cubic-bezier(.16,1,.3,1)}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.2s}
+::view-transition-old(vt-page){animation:vtOut .14s ease-in both}
+::view-transition-new(vt-page){animation:vtIn .36s cubic-bezier(.16,1,.3,1) .04s both}
+@keyframes vtOut{to{opacity:0;transform:translateY(-4px)}}
+@keyframes vtIn{from{opacity:0;transform:translateY(10px)}}
+@media (prefers-reduced-motion:reduce){
+    ::view-transition-old(vt-page){animation:fadeOut .1s linear both}
+    ::view-transition-new(vt-page){animation:fadeOnly .15s linear both}
+}
