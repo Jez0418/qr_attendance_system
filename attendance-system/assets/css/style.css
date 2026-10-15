@@ -932,12 +932,6 @@ img.greeting-avatar-photo{object-fit:cover;background:var(--slate-100);flex-shri
 .dd-check{font-size:12.5px;color:var(--indigo-600);opacity:0;transform:scale(.4);transition:opacity .15s,transform .2s cubic-bezier(.2,.8,.2,1)}
 .dd-item.is-selected .dd-check{opacity:1;transform:none}
 .dd-group{padding:10px 12px 4px;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--slate-500)}
-.dd-search{position:relative;margin:0 0 6px}
-.dd-search i{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:12.5px;color:var(--slate-500)}
-.dd-search input{width:100%;padding:8px 12px 8px 32px;border:1px solid var(--slate-200);border-radius:var(--radius-sm);
-    background:var(--surface);color:var(--slate-900);font:inherit;font-size:13.5px}
-.dd-search input:focus{outline:none;border-color:var(--indigo-500);box-shadow:0 0 0 3px var(--indigo-100)}
-.dd-empty{padding:12px;text-align:center;font-size:13px;color:var(--slate-500)}
 
 /* Live filter: results dim briefly while loading, then fade in. */
 .card.is-loading .table-wrapper{opacity:.55;transition:opacity .15s}

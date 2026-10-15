@@ -339,7 +339,7 @@ document.addEventListener('DOMContentLoaded', initLiveFilters);
         sel.addEventListener('change', refresh);
         refresh();
 
-        function open(byTouch) {
+        function open() {
             if (current && current.btn === btn) return;
             closeCurrent(false);
             if (btn.disabled) return;
@@ -363,9 +363,7 @@ document.addEventListener('DOMContentLoaded', initLiveFilters);
                     list += item(ch);
                 }
             });
-            const searchable = sel.options.length > 10;
-            menu.innerHTML = (searchable ? '<div class="dd-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="text" placeholder="Search..." aria-label="Search options" autocomplete="off"></div>' : '')
-                + '<ul class="dd-list" role="listbox">' + list + '</ul><div class="dd-empty" hidden>No matches</div>';
+            menu.innerHTML = '<ul class="dd-list" role="listbox">' + list + '</ul>';
             document.body.appendChild(menu);
 
             const r = btn.getBoundingClientRect();
@@ -375,7 +373,7 @@ document.addEventListener('DOMContentLoaded', initLiveFilters);
             const below = window.innerHeight - r.bottom - 12;
             const up = below < 220 && r.top > below;
             const space = (up ? r.top : below) - 8;
-            menu.querySelector('.dd-list').style.maxHeight = Math.max(120, Math.min(280, space - (searchable ? 52 : 0))) + 'px';
+            menu.querySelector('.dd-list').style.maxHeight = Math.max(120, Math.min(280, space)) + 'px';
             const mh = menu.offsetHeight;
             menu.style.top = (up ? Math.max(8, r.top - mh - 6) : r.bottom + 6) + 'px';
             menu.classList.toggle('is-up', up);
@@ -384,13 +382,10 @@ document.addEventListener('DOMContentLoaded', initLiveFilters);
             btn.setAttribute('aria-expanded', 'true');
             wrap.classList.add('is-open');
 
-            const items = () => [...menu.querySelectorAll('.dd-item:not(.is-disabled):not([hidden])')];
+            const items = () => [...menu.querySelectorAll('.dd-item:not(.is-disabled)')];
             const selItem = menu.querySelector('.dd-item.is-selected');
-            const search = menu.querySelector('.dd-search input');
-            // A tap must not focus the filter box: on a phone that pops up the keyboard (it looks like a search started) and
-            // the keyboard's resize then closed the menu. Touch users tap the box when they want it; mouse/keyboard get it.
             setTimeout(() => {
-                const f = (byTouch ? null : search) || selItem || items()[0];
+                const f = selItem || items()[0];
                 if (f) f.focus({ preventScroll: true });
                 if (selItem) selItem.scrollIntoView({ block: 'nearest' });
             }, 30);
@@ -408,30 +403,17 @@ document.addEventListener('DOMContentLoaded', initLiveFilters);
                 const li = e.target.closest('.dd-item');
                 if (li && !li.classList.contains('is-disabled')) choose(li);
             });
-            if (search) {
-                search.addEventListener('input', () => {
-                    const q = search.value.trim().toLowerCase();
-                    let shown = 0;
-                    menu.querySelectorAll('.dd-item').forEach((li) => {
-                        const ok = li.textContent.toLowerCase().includes(q);
-                        li.hidden = !ok;
-                        if (ok) shown++;
-                    });
-                    menu.querySelectorAll('.dd-group').forEach((g) => { g.hidden = !!q; });
-                    menu.querySelector('.dd-empty').hidden = shown > 0;
-                });
-            }
             menu.addEventListener('keydown', (e) => {
                 const els = items();
                 const at = els.indexOf(document.activeElement);
                 if (e.key === 'Escape') { e.preventDefault(); closeCurrent(true); }
                 else if (e.key === 'Tab') { closeCurrent(false); }
                 else if (e.key === 'ArrowDown') { e.preventDefault(); const t = els[at + 1] || els[0]; if (t) t.focus(); }
-                else if (e.key === 'ArrowUp') { e.preventDefault(); const t = at > 0 ? els[at - 1] : (search || els[els.length - 1]); if (t) t.focus(); }
-                else if (e.key === 'Home' && !search) { e.preventDefault(); if (els[0]) els[0].focus(); }
-                else if (e.key === 'End' && !search) { e.preventDefault(); if (els.length) els[els.length - 1].focus(); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); const t = at > 0 ? els[at - 1] : els[els.length - 1]; if (t) t.focus(); }
+                else if (e.key === 'Home') { e.preventDefault(); if (els[0]) els[0].focus(); }
+                else if (e.key === 'End') { e.preventDefault(); if (els.length) els[els.length - 1].focus(); }
                 else if ((e.key === 'Enter' || e.key === ' ') && document.activeElement.classList.contains('dd-item')) { e.preventDefault(); choose(document.activeElement); }
-                else if (!search && e.key.length === 1 && /\S/.test(e.key)) {
+                else if (e.key.length === 1 && /\S/.test(e.key)) {
                     const k = e.key.toLowerCase();
                     const hit = els.slice(at + 1).concat(els.slice(0, at + 1)).find((li) => li.textContent.trim().toLowerCase().startsWith(k));
                     if (hit) hit.focus();
@@ -439,29 +421,16 @@ document.addEventListener('DOMContentLoaded', initLiveFilters);
             });
         }
 
-        let touchPress = false;
-        btn.addEventListener('pointerdown', (e) => { touchPress = e.pointerType === 'touch' || e.pointerType === 'pen'; });
-        btn.addEventListener('click', () => {
-            const byTouch = touchPress;
-            touchPress = false;                    // Enter/Space clicks have no pointerdown
-            if (current && current.btn === btn) closeCurrent(false); else open(byTouch);
-        });
+        btn.addEventListener('click', () => { if (current && current.btn === btn) closeCurrent(false); else open(); });
         btn.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); open(false); }
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); open(); }
         });
     }
 
     document.addEventListener('mousedown', (e) => {
         if (current && !current.menu.contains(e.target) && !current.wrap.contains(e.target)) closeCurrent(false);
     });
-    // The on-screen keyboard only changes the height: keep the menu open while its filter box is being typed in.
-    let lastWidth = window.innerWidth;
-    window.addEventListener('resize', () => {
-        const sameWidth = window.innerWidth === lastWidth;
-        lastWidth = window.innerWidth;
-        if (sameWidth && current && current.menu.contains(document.activeElement)) return;
-        closeCurrent(false);
-    });
+    window.addEventListener('resize', () => closeCurrent(false));
     window.addEventListener('scroll', (e) => { if (current && !current.menu.contains(e.target)) closeCurrent(false); }, true);
 
     function scan(root) {
