@@ -104,7 +104,8 @@ function e($value) {
 
 /** Trim + sanitize a raw input string */
 function clean($value) {
-    return trim(strip_tags($value ?? ''));
+    if (is_array($value)) return '';           // ?search[]=x would make strip_tags() throw (HTTP 500)
+    return trim(strip_tags((string) ($value ?? '')));
 }
 
 /** Redirect helper */

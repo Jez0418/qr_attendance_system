@@ -10,7 +10,7 @@ $pageTitle = 'Student Management';
 
 // ---- Filters ----
 $search = clean($_GET['search'] ?? '');
-$programFilter = clean($_GET['program'] ?? '');
+$programFilter = id_param($_GET['program'] ?? '');   // a non-number would make Postgres fail
 
 $where = ['u.deleted_at IS NULL'];   // archived (deleted) students are hidden; their history stays
 $params = [];

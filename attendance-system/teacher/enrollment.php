@@ -56,7 +56,7 @@ if ($selectedClass) {
     }
 
     $sortMap = ['name' => 's.full_name', 'id' => 's.student_number', 'course' => 'pr.program_name', 'year' => 's.year_level'];
-    $sortCol = $sortMap[$_GET['sort'] ?? 'name'] ?? 's.full_name';
+    $sortCol = $sortMap[clean($_GET['sort'] ?? 'name')] ?? 's.full_name';
 
     $notEnrolledStmt = $pdo->prepare('
         SELECT s.student_id, s.student_number, s.full_name, s.year_level, pr.program_name,

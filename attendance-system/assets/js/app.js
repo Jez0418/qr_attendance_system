@@ -62,11 +62,20 @@ function closeModal(id) {
     const el = document.getElementById(id);
     if (el) el.classList.remove('show');
 }
-// Close modal when clicking outside the box
+// Close modal when clicking outside the box. Only when the press also started on the backdrop: selecting text in a
+// field and releasing outside the box fires a click on the backdrop, which used to close the form and lose the input.
+let pressStart = null;
+document.addEventListener('mousedown', (e) => { pressStart = e.target; });
 document.addEventListener('click', (e) => {
-    if (e.target.classList && e.target.classList.contains('modal-backdrop')) {
+    if (e.target.classList && e.target.classList.contains('modal-backdrop') && pressStart === e.target) {
         e.target.classList.remove('show');
     }
+});
+// Escape closes the top open modal (an open dropdown handles its own Escape first and marks it handled).
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || e.defaultPrevented) return;
+    const open = [...document.querySelectorAll('.modal-backdrop.show')].pop();
+    if (open) { e.preventDefault(); open.classList.remove('show'); }
 });
 
 /* ---------------- GENERIC AJAX (fetch wrapper) ---------------- */
@@ -347,12 +356,10 @@ document.addEventListener('DOMContentLoaded', initLiveFilters);
             const menu = document.createElement('div');
             menu.className = 'dd-menu';
             let list = '';
-            let n = 0;
             const item = (o) => {
-                const i = n++;
                 const selected = o.index === sel.selectedIndex;
                 return '<li role="option" tabindex="-1" class="dd-item' + (selected ? ' is-selected' : '') + (o.disabled ? ' is-disabled' : '')
-                    + '" data-index="' + o.index + '" aria-selected="' + selected + '" style="--i:' + Math.min(i, 9) + '"><span>'
+                    + '" data-index="' + o.index + '" aria-selected="' + selected + '"><span>'
                     + esc(o.textContent.trim()) + '</span><i class="fa-solid fa-check dd-check" aria-hidden="true"></i></li>';
             };
             [...sel.children].forEach((ch) => {

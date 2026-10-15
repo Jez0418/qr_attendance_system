@@ -66,7 +66,7 @@ check('roster reads excused safely', strpos(file_get_contents("$root/teacher/cla
 // ---- Admin pages and exports
 $ad = file_get_contents("$root/admin/dashboard.php");
 check('admin recent activity has an excused sentence', strpos($ad, 'was excused from') !== false);
-check('admin charts plot Excused', strpos($ad, "label: 'Excused'") !== false && strpos($ad, "'Present','Late','Absent','Excused'") !== false);
+check('admin charts plot Excused', strpos($ad, "'Excused  ' + trendData.excused[i]") !== false && strpos($ad, "'Present','Late','Absent','Excused'") !== false);
 $rp = file_get_contents("$root/admin/reports.php");
 check('reports count and plot Excused', strpos($rp, "'Excused' => 0") !== false && strpos($rp, "SUM(ar.status='Excused') AS excused") !== false && strpos($rp, "label:'Excused'") !== false);
 check('monitoring filter accepts Excused', strpos(file_get_contents("$root/admin/attendance_monitoring.php"), "['Present', 'Late', 'Absent', 'Excused']") !== false);

@@ -66,5 +66,11 @@ $like = fn(string $pattern, string $data) => (bool) preg_match('/' . str_replace
 check('the pattern matches that user', $like($capture->calls[0][0], 'csrf_token|s:3:"abc";user_id|i:5;role|s:7:"teacher";'));
 check('the pattern does not match user 15', !$like($capture->calls[0][0], 'user_id|i:15;'));
 
+// A hand-edited ?search[]=x must not crash a page: clean() turns an array into ''.
+check('clean() turns an array into an empty string', clean(['x']) === '');
+check('clean() still strips tags and trims', clean('  <b>Ana</b> ') === 'Ana' && clean(null) === '');
+$src = file_get_contents(__DIR__ . '/../admin/students.php');
+check('students program filter only takes a number', strpos($src, "\$programFilter = id_param(\$_GET['program']") !== false);
+
 echo $fail ? "\n$fail FAILED\n" : "\nAll passed\n";
 exit($fail ? 1 : 0);

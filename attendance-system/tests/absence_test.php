@@ -47,7 +47,8 @@ foreach ($must as $file => $needle) {
 $dash = file_get_contents(__DIR__ . '/../admin/dashboard.php');
 check('recent activity no longer hides Absent records', strpos($dash, 'WHERE ar.status <> "Absent"') === false);
 check('recent activity words an absence differently from a check-in', strpos($dash, 'was absent from') !== false);
-check('attendance graph counts Absent per day', strpos($dash, 'SUM(status = "Absent")') !== false && strpos($dash, "label: 'Absent'") !== false);
+// The graph plots the daily rate; each day's Absent count is in the tooltip.
+check('attendance graph counts Absent per day', strpos($dash, 'SUM(status = "Absent")') !== false && strpos($dash, "'Absent     ' + trendData.absent[i]") !== false);
 check('laboratory usage counts scans only', strpos($dash, 'ar.session_id = s.session_id AND ar.status IN ("Present", "Late")') !== false);
 
 // A student enrolled after the meeting started (but before it ended) could still scan, so must still be
