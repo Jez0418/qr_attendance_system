@@ -91,6 +91,16 @@ function occurrence_badges(array $o) {
     return $html;
 }
 
+/** Start–end time as two separate, always-whole tokens ("1:00 AM" / "2:30 PM") so a narrow column wraps
+ * between them instead of splitting a number away from its own AM/PM (format_time_range()'s single string,
+ * which drops the repeated AM/PM, read as two unrelated numbers once it broke onto two lines). */
+function render_event_time_html(array $o): string {
+    $s = DateTimeImmutable::createFromFormat('H:i:s', schedule_time($o['start_time']))->format('g:i A');
+    $en = DateTimeImmutable::createFromFormat('H:i:s', schedule_time($o['end_time']))->format('g:i A');
+    return '<span class="cal-time-start">' . e($s) . '</span>'
+        . '<span class="cal-time-end"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> ' . e($en) . '</span>';
+}
+
 /** A clickable meeting card ($compact for the month grid). */
 function render_event(array $o, $compact = false) {
     $time = format_time_range($o['start_time'], $o['end_time']);
@@ -101,7 +111,7 @@ function render_event(array $o, $compact = false) {
             . '<span class="cal-event-time">' . e(DateTimeImmutable::createFromFormat('H:i:s', $o['start_time'])->format('g:i A')) . '</span> ' . e($o['subject_code']) . '</button>';
     }
     return '<button ' . $attr . '>'
-        . '<div class="cal-event-time">' . e($time) . '</div>'
+        . '<div class="cal-event-time">' . render_event_time_html($o) . '</div>'
         . '<div class="cal-event-title">' . e($o['subject_code'] . ' · ' . $o['section']) . '</div>'
         . '<div class="cal-event-meta">' . e($o['lab_name']) . '</div>'
         . '<div class="cal-event-meta">' . e($o['teacher_name']) . '</div>'
