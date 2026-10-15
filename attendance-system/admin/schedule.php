@@ -193,13 +193,17 @@ require_once __DIR__ . '/../includes/header.php';
         <?php else: ?>
             <div class="cal-month">
                 <?php foreach (['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as $wd): ?><div class="cal-month-head"><?php echo $wd; ?></div><?php endforeach; ?>
-                <?php for ($d = $from; $d <= $to; $d = $d->modify('+1 day')):
+                <?php $gridMonth = null; for ($d = $from; $d <= $to; $d = $d->modify('+1 day')):
                     $ds = $d->format('Y-m-d');
                     $events = $byDate[$ds] ?? [];
                     $outside = $d->format('m') !== $anchor->format('m');
+                    // Spell out the month ("Sep 1") on the first cell of a leading/trailing run from another
+                    // month, so a bare "1" right after "31" never reads as a missing or empty day.
+                    $showMonth = $outside && $d->format('Ym') !== $gridMonth;
+                    $gridMonth = $d->format('Ym');
                 ?>
                     <div class="cal-cell<?php echo $outside ? ' is-outside' : ''; ?><?php echo $ds === $today ? ' is-today' : ''; ?>">
-                        <a class="cal-cell-day" href="<?php echo e(schedule_url(['view' => 'day', 'date' => $ds])); ?>"><?php echo $d->format('j'); ?></a>
+                        <a class="cal-cell-day<?php echo $showMonth ? ' has-month' : ''; ?>" href="<?php echo e(schedule_url(['view' => 'day', 'date' => $ds])); ?>"><?php echo $showMonth ? e($d->format('M')) . ' ' . $d->format('j') : $d->format('j'); ?></a>
                         <?php foreach (array_slice($events, 0, 3) as $o) echo render_event($o, true); ?>
                         <?php if (count($events) > 3): ?><a class="cal-more" href="<?php echo e(schedule_url(['view' => 'day', 'date' => $ds])); ?>">+<?php echo count($events) - 3; ?> more</a><?php endif; ?>
                     </div>
