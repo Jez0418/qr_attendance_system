@@ -40,6 +40,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Zooming or resizing across a breakpoint: no slide/margin transitions while the layout switches (they left the
+    // sidebar and panel half-way), and a menu opened at phone width does not stay "open" once the desktop layout returns.
+    let resizeTimer;
+    const root = document.documentElement;
+    window.addEventListener('resize', () => {
+        root.classList.add('is-resizing');
+        if (sidebar && window.innerWidth > 900) sidebar.classList.remove('open');
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => root.classList.remove('is-resizing'), 200);
+    });
 });
 
 /* ---------------- MODAL HELPERS ---------------- */
@@ -468,7 +479,17 @@ document.addEventListener('DOMContentLoaded', initLiveFilters);
         el.classList.remove(cls);
         void el.offsetWidth;                       // restart the animation if it is already running
         el.classList.add(cls);
-        el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+        // animationend never fires when the animation is cancelled (element hidden by a breakpoint after a zoom/resize),
+        // which left the class, and its display/transform, stuck on. Clean up on cancel and on a timer too.
+        const clear = () => {
+            el.classList.remove(cls);
+            el.removeEventListener('animationend', clear);
+            el.removeEventListener('animationcancel', clear);
+            clearTimeout(timer);
+        };
+        const timer = setTimeout(clear, 1500);
+        el.addEventListener('animationend', clear);
+        el.addEventListener('animationcancel', clear);
     };
     window.animateIn = (el) => { if (el) once(el, 'swap-in'); };
 
