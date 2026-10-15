@@ -339,7 +339,7 @@ document.addEventListener('DOMContentLoaded', initLiveFilters);
         sel.addEventListener('change', refresh);
         refresh();
 
-        function open() {
+        function open(byTouch) {
             if (current && current.btn === btn) return;
             closeCurrent(false);
             if (btn.disabled) return;
@@ -387,8 +387,10 @@ document.addEventListener('DOMContentLoaded', initLiveFilters);
             const items = () => [...menu.querySelectorAll('.dd-item:not(.is-disabled):not([hidden])')];
             const selItem = menu.querySelector('.dd-item.is-selected');
             const search = menu.querySelector('.dd-search input');
+            // A tap must not focus the filter box: on a phone that pops up the keyboard (it looks like a search started) and
+            // the keyboard's resize then closed the menu. Touch users tap the box when they want it; mouse/keyboard get it.
             setTimeout(() => {
-                const f = search || selItem || items()[0];
+                const f = (byTouch ? null : search) || selItem || items()[0];
                 if (f) f.focus({ preventScroll: true });
                 if (selItem) selItem.scrollIntoView({ block: 'nearest' });
             }, 30);
@@ -437,16 +439,29 @@ document.addEventListener('DOMContentLoaded', initLiveFilters);
             });
         }
 
-        btn.addEventListener('click', () => { if (current && current.btn === btn) closeCurrent(false); else open(); });
+        let touchPress = false;
+        btn.addEventListener('pointerdown', (e) => { touchPress = e.pointerType === 'touch' || e.pointerType === 'pen'; });
+        btn.addEventListener('click', () => {
+            const byTouch = touchPress;
+            touchPress = false;                    // Enter/Space clicks have no pointerdown
+            if (current && current.btn === btn) closeCurrent(false); else open(byTouch);
+        });
         btn.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); open(); }
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); open(false); }
         });
     }
 
     document.addEventListener('mousedown', (e) => {
         if (current && !current.menu.contains(e.target) && !current.wrap.contains(e.target)) closeCurrent(false);
     });
-    window.addEventListener('resize', () => closeCurrent(false));
+    // The on-screen keyboard only changes the height: keep the menu open while its filter box is being typed in.
+    let lastWidth = window.innerWidth;
+    window.addEventListener('resize', () => {
+        const sameWidth = window.innerWidth === lastWidth;
+        lastWidth = window.innerWidth;
+        if (sameWidth && current && current.menu.contains(document.activeElement)) return;
+        closeCurrent(false);
+    });
     window.addEventListener('scroll', (e) => { if (current && !current.menu.contains(e.target)) closeCurrent(false); }, true);
 
     function scan(root) {
