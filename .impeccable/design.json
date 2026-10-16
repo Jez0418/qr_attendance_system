@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-16T10:47:21Z",
+  "generatedAt": "2026-10-16T10:53:19Z",
   "title": "Design System: MCNP-ISAP QR Attendance",
   "extensions": {
     "colorMeta": {
@@ -108,6 +108,14 @@
       "description": "Conceptually a panel over the panel — shares the 24px radius scale with the sidebar and main content panel.",
       "html": "<div class=\"ds-modal\"><div class=\"ds-modal-header\"><h3>Confirm</h3></div><div class=\"ds-modal-body\">Are you sure?</div><div class=\"ds-modal-footer\"><button class=\"ds-btn-outline\">Cancel</button><button class=\"ds-btn-primary\">Confirm</button></div></div>",
       "css": ".ds-modal { background:#fff; border-radius:24px; width:100%; max-width:520px; box-shadow:0 18px 48px rgba(30,64,120,.18); } .ds-modal-header { display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid #e8eef7; } .ds-modal-header h3 { margin:0; font-size:17px; font-weight:800; letter-spacing:-.01em; color:#0e1a33; } .ds-modal-body { padding:22px 24px; } .ds-modal-footer { padding:16px 24px; border-top:1px solid #e8eef7; display:flex; justify-content:flex-end; gap:10px; }"
+    },
+    {
+      "name": "QR Display",
+      "kind": "custom",
+      "refersTo": "qr-display",
+      "description": "The core product mechanic, rendered with the same restraint as everything else. The code frame stays pure white even in dark mode — a scanning-reliability exception, not a stylistic one — and the countdown is the only non-stat number to get Display-tier (28px/800) treatment.",
+      "html": "<div class=\"ds-qr-display\"><div class=\"ds-qr-code\"><!-- QR code renders here --></div><div class=\"ds-qr-meta\">IT401 · Chemistry Laboratory 1 · 8:00–10:30 AM</div><div class=\"ds-qr-timer\">04:12</div></div>",
+      "css": ".ds-qr-display { text-align:center; padding:20px; } .ds-qr-code { margin:0 auto; padding:16px; background:#fff; border-radius:16px; border:1px solid #e4eaf4; display:inline-block; width:200px; height:200px; } .ds-qr-meta { margin-top:16px; font-size:13.5px; color:#3d4b63; } .ds-qr-timer { font-size:28px; font-weight:800; color:#1d6bf3; margin-top:10px; }"
     }
   ],
   "narrative": {

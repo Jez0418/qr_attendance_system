@@ -220,6 +220,13 @@ No sharp corners exist anywhere in the system; every radius step is one of these
 - **Style:** Surface card, Large shadow, a 4px colored left border (blue/green/red by type) is the only status signal — the toast body itself never changes background color.
 - **Motion:** slides in from the right (30px → 0) and slides out faster than it entered — exit is quicker than entrance throughout the system, not just here.
 
+### QR Display (signature component)
+The literal core mechanic of the product, rendered with the same restraint as everything else — no scanner chrome, no camera-viewfinder styling, just the code on white.
+- **Frame:** the QR canvas always sits on a pure-white card regardless of theme (`#fff`, never `var(--surface)`) — in dark mode this is the one deliberate surface that stays light, because a QR code photographed off a dark background is a scanning-reliability risk, not a stylistic choice.
+- **Shape:** 16px radius (the `md` step), 16px internal padding, a 1px Slate 200 border — visually a card, but one size step down from the full card radius so it doesn't compete with the card it usually sits inside.
+- **Session meta:** small (13.5px) slate-600 text beneath the code (class/lab/time).
+- **Countdown:** when a session is timed, the remaining-time number is treated like a Display-tier number — 28px, 800-weight, Gatekeeper Blue — the only place a non-stat number gets display-scale treatment, because it's the thing a teacher is watching most closely while the session is live.
+
 ## Do's and Don'ts
 
 ### Do:
