@@ -54,9 +54,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ---------------- MODAL HELPERS ---------------- */
-// Modals are written inside <main class="page-content">, which is its own stacking context (view-transition-name in
-// style.css), so their z-index only counted inside it and the sticky top bar and the sidebar covered a long modal.
-// Moving them to <body> puts them above the whole app shell; ids, forms and handlers keep working.
+// Modals are written inside <main class="page-content">; moving them to <body> puts them above the whole app
+// shell (sticky top bar, sidebar) regardless of that container's own stacking context. Ids, forms and handlers
+// keep working.
 function liftModals() {
     document.querySelectorAll('.page-content .modal-backdrop').forEach((m) => document.body.appendChild(m));
 }

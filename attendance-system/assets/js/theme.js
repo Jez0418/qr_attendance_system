@@ -9,8 +9,6 @@
 (function () {
     var KEY = 'theme';
     var root = document.documentElement;
-    // No cross-page View Transitions here: style.css then animates the content's arrival itself.
-    if (!('onpagereveal' in window)) root.classList.add('no-vt');
     var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
     function getPref() {
@@ -34,9 +32,8 @@
             syncSwitchers(pref);
             if (changed) window.dispatchEvent(new CustomEvent('themechange', { detail: { theme: theme, pref: pref } }));
         }
-        // Same-document View Transition: the browser cross-fades a handful of snapshot layers on the GPU
-        // (it reuses the vt-sidebar/vt-topbar/vt-bottomnav/vt-page groups page nav already sets up in style.css),
-        // instead of running a CSS colour transition on every element on the page, which was dropping frames.
+        // Same-document View Transition: the browser cross-fades the whole page as one GPU layer, instead of
+        // running a CSS colour transition on every element on the page, which was dropping frames.
         if (animate && document.startViewTransition) {
             root.classList.add('vt-theme');
             var vt = document.startViewTransition(commit);
