@@ -954,7 +954,11 @@ img.greeting-avatar-photo{object-fit:cover;background:var(--slate-100);flex-shri
     .toolbar .dd,.cal-filters .dd{max-width:none;flex:1 1 100%}
 }
 
-/* Overall status distribution (admin/dashboard.php): ring with the total in the middle + a breakdown list. */
+/* Overall status distribution (admin/dashboard.php, admin/reports.php): ring with the total in the middle + a breakdown list.
+   The card can end up much narrower than the viewport (it sits in the 1fr side of a 2fr/1fr grid-2), so the ring+list side-by-side
+   layout must respond to the card's own width, not the viewport's; a container query does that where supported, with the viewport
+   media query below as a fallback for browsers that don't support container queries. */
+.card-body:has(> .status-dist){container-type:inline-size}
 .status-dist{display:grid;grid-template-columns:minmax(190px,240px) 1fr;gap:28px;align-items:center}
 .status-dist[hidden]{display:none}
 .status-ring{position:relative;height:230px}
@@ -984,6 +988,7 @@ img.greeting-avatar-photo{object-fit:cover;background:var(--slate-100);flex-shri
 @keyframes statusIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes statusBar{from{transform:scaleX(0)}to{transform:none}}
 @media (max-width:640px){.status-dist{grid-template-columns:1fr}.status-ring{height:210px}}
+@container (max-width:420px){.status-dist{grid-template-columns:1fr}.status-ring{height:210px}}
 @media (prefers-reduced-motion:reduce){.status-row,.status-bar i{animation:none}.status-row{transition:none}}
 
 /* Long option text (e.g. "ISAP - Institute of ...") must not widen a form column: grid/flex children may shrink,
@@ -1199,9 +1204,15 @@ td:has(> .row-actions),td:has(> .btn-icon){white-space:nowrap}
 /* Zoom / resize: layout changes at a breakpoint apply at once (class set by app.js while the window is resizing). */
 html.is-resizing *,html.is-resizing *::before,html.is-resizing *::after{transition:none!important}
 
-/* Theme switch: colours cross-fade instead of snapping. The class is on <html> for ~350 ms (theme.js). */
+/* Theme switch: colours cross-fade instead of snapping. The class is on <html> for ~350 ms (theme.js).
+   Only background-color/border-color/color (paint-cheap, and the ones that actually read as "the theme") transition;
+   box-shadow and fill were dropped because transitioning them on every node at once (thousands on a big data table)
+   caused the FPS drop. Table rows/cells snap instantly instead of fading: with up to 300+ rows on report/history
+   pages they are most of the page's elements, and a fading table isn't something anyone notices anyway. */
 html.theme-switching *,html.theme-switching *::before,html.theme-switching *::after{
-    transition:background-color .3s ease,border-color .3s ease,color .3s ease,fill .3s ease,box-shadow .3s ease!important}
+    transition:background-color .3s ease,border-color .3s ease,color .3s ease!important}
+html.theme-switching .table-wrapper *,html.theme-switching .table-wrapper *::before,html.theme-switching .table-wrapper *::after{
+    transition:none!important}
 
 /* Reduced motion: no travel or scaling, but changes still fade so they stay noticeable. */
 @media (prefers-reduced-motion:reduce){

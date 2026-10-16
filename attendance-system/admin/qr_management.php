@@ -115,7 +115,7 @@ require_once __DIR__ . '/../includes/header.php';
     #labQrGrid .print-only { display: block; }
     #labQrGrid h4, #labQrGrid p { color: #000 !important; }
     body.print-single-mode #labQrGrid .lab-qr-card { display: none; }
-    body.print-single-mode #labQrGrid .lab-qr-card.print-target { display: block; }
+    body.print-single-mode #labQrGrid .lab-qr-card.print-target { display: block; page-break-after: auto; }
 }
 </style>
 <div class="card" style="margin-top:20px">
