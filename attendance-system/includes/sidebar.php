@@ -118,4 +118,10 @@ if ($role === 'teacher' && isset($pdo)) {
         try { sessionStorage.setItem(KEY, String(nav.scrollTop)); } catch (e) {}
     }, { passive: true });
 })();
+
+// Links are natively draggable; an accidental drag from the sidebar onto a text input (e.g. a page's
+// search box) would otherwise drop the link's URL into it. The sidebar is never a drag source.
+document.getElementById('sidebar').addEventListener('dragstart', function (e) {
+    if (e.target.closest('a')) e.preventDefault();
+});
 </script>
