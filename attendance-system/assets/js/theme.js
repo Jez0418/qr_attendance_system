@@ -27,16 +27,29 @@
     function apply() {
         var pref = getPref(), theme = resolve(pref);
         var changed = root.getAttribute('data-theme') !== theme;
-        // Cross-fade the colours (style.css "theme-switching") when the theme changes after the page has loaded.
-        if (changed && root.hasAttribute('data-theme') && document.readyState === 'complete') {
+        var animate = changed && root.hasAttribute('data-theme') && document.readyState === 'complete';
+        function commit() {
+            root.setAttribute('data-theme', theme);
+            root.setAttribute('data-theme-pref', pref);
+            syncSwitchers(pref);
+            if (changed) window.dispatchEvent(new CustomEvent('themechange', { detail: { theme: theme, pref: pref } }));
+        }
+        // Same-document View Transition: the browser cross-fades a handful of snapshot layers on the GPU
+        // (it reuses the vt-sidebar/vt-topbar/vt-bottomnav/vt-page groups page nav already sets up in style.css),
+        // instead of running a CSS colour transition on every element on the page, which was dropping frames.
+        if (animate && document.startViewTransition) {
+            root.classList.add('vt-theme');
+            var vt = document.startViewTransition(commit);
+            vt.finished.then(function () { root.classList.remove('vt-theme'); }, function () { root.classList.remove('vt-theme'); });
+            return;
+        }
+        // Fallback for browsers without View Transitions: the old per-element colour cross-fade.
+        if (animate) {
             root.classList.add('theme-switching');
             clearTimeout(apply._t);
             apply._t = setTimeout(function () { root.classList.remove('theme-switching'); }, 380);
         }
-        root.setAttribute('data-theme', theme);
-        root.setAttribute('data-theme-pref', pref);
-        syncSwitchers(pref);
-        if (changed) window.dispatchEvent(new CustomEvent('themechange', { detail: { theme: theme, pref: pref } }));
+        commit();
     }
     function setPref(pref) {
         try { localStorage.setItem(KEY, pref); } catch (e) { /* not saved, still applied for this page */ }

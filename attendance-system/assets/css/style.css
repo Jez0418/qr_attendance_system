@@ -1247,7 +1247,24 @@ html.theme-switching .table-wrapper *,html.theme-switching .table-wrapper *::bef
 @media (prefers-reduced-motion:reduce){
     ::view-transition-old(vt-page){animation:fadeOut .1s linear both}
     ::view-transition-new(vt-page){animation:fadeOnly .15s linear both}
+    html.vt-theme::view-transition-old(vt-page),html.vt-theme::view-transition-old(vt-sidebar),
+    html.vt-theme::view-transition-old(vt-topbar),html.vt-theme::view-transition-old(vt-bottomnav),
+    html.vt-theme::view-transition-old(root){animation:fadeOut .1s linear both}
+    html.vt-theme::view-transition-new(vt-page),html.vt-theme::view-transition-new(vt-sidebar),
+    html.vt-theme::view-transition-new(vt-topbar),html.vt-theme::view-transition-new(vt-bottomnav),
+    html.vt-theme::view-transition-new(root){animation:fadeOnly .15s linear both}
 }
+
+/* Theme switch (same-document View Transition, theme.js): reuses the vt-sidebar/vt-topbar/vt-bottomnav/vt-page
+   groups above, so the browser cross-fades a handful of GPU layers instead of animating every element's colours
+   (that was the FPS drop). Plain opacity, no slide: nothing moved, only colours changed. */
+html.vt-theme::view-transition-group(*){animation-duration:180ms;animation-timing-function:ease-out}
+html.vt-theme::view-transition-old(vt-page),html.vt-theme::view-transition-old(vt-sidebar),
+html.vt-theme::view-transition-old(vt-topbar),html.vt-theme::view-transition-old(vt-bottomnav),
+html.vt-theme::view-transition-old(root){animation:fadeOut .18s ease-out both}
+html.vt-theme::view-transition-new(vt-page),html.vt-theme::view-transition-new(vt-sidebar),
+html.vt-theme::view-transition-new(vt-topbar),html.vt-theme::view-transition-new(vt-bottomnav),
+html.vt-theme::view-transition-new(root){animation:fadeOnly .18s ease-out both}
 
 /* ================= Responsive pass (last so it wins over the base rules above) ================= */
 @media(max-width:900px){.topbar{padding:10px 16px}.card-header,.card-body{padding-left:18px;padding-right:18px}.trend-hero strong{font-size:36px}}
