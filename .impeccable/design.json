@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-16T10:47:21Z",
+  "title": "Design System: MCNP-ISAP QR Attendance",
+  "extensions": {
+    "colorMeta": {
+      "gatekeeper-blue": { "role": "primary", "displayName": "Gatekeeper Blue", "canonical": "#1d6bf3", "tonalRamp": ["#0f1b3c", "#1558cc", "#1d6bf3", "#4a8cf7", "#dce9ff", "#eef4ff"] },
+      "gatekeeper-blue-deep": { "role": "primary-hover", "displayName": "Gatekeeper Blue Deep", "canonical": "#1558cc" },
+      "gatekeeper-blue-ink": { "role": "primary-dark", "displayName": "Gatekeeper Blue Ink", "canonical": "#0f1b3c" },
+      "slate-ink": { "role": "neutral-text", "displayName": "Slate Ink", "canonical": "#0e1a33", "tonalRamp": ["#0e1a33", "#14213d", "#2b3a55", "#3d4b63", "#55637a", "#94a3b8", "#cdd6e4", "#e4eaf4", "#eef2f9", "#f6f9fd"] },
+      "slate-surface": { "role": "neutral-surface", "displayName": "Slate Surface", "canonical": "#ffffff" },
+      "slate-canvas": { "role": "neutral-canvas", "displayName": "Slate Canvas", "canonical": "#f4f7fc" },
+      "slate-line": { "role": "neutral-border", "displayName": "Slate Line", "canonical": "#e8eef7" },
+      "present-green": { "role": "status", "displayName": "Present Green", "canonical": "#16a34a", "tonalRamp": ["#16a34a", "#dcf6e6", "#15803d"] },
+      "late-amber": { "role": "status", "displayName": "Late Amber", "canonical": "#e8820c", "tonalRamp": ["#e8820c", "#ffefd9", "#b45309"] },
+      "absent-red": { "role": "status", "displayName": "Absent Red", "canonical": "#dc2626", "tonalRamp": ["#dc2626", "#fde4e4", "#b91c1c"] },
+      "excused-violet": { "role": "status", "displayName": "Excused Violet", "canonical": "#6366f1", "tonalRamp": ["#6366f1", "#e0e7ff", "#4338ca"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Stat-card numbers, the single largest figures on a dashboard view." },
+      "headline": { "displayName": "Headline", "purpose": "The top-bar page title on every screen." },
+      "title": { "displayName": "Title", "purpose": "Card headers and modal headers." },
+      "body": { "displayName": "Body", "purpose": "Running text and table content; the unweighted default." },
+      "label": { "displayName": "Label", "purpose": "Uppercase section eyebrows, table column headers, form section titles." }
+    },
+    "shadows": [
+      { "name": "panel", "value": "0 10px 40px rgba(37,84,170,.10)", "purpose": "The sidebar and main content panel, directly against the gradient backdrop. Deepest ambient shadow in the system." },
+      { "name": "sm", "value": "0 1px 2px rgba(30,64,120,.05)", "purpose": "Resting state for cards, stat cards, inputs, chips." },
+      { "name": "md", "value": "0 6px 20px rgba(30,64,120,.08)", "purpose": "Hover/focus response only (stat card hover, calendar event hover/focus-visible) — never a resting shadow." },
+      { "name": "lg", "value": "0 18px 48px rgba(30,64,120,.18)", "purpose": "Overlays: modals, toasts, the open mobile sidebar drawer, the mobile bottom nav." }
+    ],
+    "motion": [
+      { "name": "press", "value": "transform .16s cubic-bezier(.23,1,.32,1)", "purpose": "Button/icon-button scale(.97) on :active — the system's universal press feedback." },
+      { "name": "toast-in", "value": ".32s cubic-bezier(.16,1,.3,1)", "purpose": "Toast entrance: slides in from the right, fades in." },
+      { "name": "toast-out", "value": ".18s cubic-bezier(.23,1,.32,1)", "purpose": "Toast exit — deliberately faster than its entrance." },
+      { "name": "modal-open", "value": ".32s cubic-bezier(.16,1,.3,1)", "purpose": "Modal scale-up + translateY entrance from the backdrop show state." }
+    ],
+    "breakpoints": [
+      { "name": "grid-collapse", "value": "1000px" },
+      { "name": "sidebar-collapse", "value": "900px" },
+      { "name": "form-row-collapse", "value": "700px" },
+      { "name": "compact", "value": "600px" },
+      { "name": "small-phone", "value": "480px" },
+      { "name": "tiny-phone", "value": "380px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The only solid-fill, full-pill call to action in the system.",
+      "html": "<button class=\"ds-btn-primary\">Save Changes</button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 20px; border-radius:999px; font-size:14px; font-weight:700; border:1px solid transparent; cursor:pointer; background:#1d6bf3; color:#fff; box-shadow:0 6px 14px rgba(29,107,243,.24); transition:background .15s, box-shadow .15s, transform .16s cubic-bezier(.23,1,.32,1); } .ds-btn-primary:hover { background:#1558cc; } .ds-btn-primary:active { transform:scale(.97); } .ds-btn-primary:focus-visible { outline:2px solid #4a8cf7; outline-offset:2px; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action — cancel, dismiss, or any action that shouldn't compete with the primary one.",
+      "html": "<button class=\"ds-btn-outline\">Cancel</button>",
+      "css": ".ds-btn-outline { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 20px; border-radius:999px; font-size:14px; font-weight:700; cursor:pointer; background:#fff; border:1px solid #e4eaf4; color:#2b3a55; transition:background .15s, border-color .15s, transform .16s cubic-bezier(.23,1,.32,1); } .ds-btn-outline:hover { background:#f6f9fd; border-color:#cdd6e4; } .ds-btn-outline:active { transform:scale(.97); }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-present",
+      "description": "Light tint + dark text pill, never a solid fill — the visual tell that separates a status badge from a button. Four color variants shown; Present is the example instance.",
+      "html": "<span class=\"ds-badge ds-badge-present\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6 9 17l-5-5\"/></svg>Present</span>",
+      "css": ".ds-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:999px; font-size:12.5px; font-weight:700; } .ds-badge-present { background:#dcf6e6; color:#15803d; } .ds-badge-late { background:#ffefd9; color:#b45309; } .ds-badge-absent { background:#fde4e4; color:#b91c1c; } .ds-badge-excused { background:#e0e7ff; color:#4338ca; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The base container for every grouped section of content.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-header\"><h3>Today's Classes</h3></div><div class=\"ds-card-body\">Card content goes here.</div></div>",
+      "css": ".ds-card { background:#fff; border-radius:20px; border:1px solid #e8eef7; box-shadow:0 1px 2px rgba(30,64,120,.05); } .ds-card-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:20px 24px 4px; } .ds-card-header h3 { margin:0; font-size:16px; font-weight:800; letter-spacing:-.01em; color:#0e1a33; } .ds-card-body { padding:16px 24px 24px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "form-control",
+      "description": "Standard text field with the system's signature 3px soft-blue focus glow.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Search name, ID, email...\">",
+      "css": ".ds-input { width:100%; padding:10px 14px; border:1px solid #e4eaf4; border-radius:12px; font-size:14px; color:#0e1a33; background:#fff; transition:border-color .15s, box-shadow .15s; } .ds-input::placeholder { color:#55637a; } .ds-input:focus { outline:none; border-color:#4a8cf7; box-shadow:0 0 0 3px #dce9ff; }"
+    },
+    {
+      "name": "Sidebar Nav Link",
+      "kind": "nav",
+      "refersTo": "sidebar-nav-link",
+      "description": "Active state is a solid accent fill with a colored glow — not a tint or a border — so current location is unmissable.",
+      "html": "<a class=\"ds-nav-link ds-nav-link-active\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><circle cx=\"12\" cy=\"12\" r=\"10\"/></svg><span>Dashboard</span></a>",
+      "css": ".ds-nav-link { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:999px; color:#3d4b63; font-size:13.5px; font-weight:600; transition:background .15s, color .15s, box-shadow .15s; } .ds-nav-link:hover { background:#f6f9fd; color:#0e1a33; } .ds-nav-link-active { background:#1d6bf3; color:#fff; box-shadow:0 8px 18px rgba(29,107,243,.30); }"
+    },
+    {
+      "name": "Toast",
+      "kind": "custom",
+      "refersTo": "toast",
+      "description": "A colored left border is the only status signal; the toast body itself never changes background color.",
+      "html": "<div class=\"ds-toast ds-toast-success\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6 9 17l-5-5\"/></svg><span class=\"ds-toast-msg\">Saved successfully.</span></div>",
+      "css": ".ds-toast { min-width:280px; max-width:360px; background:#fff; border-radius:16px; box-shadow:0 18px 48px rgba(30,64,120,.18); padding:14px 16px; display:flex; align-items:flex-start; gap:10px; border-left:4px solid #1d6bf3; } .ds-toast-success { border-color:#16a34a; } .ds-toast-msg { font-size:13.5px; color:#14213d; flex:1; }"
+    },
+    {
+      "name": "Modal",
+      "kind": "custom",
+      "refersTo": "modal",
+      "description": "Conceptually a panel over the panel — shares the 24px radius scale with the sidebar and main content panel.",
+      "html": "<div class=\"ds-modal\"><div class=\"ds-modal-header\"><h3>Confirm</h3></div><div class=\"ds-modal-body\">Are you sure?</div><div class=\"ds-modal-footer\"><button class=\"ds-btn-outline\">Cancel</button><button class=\"ds-btn-primary\">Confirm</button></div></div>",
+      "css": ".ds-modal { background:#fff; border-radius:24px; width:100%; max-width:520px; box-shadow:0 18px 48px rgba(30,64,120,.18); } .ds-modal-header { display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid #e8eef7; } .ds-modal-header h3 { margin:0; font-size:17px; font-weight:800; letter-spacing:-.01em; color:#0e1a33; } .ds-modal-body { padding:22px 24px; } .ds-modal-footer { padding:16px 24px; border-top:1px solid #e8eef7; display:flex; justify-content:flex-end; gap:10px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Gatekeeper",
+    "overview": "This is a system whose entire purpose is catching attendance fraud, and it deliberately does not look or feel like one. Instead of alarms, locks, or heavy institutional chrome, it uses a soft blue gradient backdrop with two floating white panels — the sidebar and the main content panel — riding above it like paper on a desk. Verification happens quietly and constantly underneath (GPS radius, device binding, signed QR payloads, server-side re-checks on every rule), but the surface stays calm, precise, and trustworthy. The product earns trust by being legible and unhurried, not by looking locked down.\n\nEvery interactive surface is a pill or a rounded rectangle; nothing is sharp-cornered. One accent color — Gatekeeper Blue — marks everything selected or actionable; it never competes with the four status colors (Present, Late, Absent, Excused), which are reserved strictly for attendance state. The whole system reads as soft-edged and quietly confident: generous radii, restrained shadows, bold (800-weight) headings doing hierarchy's work instead of loud color or large size jumps, and a scale(.97) press on every button that makes the interface feel like it's listening.",
+    "keyCharacteristics": [
+      "Floating-panel shell: a visible gradient backdrop behind two elevated white (or dark-surface) panels, never a single flat background",
+      "One brand accent (Gatekeeper Blue), four status colors that never do double duty as decoration",
+      "Pills everywhere interactive; cards and panels round at a larger, consistent scale",
+      "Headings differentiate by weight (800) and negative letter-spacing, not by dramatic size jumps",
+      "Full light/dark theme parity — every token has a dark-mode counterpart, not just an inverted background"
+    ],
+    "rules": [
+      { "name": "The Single Accent Rule", "body": "Gatekeeper Blue is the only brand color. Every other hue on screen is either a neutral (slate) or a status signal — never a second decorative accent.", "section": "colors" },
+      { "name": "The Status Colors Never Multitask Rule", "body": "Present green, Late amber, Absent red, and Excused violet map 1:1 to attendance meaning everywhere in the product. They are never repurposed for unrelated success/warning/error messaging elsewhere.", "section": "colors" },
+      { "name": "The Weight-Over-Size Rule", "body": "Headings jump straight to font-weight 800 rather than stepping through 500/600/700; the type scale stays compact because weight and negative tracking do the differentiation, not dramatic size jumps.", "section": "typography" },
+      { "name": "The Panel Lift Rule", "body": "Depth decreases as you move inward: backdrop (flat) → sidebar/main panel (Panel shadow) → cards (Small shadow) → nothing, until an element becomes an overlay (modal/toast) or gains interactive focus (Medium shadow), both of which jump back up.", "section": "elevation" },
+      { "name": "The Shape Rule", "body": "Panels round at 24px, cards at 20px, inputs and small blocks at 12px; buttons, badges, chips, and tabs are always full pills. A new component picks from this exact scale — it never introduces its own radius value.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do use the pill shape (999px) for every button, badge, chip, and tab — it's the single most identifying shape in the system.",
+      "Do differentiate heading levels with weight (800) and negative letter-spacing before reaching for a bigger font size.",
+      "Do keep status colors (Present/Late/Absent/Excused) exclusive to attendance meaning; use slate neutrals for anything else that needs a \"pending/inactive\" look.",
+      "Do give the active sidebar item a solid accent fill with a glow shadow, not a subtle tint or border — navigation state should be unmissable.",
+      "Do make exits (toast dismiss, modal close) faster than entrances."
+    ],
+    "donts": [
+      "Don't introduce a second brand accent color. Gatekeeper Blue is the only one; a new \"secondary\" color is almost certainly meant to be a status color or a slate neutral instead.",
+      "Don't give a card, panel, or button a radius outside the five-step scale (12/16/20/24/999).",
+      "Don't use a flat solid fill for a status badge — badges are always a light tint + dark text pair, never a saturated solid background (that's reserved for buttons).",
+      "Don't add drop shadows to small, flat UI like table rows or list items; the shadow vocabulary is reserved for panels, cards, and overlays — most of the interface stays flat against its parent surface.",
+      "Don't reach for a second typeface. Plus Jakarta Sans at a higher weight is the answer to \"this needs to stand out more,\" not a new font."
+    ]
+  }
+}
