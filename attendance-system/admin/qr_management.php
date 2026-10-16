@@ -114,6 +114,8 @@ require_once __DIR__ . '/../includes/header.php';
     #labQrGrid .lab-qr-card .no-print { display: none; }
     #labQrGrid .print-only { display: block; }
     #labQrGrid h4, #labQrGrid p { color: #000 !important; }
+    body.print-single-mode #labQrGrid .lab-qr-card { display: none; }
+    body.print-single-mode #labQrGrid .lab-qr-card.print-target { display: block; }
 }
 </style>
 <div class="card" style="margin-top:20px">
@@ -141,6 +143,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <p class="print-only" style="font-size:15px;margin:10px 0 0">To record your attendance, open the attendance app, go to <strong>Scan Attendance</strong> and scan this code.</p>
                     <?php if (!$q['has_coords']): ?><p class="no-print" style="font-size:12px;color:var(--red-600);margin:8px 0 0"><i class="fa-solid fa-triangle-exclamation"></i> No GPS set: attendance can't be verified here until coordinates are added.</p><?php endif; ?>
                     <p class="text-muted no-print" style="font-size:12px;margin:6px 0 12px">Code version <?php echo (int) $q['version']; ?></p>
+                    <button class="btn btn-outline btn-sm no-print" onclick="printLabQr(<?php echo (int) $q['id']; ?>)"><i class="fa-solid fa-print"></i> Print</button>
                     <button class="btn btn-outline btn-sm no-print" onclick='regenerateLabQr(<?php echo (int) $q['id']; ?>, <?php echo js_attr_json($q['name']); ?>)'><i class="fa-solid fa-rotate"></i> Regenerate</button>
                 </div>
             </div>
@@ -195,6 +198,18 @@ async function closeSession(sessionId, label) {
     if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 500); }
     else showToast('error', res.message);
 }
+
+function printLabQr(labId) {
+    const card = document.getElementById('labqr-' + labId).closest('.lab-qr-card');
+    document.body.classList.add('print-single-mode');
+    card.classList.add('print-target');
+    window.print();
+}
+
+window.addEventListener('afterprint', () => {
+    document.body.classList.remove('print-single-mode');
+    document.querySelectorAll('#labQrGrid .lab-qr-card.print-target').forEach(c => c.classList.remove('print-target'));
+});
 
 async function regenerateLabQr(labId, name) {
     if (!confirm('Regenerate the QR code for ' + name + '? The code posted on the wall stops working immediately and the new one must be printed and posted.')) return;
