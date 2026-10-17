@@ -803,13 +803,16 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .login-grid{width:100%;max-width:1040px;min-height:600px;display:grid;grid-template-columns:1.05fr 1fr;
     background:var(--surface);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);overflow:hidden;
     animation:lgIn .36s cubic-bezier(.23,1,.32,1) both}
-.login-visual{position:relative;padding:40px 36px;display:flex;color:#fff}
+.login-visual{position:relative;padding:40px 36px;display:flex;color:#fff;
+    background-image:url('../img/login-bg.jpg');background-size:cover;background-position:center;background-repeat:no-repeat}
 .login-visual::before{content:'';position:absolute;inset:0;z-index:0;
-    background-image:linear-gradient(165deg,var(--indigo-900),var(--indigo-700)),url('../img/login-bg.jpg');
-    background-size:cover,cover;background-position:center,center;background-repeat:no-repeat,no-repeat;background-blend-mode:color}
-.login-visual::after{content:'';position:absolute;inset:0;z-index:1;
-    background-image:linear-gradient(195deg,rgba(15,27,60,.55) 0%,rgba(15,27,60,.72) 55%,rgba(15,27,60,.92) 100%)}
-.login-visual-content{position:relative;z-index:2;width:100%;display:flex;flex-direction:column;justify-content:space-between}
+    background-image:linear-gradient(195deg,rgba(15,27,60,.55) 0%,rgba(15,27,60,.72) 55%,rgba(15,27,60,.92) 100%),
+        linear-gradient(165deg,var(--indigo-900),var(--indigo-700)),url('../img/login-bg.jpg');
+    background-size:cover,cover,cover;background-position:center,center,center;background-repeat:no-repeat,no-repeat,no-repeat;
+    background-blend-mode:normal,color;
+    -webkit-mask-image:radial-gradient(circle 150px at 80% 46%,transparent 0,transparent 55px,rgba(0,0,0,.55) 100px,#000 150px);
+    mask-image:radial-gradient(circle 150px at 80% 46%,transparent 0,transparent 55px,rgba(0,0,0,.55) 100px,#000 150px)}
+.login-visual-content{position:relative;z-index:1;width:100%;display:flex;flex-direction:column;justify-content:space-between}
 .login-visual-eyebrow{display:flex;align-items:center;gap:8px;margin:0;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.78)}
 .login-visual-mid h2{margin:0 0 14px;font-size:30px;font-weight:800;line-height:1.15;letter-spacing:-.02em}
 .login-visual-mid p{margin:0;max-width:34ch;font-size:15px;line-height:1.6;color:rgba(255,255,255,.82)}
