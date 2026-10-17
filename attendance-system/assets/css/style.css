@@ -795,13 +795,13 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
     font-family:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
     background:var(--page-bg);color:var(--slate-900)}
 .login-page::before{content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;transition:opacity .3s ease;
-    background-image:linear-gradient(160deg,rgba(15,27,60,.65),rgba(29,107,243,.65)),url('../img/login-bg.jpg');
+    background-image:linear-gradient(160deg,var(--indigo-900),var(--indigo-600)),url('../img/login-bg.jpg');
     background-size:cover,cover;background-position:center,center;background-repeat:no-repeat,no-repeat;
-    background-blend-mode:color;opacity:.68}
+    background-blend-mode:color;opacity:.62}
 .login-page::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
-    background-image:var(--bg-grad);opacity:.4}
-:root[data-theme="dark"] .login-page::before{opacity:.38}
-:root[data-theme="dark"] .login-page::after{opacity:.78}
+    background-image:var(--bg-grad);opacity:.32}
+:root[data-theme="dark"] .login-page::before{opacity:.32}
+:root[data-theme="dark"] .login-page::after{opacity:.8}
 .login-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px clamp(16px,4vw,40px)}
 .login-topbar-brand{display:flex;align-items:center;gap:12px}
 .login-topbar-logo{display:block;width:40px;height:40px;border-radius:50%;object-fit:cover;background:#fff;box-shadow:0 0 0 2px #fff,0 4px 12px rgba(30,64,120,.18)}
