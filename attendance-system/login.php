@@ -93,7 +93,6 @@ $roleNotes = [
 <main class="login-shell">
     <div class="login-grid">
         <section class="login-panel" aria-labelledby="lgTitle">
-            <p class="login-kicker">Your campus, connected</p>
             <h1 id="lgTitle">Welcome back</h1>
             <p class="lg-sub">Sign in to your MCNP&ndash;ISAP attendance account.</p>
 
