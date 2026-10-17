@@ -92,21 +92,6 @@ $roleNotes = [
 
 <main class="login-shell">
     <div class="login-grid">
-        <section class="login-visual" aria-hidden="true">
-            <div class="login-visual-content">
-                <p class="login-visual-eyebrow"><i class="fa-solid fa-qrcode" aria-hidden="true"></i> MCNP&ndash;ISAP QR Attendance</p>
-                <div class="login-visual-mid">
-                    <h2>A connected campus.<br>One scan at a time.</h2>
-                    <p>Making attendance simpler, so you can focus on what matters: learning, teaching, and growing together.</p>
-                </div>
-                <div class="login-visual-bottom">
-                    <span class="login-visual-rule"></span>
-                    <strong>Every presence makes a difference.</strong>
-                    <p>One community. A shared commitment to learning.</p>
-                </div>
-            </div>
-        </section>
-
         <section class="login-panel" aria-labelledby="lgTitle">
             <p class="login-kicker">Your campus, connected</p>
             <h1 id="lgTitle">Welcome back</h1>
