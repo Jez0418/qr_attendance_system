@@ -86,7 +86,6 @@ $roleNotes = [
     </a>
     <div class="login-topbar-actions">
         <?php echo theme_switcher(); ?>
-        <span class="login-badge"><i class="fa-solid fa-qrcode" aria-hidden="true"></i> <span>QR Attendance</span></span>
     </div>
 </header>
 

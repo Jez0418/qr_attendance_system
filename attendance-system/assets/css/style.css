@@ -810,8 +810,6 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .login-topbar-text small{font-size:12px;color:var(--slate-600);max-width:34ch}
 .login-topbar-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .login-topbar-actions .icon-btn{background:var(--surface);border:1px solid var(--slate-200);box-shadow:var(--shadow-sm)}
-.login-badge{display:flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:var(--radius-pill);
-    background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-sm);color:var(--indigo-600);font-size:12.5px;font-weight:700}
 .login-shell{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:8px clamp(16px,4vw,40px) 20px}
 .login-grid{width:100%;max-width:440px;background:var(--surface);border-radius:var(--radius-xl);
     box-shadow:var(--shadow-lg);overflow:hidden;animation:lgIn .36s cubic-bezier(.23,1,.32,1) both}
@@ -835,7 +833,6 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 @keyframes lgSpin{to{transform:rotate(360deg)}}
 @media (max-width:560px){
     .login-topbar-text small{display:none}
-    .login-badge span{display:none}
 }
 @media (max-width:480px){
     .login-panel{padding:30px 20px}
