@@ -23,6 +23,7 @@ if (!in_array($selectedRole, ['admin', 'teacher', 'student'], true)) $selectedRo
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = clean($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
+    $remember = !empty($_POST['remember']);
 
     $ip = login_client_ip();
     if ($username === '' || $password === '') {
@@ -33,6 +34,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = attempt_login($pdo, $username, $password, $selectedRole);
         if ($result === true) {
             login_clear_failures($pdo, $username);
+            if ($remember) {
+                // Keep the session cookie past the browser closing (30 days) instead of the default
+                // session-only cookie. Same HttpOnly/SameSite/Secure hardening as includes/config.php.
+                $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                    || strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+                setcookie(session_name(), session_id(), [
+                    'expires' => time() + 60 * 60 * 24 * 30, 'path' => '/',
+                    'secure' => $isHttps, 'httponly' => true, 'samesite' => 'Lax',
+                ]);
+            }
             redirect($_SESSION['role'] . '/dashboard.php');
         }
         login_record_failure($pdo, $username, $ip);
@@ -43,6 +54,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$roleIcons = ['admin' => 'fa-user-shield', 'teacher' => 'fa-chalkboard-user', 'student' => 'fa-graduation-cap'];
+$roleNotes = [
+    'admin'   => 'Use your assigned admin ID to sign in.',
+    'teacher' => 'Use your assigned employee number to sign in.',
+    'student' => 'Use your assigned student ID to sign in.',
+];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -57,77 +75,117 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <?php echo theme_head_tags(); ?>
 <?php echo pwa_head_tags(); ?>
 </head>
-<body class="lg-body">
-<div class="theme-float"><?php echo theme_switcher(); ?></div>
-<main class="lg-wrap">
-    <header class="lg-brand">
-        <img class="lg-logo" src="<?php echo BASE_URL; ?>assets/img/school-emblem-256.png" width="72" height="72" alt="MCNP and ISAP emblem">
-        <h1>MCNP-ISAP QR Attendance</h1>
-        <p>Medical Colleges of Northern Philippines and International School of Asia and the Pacific</p>
-    </header>
+<body class="login-page">
+<header class="login-topbar">
+    <a class="login-topbar-brand" href="<?php echo BASE_URL; ?>login.php">
+        <img class="login-topbar-logo" src="<?php echo BASE_URL; ?>assets/img/school-emblem-96.png" width="40" height="40" alt="MCNP&ndash;ISAP emblem">
+        <span class="login-topbar-text">
+            <strong>MCNP&ndash;ISAP</strong>
+            <small>Medical Colleges of Northern Philippines and International School of Asia and the Pacific</small>
+        </span>
+    </a>
+    <div class="login-topbar-actions">
+        <?php echo theme_switcher(); ?>
+        <span class="login-badge"><i class="fa-solid fa-qrcode" aria-hidden="true"></i> <span>QR Attendance</span></span>
+    </div>
+</header>
 
-    <section class="lg-card" aria-labelledby="lgTitle">
-        <h2 id="lgTitle" class="lg-sr">Sign in</h2>
-
-        <?php if ($flash = get_flash()): ?>
-            <div class="lg-alert<?php echo $flash['type'] === 'success' ? ' ok' : ''; ?>" role="status"><i class="fa-solid fa-circle-<?php echo $flash['type'] === 'success' ? 'check' : 'exclamation'; ?>" aria-hidden="true"></i> <span><?php echo e($flash['message']); ?></span></div>
-        <?php endif; ?>
-        <?php foreach ($errors as $err): ?>
-            <div class="lg-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> <span><?php echo e($err); ?></span></div>
-        <?php endforeach; ?>
-
-        <div class="lg-roles" id="roleTabs" role="group" aria-label="Account type">
-            <?php foreach (['admin' => 'Admin', 'teacher' => 'Teacher', 'student' => 'Student'] as $r => $label): ?>
-                <button type="button" class="lg-role <?php echo $selectedRole === $r ? 'active' : ''; ?>" data-role="<?php echo $r; ?>" aria-pressed="<?php echo $selectedRole === $r ? 'true' : 'false'; ?>"><?php echo $label; ?></button>
-            <?php endforeach; ?>
-        </div>
-
-        <form method="POST" action="login.php" autocomplete="off" novalidate>
-            <input type="hidden" name="role" id="roleInput" value="<?php echo e($selectedRole); ?>">
-
-            <div class="lg-field">
-                <label for="username">Username</label>
-                <div class="lg-input">
-                    <i class="fa-solid fa-user" aria-hidden="true"></i>
-                    <input type="text" id="username" name="username" placeholder="Enter your username" value="<?php echo e($_POST['username'] ?? ''); ?>" autocomplete="username" required autofocus>
+<main class="login-shell">
+    <div class="login-grid">
+        <section class="login-visual" aria-hidden="true">
+            <div class="login-visual-content">
+                <p class="login-visual-eyebrow"><i class="fa-solid fa-qrcode" aria-hidden="true"></i> MCNP&ndash;ISAP QR Attendance</p>
+                <div class="login-visual-mid">
+                    <h2>A connected campus.<br>One scan at a time.</h2>
+                    <p>Making attendance simpler, so you can focus on what matters: learning, teaching, and growing together.</p>
+                </div>
+                <div class="login-visual-bottom">
+                    <span class="login-visual-rule"></span>
+                    <strong>Every presence makes a difference.</strong>
+                    <p>One community. A shared commitment to learning.</p>
                 </div>
             </div>
+        </section>
 
-            <div class="lg-field">
-                <div class="lg-label-row">
+        <section class="login-panel" aria-labelledby="lgTitle">
+            <p class="login-kicker">Your campus, connected</p>
+            <h1 id="lgTitle">Welcome back</h1>
+            <p class="lg-sub">Sign in to your MCNP&ndash;ISAP attendance account.</p>
+
+            <?php if ($flash = get_flash()): ?>
+                <div class="lg-alert<?php echo $flash['type'] === 'success' ? ' ok' : ''; ?>" role="status"><i class="fa-solid fa-circle-<?php echo $flash['type'] === 'success' ? 'check' : 'exclamation'; ?>" aria-hidden="true"></i> <span><?php echo e($flash['message']); ?></span></div>
+            <?php endif; ?>
+            <?php foreach ($errors as $err): ?>
+                <div class="lg-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> <span><?php echo e($err); ?></span></div>
+            <?php endforeach; ?>
+
+            <p class="login-field-label" id="roleLabel">Sign in as</p>
+            <div class="lg-roles" id="roleTabs" role="group" aria-labelledby="roleLabel">
+                <?php foreach (['admin' => 'Admin', 'teacher' => 'Teacher', 'student' => 'Student'] as $r => $label): ?>
+                    <button type="button" class="lg-role <?php echo $selectedRole === $r ? 'active' : ''; ?>" data-role="<?php echo $r; ?>" aria-pressed="<?php echo $selectedRole === $r ? 'true' : 'false'; ?>"><i class="fa-solid <?php echo $roleIcons[$r]; ?>" aria-hidden="true"></i> <?php echo $label; ?></button>
+                <?php endforeach; ?>
+            </div>
+
+            <form method="POST" action="login.php" autocomplete="off" novalidate id="loginForm">
+                <input type="hidden" name="role" id="roleInput" value="<?php echo e($selectedRole); ?>">
+
+                <div class="lg-field">
+                    <label for="username">Username</label>
+                    <div class="lg-input">
+                        <i class="fa-solid fa-user" aria-hidden="true"></i>
+                        <input type="text" id="username" name="username" placeholder="Enter your username" value="<?php echo e($_POST['username'] ?? ''); ?>" autocomplete="username" required autofocus>
+                    </div>
+                </div>
+
+                <div class="lg-field">
                     <label for="password">Password</label>
-                    <span class="lg-hint" id="pwHint"></span>
+                    <div class="lg-input">
+                        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                        <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
+                        <button type="button" class="lg-eye" id="pwToggle" aria-label="Show password" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+
+                <div class="login-remember-row">
+                    <label class="login-check"><input type="checkbox" name="remember" value="1"> Remember me</label>
                     <a class="lg-link" href="<?php echo BASE_URL; ?>forgot_password.php">Forgot password?</a>
                 </div>
-                <div class="lg-input">
-                    <i class="fa-solid fa-lock" aria-hidden="true"></i>
-                    <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
-                    <button type="button" class="lg-eye" id="pwToggle" aria-label="Show password" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
+
+                <button type="submit" class="lg-submit" id="loginSubmit"><span class="lg-submit-label">Sign in</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+            </form>
+
+            <p class="login-note"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> <span id="loginNoteText"><?php echo e($roleNotes[$selectedRole]); ?></span></p>
+
+            <?php // Demo credentials are hidden unless the SHOW_DEMO_LOGINS=1 environment variable is set (local testing only). ?>
+            <?php if (getenv('SHOW_DEMO_LOGINS') === '1'): ?>
+            <div class="lg-demo">
+                <span>Demo logins <small>(click to fill)</small></span>
+                <div class="lg-chips">
+                    <button type="button" class="lg-chip" data-role="admin" data-user="admin" data-pass="password">Admin</button>
+                    <button type="button" class="lg-chip" data-role="teacher" data-user="tcruz" data-pass="password">Teacher</button>
+                    <button type="button" class="lg-chip" data-role="student" data-user="s2023001" data-pass="password">Student</button>
                 </div>
             </div>
+            <?php endif; ?>
 
-            <button type="submit" class="lg-submit">Sign in <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
-        </form>
-
-        <?php // Demo credentials are hidden unless the SHOW_DEMO_LOGINS=1 environment variable is set (local testing only). ?>
-        <?php if (getenv('SHOW_DEMO_LOGINS') === '1'): ?>
-        <div class="lg-demo">
-            <span>Demo logins <small>(click to fill)</small></span>
-            <div class="lg-chips">
-                <button type="button" class="lg-chip" data-role="admin" data-user="admin" data-pass="password">Admin</button>
-                <button type="button" class="lg-chip" data-role="teacher" data-user="tcruz" data-pass="password">Teacher</button>
-                <button type="button" class="lg-chip" data-role="student" data-user="s2023001" data-pass="password">Student</button>
-            </div>
-        </div>
-        <?php endif; ?>
-    </section>
-
-    <p class="lg-help">Need help? Contact the MCNP-ISAP IT Services or Laboratory Department.</p>
+            <p class="lg-help">Need help? Contact the MCNP&ndash;ISAP Registrar or Laboratory Department.</p>
+        </section>
+    </div>
 </main>
 
+<footer class="login-footer">
+    <span>&copy; 2026 MCNP&ndash;ISAP. All rights reserved.</span>
+    <span class="login-footer-secure"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Secure institutional access</span>
+</footer>
+
 <script>
-const roleHints = { admin: 'Your Admin ID', teacher: 'Your Employee No.', student: 'Your Student No.' };
+const roleNotes = {
+    admin: 'Use your assigned admin ID to sign in.',
+    teacher: 'Use your assigned employee number to sign in.',
+    student: 'Use your assigned student ID to sign in.',
+};
 const roleInput = document.getElementById('roleInput');
+const noteText = document.getElementById('loginNoteText');
 
 function setRole(role) {
     roleInput.value = role;
@@ -136,7 +194,7 @@ function setRole(role) {
         t.classList.toggle('active', on);
         t.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
-    document.getElementById('pwHint').textContent = roleHints[role] || '';
+    noteText.textContent = roleNotes[role] || '';
 }
 document.querySelectorAll('.lg-role').forEach(t => t.addEventListener('click', () => setRole(t.dataset.role)));
 setRole(roleInput.value);
@@ -159,6 +217,13 @@ document.querySelectorAll('.lg-chip').forEach(c => c.addEventListener('click', (
     pw.value = c.dataset.pass;
     document.querySelector('.lg-submit').focus();
 }));
+
+// Busy state while the sign-in request is in flight
+document.getElementById('loginForm').addEventListener('submit', () => {
+    const btn = document.getElementById('loginSubmit');
+    btn.classList.add('is-loading');
+    btn.disabled = true;
+});
 </script>
 </body>
 </html>
