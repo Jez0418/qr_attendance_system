@@ -810,9 +810,10 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
         linear-gradient(165deg,var(--indigo-900),var(--indigo-700)),url('../img/login-bg.jpg');
     background-size:cover,cover,cover;background-position:center,center,center;background-repeat:no-repeat,no-repeat,no-repeat;
     background-blend-mode:normal,color;
-    -webkit-mask-image:radial-gradient(circle 150px at 80% 46%,transparent 0,transparent 55px,rgba(0,0,0,.55) 100px,#000 150px);
-    mask-image:radial-gradient(circle 150px at 80% 46%,transparent 0,transparent 55px,rgba(0,0,0,.55) 100px,#000 150px)}
-.login-visual-content{position:relative;z-index:1;width:100%;display:flex;flex-direction:column;justify-content:space-between}
+    -webkit-mask-image:radial-gradient(circle 240px at 50% 50%,transparent 0,transparent 110px,rgba(0,0,0,.55) 190px,#000 240px);
+    mask-image:radial-gradient(circle 240px at 50% 50%,transparent 0,transparent 110px,rgba(0,0,0,.55) 190px,#000 240px)}
+.login-visual-content{position:relative;z-index:1;width:100%;display:flex;flex-direction:column;justify-content:space-between;
+    text-shadow:0 1px 3px rgba(0,0,0,.5),0 4px 16px rgba(0,0,0,.4)}
 .login-visual-eyebrow{display:flex;align-items:center;gap:8px;margin:0;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.78)}
 .login-visual-mid h2{margin:0 0 14px;font-size:30px;font-weight:800;line-height:1.15;letter-spacing:-.02em}
 .login-visual-mid p{margin:0;max-width:34ch;font-size:15px;line-height:1.6;color:rgba(255,255,255,.82)}
