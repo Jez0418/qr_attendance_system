@@ -749,25 +749,28 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
     background:var(--page-bg);font-family:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--slate-900)}
 .lg-body::before{content:'';position:fixed;inset:0;z-index:-2;
     background-image:url('../img/login-bg.jpg');background-size:cover;background-position:center;background-repeat:no-repeat;
-    filter:saturate(.85);opacity:.78;pointer-events:none}
+    filter:saturate(.85);opacity:.78;transition:opacity .3s ease;pointer-events:none}
 .lg-body::after{content:'';position:fixed;inset:0;z-index:-1;
-    background-image:var(--bg-grad);background-attachment:fixed;opacity:.42;pointer-events:none}
+    background-image:var(--bg-grad);opacity:.42;pointer-events:none}
 :root[data-theme="dark"] .lg-body::before{opacity:.3}
 :root[data-theme="dark"] .lg-body::after{opacity:.82}
 .lg-wrap{position:relative;z-index:1;width:100%;max-width:420px}
 .lg-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.lg-brand{text-align:center;margin-bottom:24px}
+.lg-brand{text-align:center;margin-bottom:24px;animation:lgIn .32s cubic-bezier(.23,1,.32,1) both}
 .lg-logo{display:block;width:72px;height:72px;margin:0 auto 14px;border-radius:50%;object-fit:cover;
     background:#fff;box-shadow:0 0 0 3px #fff,0 8px 22px rgba(30,64,120,.20)}
 .lg-brand h1{margin:0 0 4px;font-size:26px;font-weight:800;letter-spacing:-.02em}
 .lg-brand p{margin:0;font-size:14px;color:var(--slate-600)}
-.lg-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-xl);padding:28px;box-shadow:var(--shadow-panel)}
+.lg-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-xl);padding:28px;box-shadow:var(--shadow-panel);
+    animation:lgIn .36s cubic-bezier(.23,1,.32,1) .04s both}
+@keyframes lgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .lg-alert{display:flex;gap:10px;align-items:flex-start;margin-bottom:16px;padding:12px 14px;border-radius:var(--radius-md);
     background:var(--red-100);color:var(--error-text);font-size:14px;line-height:1.4}
 .lg-roles{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;margin-bottom:22px;background:var(--slate-100);border-radius:var(--radius-pill)}
 .lg-role{min-height:42px;border:0;border-radius:var(--radius-pill);background:transparent;color:var(--slate-600);
-    font:700 14px/1 'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:background .18s,color .18s,box-shadow .18s}
+    font:700 14px/1 'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:background .18s,color .18s,box-shadow .18s,transform .16s cubic-bezier(.23,1,.32,1)}
 .lg-role:hover{color:var(--slate-900)}
+.lg-role:active{transform:scale(.97)}
 .lg-role.active{background:var(--indigo-600);color:#fff;box-shadow:0 6px 14px rgba(29,107,243,.26)}
 .lg-field{margin-bottom:16px}
 .lg-field label{display:block;margin-bottom:6px;font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate-700)}
@@ -780,8 +783,9 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .lg-input input::placeholder{color:var(--slate-500)}
 .lg-input input:focus{outline:none;background:var(--surface);border-color:var(--indigo-500);box-shadow:0 0 0 4px var(--indigo-100)}
 .lg-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:44px;height:44px;border:0;background:transparent;
-    border-radius:50%;color:var(--slate-500);font-size:16px;cursor:pointer}
+    border-radius:50%;color:var(--slate-500);font-size:16px;cursor:pointer;transition:color .18s,transform .16s cubic-bezier(.23,1,.32,1)}
 .lg-eye:hover{color:var(--slate-900)}
+.lg-eye:active{transform:translateY(-50%) scale(.95)}
 .lg-eye:focus-visible,.lg-role:focus-visible,.lg-chip:focus-visible,.lg-submit:focus-visible{outline:3px solid rgba(29,107,243,.45);outline-offset:2px}
 .lg-submit{width:100%;min-height:48px;margin-top:6px;border:0;border-radius:var(--radius-pill);background:var(--indigo-600);color:#fff;
     font:700 16px 'Plus Jakarta Sans',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
@@ -792,15 +796,16 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .lg-demo small{color:var(--slate-500)}
 .lg-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .lg-chip{min-height:36px;padding:0 14px;border:1px solid var(--slate-200);border-radius:var(--radius-pill);background:var(--slate-50);color:var(--slate-700);
-    font:600 13px 'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:background .18s}
+    font:600 13px 'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:background .18s,transform .16s cubic-bezier(.23,1,.32,1)}
 .lg-chip:hover{background:var(--slate-100)}
+.lg-chip:active{transform:scale(.97)}
 .lg-help{margin:20px 0 0;text-align:center;font-size:13px;color:var(--slate-500)}
 .lg-alert.ok{background:var(--green-100);color:var(--green-fg)}
 .lg-link{font-size:12.5px;color:var(--link);text-decoration:none}.lg-link:hover{text-decoration:underline}
 .lg-sub{margin:0 0 18px;font-size:14px;line-height:1.5;color:var(--slate-600)}
 .lg-back{display:block;margin-top:18px;text-align:center;font-size:14px}
 @media (max-width:480px){.lg-card{padding:22px 18px}.lg-brand h1{font-size:23px}}
-@media (prefers-reduced-motion:reduce){.lg-body *{transition:none!important}}
+@media (prefers-reduced-motion:reduce){.lg-body *{transition:none!important}.lg-brand,.lg-card{animation:none!important}}
 
 /* School emblem in the sidebar */
 .sidebar-brand .brand-emblem{width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#fff;box-shadow:0 0 0 2px var(--line)}
