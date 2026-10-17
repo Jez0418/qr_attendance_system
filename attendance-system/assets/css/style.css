@@ -749,9 +749,9 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
     background:var(--page-bg);font-family:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--slate-900)}
 .lg-body::before{content:'';position:fixed;inset:0;z-index:-2;
     background-image:url('../img/login-bg.jpg');background-size:cover;background-position:center;background-repeat:no-repeat;
-    filter:saturate(.7);opacity:.5;pointer-events:none}
+    filter:saturate(.85);opacity:.78;pointer-events:none}
 .lg-body::after{content:'';position:fixed;inset:0;z-index:-1;
-    background-image:var(--bg-grad);background-attachment:fixed;opacity:.62;pointer-events:none}
+    background-image:var(--bg-grad);background-attachment:fixed;opacity:.42;pointer-events:none}
 :root[data-theme="dark"] .lg-body::before{opacity:.3}
 :root[data-theme="dark"] .lg-body::after{opacity:.82}
 .lg-wrap{position:relative;z-index:1;width:100%;max-width:420px}
