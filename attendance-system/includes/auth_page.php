@@ -43,6 +43,10 @@ function auth_page_end(): void {
     </section>
     <p class="lg-help">Need help? Contact the MCNP-ISAP IT Services or Laboratory Department.</p>
 </main>
+<footer class="lg-photo-footer">
+    <span>&copy; 2026 MCNP&ndash;ISAP. All rights reserved.</span>
+    <span class="login-footer-secure"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Secure institutional access</span>
+</footer>
 </body>
 </html>
 <?php

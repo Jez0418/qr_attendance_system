@@ -727,7 +727,13 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
     background-image:var(--bg-grad);opacity:.42;pointer-events:none}
 :root[data-theme="dark"] .lg-body::before{opacity:.3}
 :root[data-theme="dark"] .lg-body::after{opacity:.82}
-.lg-wrap{position:relative;z-index:1;width:100%;max-width:420px}
+.lg-wrap{position:relative;z-index:1;width:100%;max-width:420px;padding-bottom:64px}
+.lg-photo-footer{position:fixed;left:0;right:0;bottom:0;z-index:2;display:flex;align-items:center;justify-content:space-between;
+    gap:12px;flex-wrap:wrap;padding:14px clamp(16px,4vw,40px);
+    background:rgba(255,255,255,.68);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border-top:1px solid rgba(255,255,255,.4);font-size:12.5px;color:var(--slate-700)}
+.lg-photo-footer .login-footer-secure{display:flex;align-items:center;gap:7px}
+:root[data-theme="dark"] .lg-photo-footer{background:rgba(10,19,40,.6);border-top-color:rgba(255,255,255,.08);color:var(--slate-400)}
 .lg-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .lg-brand{text-align:center;margin-bottom:24px;animation:lgIn .32s cubic-bezier(.23,1,.32,1) both}
 .lg-logo{display:block;width:72px;height:72px;margin:0 auto 14px;border-radius:50%;object-fit:cover;
