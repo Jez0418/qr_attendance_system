@@ -739,7 +739,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 @keyframes lgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .lg-alert{display:flex;gap:10px;align-items:flex-start;margin-bottom:16px;padding:12px 14px;border-radius:var(--radius-md);
     background:var(--red-100);color:var(--error-text);font-size:14px;line-height:1.4}
-.lg-roles{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;margin-bottom:22px;background:var(--slate-100);border-radius:var(--radius-pill)}
+.lg-roles{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;margin-bottom:16px;background:var(--slate-100);border-radius:var(--radius-pill)}
 .lg-role{min-height:42px;border:0;border-radius:var(--radius-pill);background:transparent;color:var(--slate-600);
     display:flex;align-items:center;justify-content:center;gap:6px;
     font:700 13.5px/1 'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:background .18s,color .18s,box-shadow .18s,transform .16s cubic-bezier(.23,1,.32,1)}
@@ -765,7 +765,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
     box-shadow:0 8px 18px rgba(29,107,243,.28);transition:background .18s,transform .16s cubic-bezier(.23,1,.32,1)}
 .lg-submit:hover{background:var(--indigo-700)}
 .lg-submit:active{transform:scale(.97)}
-.lg-demo{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--slate-600)}
+.lg-demo{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:13px;color:var(--slate-600)}
 .lg-demo small{color:var(--slate-500)}
 .lg-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .lg-chip{min-height:36px;padding:0 14px;border:1px solid var(--slate-200);border-radius:var(--radius-pill);background:var(--slate-50);color:var(--slate-700);
@@ -788,7 +788,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .login-page{min-height:100vh;margin:0;display:flex;flex-direction:column;
     font-family:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
     background:var(--page-bg);background-image:var(--bg-grad);background-attachment:fixed;color:var(--slate-900)}
-.login-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px clamp(16px,4vw,40px)}
+.login-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px clamp(16px,4vw,40px)}
 .login-topbar-brand{display:flex;align-items:center;gap:12px}
 .login-topbar-logo{display:block;width:40px;height:40px;border-radius:50%;object-fit:cover;background:#fff;box-shadow:0 0 0 2px #fff,0 4px 12px rgba(30,64,120,.18)}
 .login-topbar-text{display:flex;flex-direction:column;line-height:1.3}
@@ -798,20 +798,23 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .login-topbar-actions .icon-btn{background:var(--surface);border:1px solid var(--slate-200);box-shadow:var(--shadow-sm)}
 .login-badge{display:flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:var(--radius-pill);
     background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-sm);color:var(--indigo-600);font-size:12.5px;font-weight:700}
-.login-shell{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:12px clamp(16px,4vw,40px) 32px}
-.login-grid{width:100%;max-width:460px;background:var(--surface);border-radius:var(--radius-xl);
+.login-shell{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:8px clamp(16px,4vw,40px) 20px}
+.login-grid{width:100%;max-width:440px;background:var(--surface);border-radius:var(--radius-xl);
     box-shadow:var(--shadow-lg);overflow:hidden;animation:lgIn .36s cubic-bezier(.23,1,.32,1) both}
-.login-panel{padding:44px clamp(28px,4vw,48px);display:flex;flex-direction:column;justify-content:center}
-.login-kicker{margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--indigo-600)}
-.login-panel h1{margin:0 0 6px;font-size:30px;font-weight:800;letter-spacing:-.02em}
-.login-field-label{display:block;margin-bottom:8px;font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate-700)}
-.login-remember-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 18px}
+.login-panel{padding:32px clamp(26px,4vw,40px);display:flex;flex-direction:column;justify-content:center}
+.login-panel .lg-sub{margin-bottom:14px}
+.login-panel .lg-field{margin-bottom:12px}
+.login-panel .lg-help{margin-top:14px}
+.login-kicker{margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--indigo-600)}
+.login-panel h1{margin:0 0 4px;font-size:30px;font-weight:800;letter-spacing:-.02em}
+.login-field-label{display:block;margin-bottom:6px;font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate-700)}
+.login-remember-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 14px}
 .login-check{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--slate-700);cursor:pointer;user-select:none}
 .login-check input{width:16px;height:16px;accent-color:var(--indigo-600);cursor:pointer}
-.login-note{display:flex;align-items:flex-start;justify-content:center;gap:7px;margin:16px 0 0;text-align:center;font-size:12.5px;line-height:1.5;color:var(--slate-500)}
+.login-note{display:flex;align-items:flex-start;justify-content:center;gap:7px;margin:12px 0 0;text-align:center;font-size:12.5px;line-height:1.5;color:var(--slate-500)}
 .login-note i{margin-top:2px;color:var(--slate-400)}
 .login-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
-    padding:18px clamp(16px,4vw,40px);border-top:1px solid var(--line);font-size:12.5px;color:var(--slate-500)}
+    padding:12px clamp(16px,4vw,40px);border-top:1px solid var(--line);font-size:12.5px;color:var(--slate-500)}
 .login-footer-secure{display:flex;align-items:center;gap:7px}
 .lg-submit.is-loading{opacity:.75;cursor:default}
 .lg-submit.is-loading .lg-submit-label::after{content:'';display:inline-block;width:14px;height:14px;margin-left:8px;
