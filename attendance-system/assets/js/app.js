@@ -5,22 +5,27 @@
  * ==============================================================
  */
 
-/* ---------------- LIVE EMAIL VALIDATION ---------------- */
-function attachEmailValidation(inputId) {
+/* ---------------- LIVE FORMAT VALIDATION ---------------- */
+function attachFormatValidation(inputId, pattern, message) {
     const input = document.getElementById(inputId);
-    if (!input || input.dataset.emailValidationAttached) return;
-    input.dataset.emailValidationAttached = '1';
+    if (!input || input.dataset.formatValidationAttached) return;
+    input.dataset.formatValidationAttached = '1';
     const hint = document.createElement('small');
     hint.className = 'field-hint-error';
     hint.style.cssText = 'display:none;color:var(--red-fg);margin-top:4px';
-    hint.textContent = 'Enter a valid email address (e.g. name@example.com).';
+    hint.textContent = message;
     input.insertAdjacentElement('afterend', hint);
-    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     input.addEventListener('input', () => {
         const valid = input.value === '' || pattern.test(input.value);
         hint.style.display = valid ? 'none' : 'block';
         input.style.borderColor = valid ? '' : 'var(--red-fg)';
     });
+}
+function attachEmailValidation(inputId) {
+    attachFormatValidation(inputId, /^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Enter a valid email address (e.g. name@example.com).');
+}
+function attachContactNumberValidation(inputId) {
+    attachFormatValidation(inputId, /^(09\d{9}|\+639\d{9})$/, 'Enter a valid PH mobile number (e.g. 09171234567).');
 }
 
 /* ---------------- TOASTS ---------------- */

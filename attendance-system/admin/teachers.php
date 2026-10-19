@@ -135,6 +135,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <script>
 attachEmailValidation('email');
+attachContactNumberValidation('contact_number');
 
 function openAddModal() {
     document.getElementById('teacherForm').reset();
