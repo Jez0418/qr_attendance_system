@@ -37,7 +37,7 @@ $subtitleMap = [
         'enrollment_requests.php' => 'Review student enrollment requests',
         'reports.php' => 'Attendance totals by subject, status and date',
         'settings.php' => 'Late grace, absence limits and geofencing',
-        'notifications.php' => 'Your alerts and announcements',
+        'notifications.php' => 'Broadcast an announcement to teachers and students',
     ],
     'teacher' => [
         'dashboard.php' => "Your classes and today's attendance",
