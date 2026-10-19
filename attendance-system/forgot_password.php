@@ -2,7 +2,7 @@
 /**
  * ------------------------------------------------------------
  * forgot_password.php
- * Public page: the user enters their username or email and we email a one-hour, single-use link
+ * Public page: the user enters their account email and we email a one-hour, single-use link
  * (includes/password_reset.php). The answer is the same whether or not the account exists, so
  * the page can't be used to find out who has an account.
  * ------------------------------------------------------------
@@ -22,7 +22,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_request_is_valid()) {
         $error = 'Your session expired. Please try again.';
     } elseif ($identifier === '' || strlen($identifier) > 100) {
-        $error = 'Please enter your username or email.';
+        $error = 'Please enter your email address.';
+    } elseif (!filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+        $error = 'Please enter a valid email address.';
     } elseif (!mail_available()) {
         $error = 'Password reset by email is not set up yet. Please contact the MCNP-ISAP IT Services.';
     } else {
@@ -47,18 +49,33 @@ auth_page_start('Forgot password');
             <div class="lg-alert ok" role="status"><i class="fa-solid fa-circle-check" aria-hidden="true"></i>
                 <span>If an account matches, we sent a link to its email address. It works once and expires in <?php echo PWRESET_TTL_MINUTES; ?> minutes. Check your spam folder too.</span></div>
         <?php else: ?>
-            <p class="lg-sub">Enter your username or the email address on your account and we will email you a link to choose a new password.</p>
+            <p class="lg-sub">Enter the email address on your account and we will email you a link to choose a new password.</p>
             <?php if ($error): ?><div class="lg-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> <span><?php echo e($error); ?></span></div><?php endif; ?>
             <form method="POST" action="forgot_password.php" novalidate>
                 <?php echo csrf_field(); ?>
                 <div class="lg-field">
-                    <label for="identifier">Username or email</label>
+                    <label for="identifier">Email</label>
                     <div class="lg-input">
                         <i class="fa-solid fa-envelope" aria-hidden="true"></i>
-                        <input type="text" id="identifier" name="identifier" maxlength="100" value="<?php echo e($identifier); ?>" autocomplete="username" required autofocus>
+                        <input type="email" id="identifier" name="identifier" maxlength="100" value="<?php echo e($identifier); ?>" autocomplete="email" required autofocus>
                     </div>
+                    <small id="identifierHint" style="display:none;color:var(--red-fg);margin-top:4px">Enter a valid email address (e.g. name@example.com).</small>
                 </div>
                 <button type="submit" class="lg-submit">Send reset link <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
             </form>
+            <script>
+            (function () {
+                var input = document.getElementById('identifier');
+                var hint = document.getElementById('identifierHint');
+                var pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                var check = function () {
+                    var valid = input.value === '' || pattern.test(input.value);
+                    hint.style.display = valid ? 'none' : 'block';
+                    input.style.borderColor = valid ? '' : 'var(--red-fg)';
+                };
+                input.addEventListener('blur', check);
+                input.addEventListener('input', function () { if (hint.style.display === 'block') check(); });
+            })();
+            </script>
         <?php endif; ?>
 <?php auth_page_end();
