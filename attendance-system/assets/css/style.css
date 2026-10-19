@@ -1048,7 +1048,8 @@ img.greeting-avatar-photo{object-fit:cover;background:var(--slate-100);flex-shri
 /* Notifications list (admin/notifications.php) */
 .notif-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .notif{display:flex;gap:14px;padding:14px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface);
-    animation:statusIn .4s cubic-bezier(.2,.8,.2,1) backwards;animation-delay:calc(var(--i) * 45ms);transition:border-color .2s,box-shadow .2s,transform .2s}
+    animation:statusIn .4s cubic-bezier(.2,.8,.2,1) backwards;animation-delay:calc(var(--i) * 45ms);transition:border-color .2s,box-shadow .2s,transform .2s;
+    text-decoration:none;color:inherit;cursor:pointer}
 @media (hover:hover) and (pointer:fine){.notif:hover{border-color:var(--indigo-500);box-shadow:var(--shadow-sm);transform:translateY(-1px)}}
 .notif-icon{flex:none;width:40px;height:40px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:15px;
     background:var(--slate-100);color:var(--slate-500)}

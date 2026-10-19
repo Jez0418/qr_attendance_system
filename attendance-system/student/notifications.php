@@ -12,6 +12,11 @@ if (isset($_GET['mark_all_read'])) {
     redirect('student/notifications.php');
 }
 
+if (isset($_GET['mark_read']) && ($id = id_param($_GET['mark_read']))) {
+    $pdo->prepare('UPDATE notifications SET is_read = 1 WHERE notification_id = ? AND user_id = ?')->execute([$id, $_SESSION['user_id']]);
+    redirect('student/notifications.php' . (isset($_GET['page']) ? '?page=' . (int) $_GET['page'] : ''));
+}
+
 $countStmt = $pdo->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ?');
 $countStmt->execute([$_SESSION['user_id']]);
 $totalRows = (int) $countStmt->fetchColumn();
@@ -34,13 +39,15 @@ require_once __DIR__ . '/../includes/header.php';
         <?php else: ?>
             <ul class="notif-list">
             <?php foreach ($notifications as $k => $n): ?>
-                <li class="notif<?php echo $n['is_read'] ? '' : ' is-unread'; ?>" style="--i:<?php echo min($k, 8); ?>">
-                    <span class="notif-icon"><i class="fa-solid <?php echo $n['is_read'] ? 'fa-envelope-open' : 'fa-envelope'; ?>"></i></span>
-                    <div class="notif-main">
-                        <div class="notif-top"><strong><?php echo e($n['title']); ?></strong><?php if (!$n['is_read']): ?><span class="notif-new">New</span><?php endif; ?></div>
-                        <div class="notif-msg"><?php echo e($n['message']); ?></div>
-                        <time class="notif-time"><?php echo format_datetime($n['created_at']); ?></time>
-                    </div>
+                <li style="--i:<?php echo min($k, 8); ?>">
+                    <a class="notif<?php echo $n['is_read'] ? '' : ' is-unread'; ?>" href="?mark_read=<?php echo (int) $n['notification_id']; ?>&page=<?php echo $p['page']; ?>">
+                        <span class="notif-icon"><i class="fa-solid <?php echo $n['is_read'] ? 'fa-envelope-open' : 'fa-envelope'; ?>"></i></span>
+                        <div class="notif-main">
+                            <div class="notif-top"><strong><?php echo e($n['title']); ?></strong><?php if (!$n['is_read']): ?><span class="notif-new">New</span><?php endif; ?></div>
+                            <div class="notif-msg"><?php echo e($n['message']); ?></div>
+                            <time class="notif-time"><?php echo format_datetime($n['created_at']); ?></time>
+                        </div>
+                    </a>
                 </li>
             <?php endforeach; ?>
             </ul>
