@@ -109,6 +109,34 @@ async function ajaxGet(url) {
     return await res.json();
 }
 
+/* ---------------- NOTIFICATION DETAIL MODAL (admin/teacher/student notifications.php) ---------------- */
+document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.notif-list .notif');
+    if (!btn) return;
+    const title = document.getElementById('notifDetailTitle');
+    const message = document.getElementById('notifDetailMessage');
+    const time = document.getElementById('notifDetailTime');
+    if (!title || !message || !time) return;
+    title.textContent = btn.dataset.title;
+    message.textContent = btn.dataset.message;
+    time.textContent = btn.dataset.time;
+    openModal('notifDetailModal');
+    if (btn.classList.contains('is-unread')) {
+        btn.classList.remove('is-unread');
+        const icon = btn.querySelector('.notif-icon i');
+        if (icon) icon.className = 'fa-solid fa-envelope-open';
+        const newTag = btn.querySelector('.notif-new');
+        if (newTag) newTag.remove();
+        const dot = document.querySelector('#notifBellBtn .badge-dot');
+        if (dot) {
+            const left = parseInt(dot.textContent, 10) - 1;
+            if (left > 0) dot.textContent = left; else dot.remove();
+        }
+        // read state is cosmetic client-side; a failed request just leaves it unread server-side
+        try { await ajaxPost('ajax_notification_read.php', { notification_id: btn.dataset.id }); } catch (err) { /* ignore */ }
+    }
+});
+
 /* ---------------- DEBOUNCE (for live search boxes) ---------------- */
 function debounce(fn, delay = 350) {
     let timer;
