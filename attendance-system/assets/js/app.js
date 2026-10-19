@@ -15,10 +15,14 @@ function attachFormatValidation(inputId, pattern, message) {
     hint.style.cssText = 'display:none;color:var(--red-fg);margin-top:4px';
     hint.textContent = message;
     input.insertAdjacentElement('afterend', hint);
-    input.addEventListener('input', () => {
+    const check = () => {
         const valid = input.value === '' || pattern.test(input.value);
         hint.style.display = valid ? 'none' : 'block';
         input.style.borderColor = valid ? '' : 'var(--red-fg)';
+    };
+    input.addEventListener('blur', check);
+    input.addEventListener('input', () => {
+        if (hint.style.display === 'block') check();
     });
 }
 function attachEmailValidation(inputId) {
