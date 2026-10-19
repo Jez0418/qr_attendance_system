@@ -212,6 +212,7 @@ const PROGRAMS = <?php echo json_encode($allPrograms); ?>;
 document.addEventListener('DOMContentLoaded', () => {
     attachEmailValidation('email');
     attachContactNumberValidation('contact_number');
+    attachDigitsOnlyValidation('student_number', 'Student number must contain numbers only (e.g. 2024-10000).');
 });
 
 function populateDepartments(institutionId, selectedDeptId) {

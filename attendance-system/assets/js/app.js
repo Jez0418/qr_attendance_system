@@ -31,6 +31,22 @@ function attachEmailValidation(inputId) {
 function attachContactNumberValidation(inputId) {
     attachFormatValidation(inputId, /^(09\d{9}|\+639\d{9})$/, 'Enter a valid PH mobile number (e.g. 09171234567).');
 }
+function attachDigitsOnlyValidation(inputId, message) {
+    const input = document.getElementById(inputId);
+    if (!input || input.dataset.digitsOnlyAttached) return;
+    input.dataset.digitsOnlyAttached = '1';
+    const hint = document.createElement('small');
+    hint.className = 'field-hint-error';
+    hint.style.cssText = 'display:none;color:var(--red-fg);margin-top:4px';
+    hint.textContent = message;
+    input.insertAdjacentElement('afterend', hint);
+    const pattern = /^[0-9]+(-[0-9]+)*$/;
+    input.addEventListener('input', () => {
+        const valid = input.value === '' || pattern.test(input.value);
+        hint.style.display = valid ? 'none' : 'block';
+        input.style.borderColor = valid ? '' : 'var(--red-fg)';
+    });
+}
 
 /* ---------------- TOASTS ---------------- */
 function showToast(type, message) {
