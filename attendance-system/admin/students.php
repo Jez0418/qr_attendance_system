@@ -209,6 +209,8 @@ require_once __DIR__ . '/../includes/header.php';
 const DEPARTMENTS = <?php echo json_encode($departments); ?>;
 const PROGRAMS = <?php echo json_encode($allPrograms); ?>;
 
+attachEmailValidation('email');
+
 function populateDepartments(institutionId, selectedDeptId) {
     const sel = document.getElementById('department_id');
     sel.innerHTML = '<option value="">Select department</option>';

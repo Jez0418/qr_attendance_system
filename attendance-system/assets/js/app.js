@@ -5,6 +5,24 @@
  * ==============================================================
  */
 
+/* ---------------- LIVE EMAIL VALIDATION ---------------- */
+function attachEmailValidation(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input || input.dataset.emailValidationAttached) return;
+    input.dataset.emailValidationAttached = '1';
+    const hint = document.createElement('small');
+    hint.className = 'field-hint-error';
+    hint.style.cssText = 'display:none;color:var(--red-fg);margin-top:4px';
+    hint.textContent = 'Enter a valid email address (e.g. name@example.com).';
+    input.insertAdjacentElement('afterend', hint);
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    input.addEventListener('input', () => {
+        const valid = input.value === '' || pattern.test(input.value);
+        hint.style.display = valid ? 'none' : 'block';
+        input.style.borderColor = valid ? '' : 'var(--red-fg)';
+    });
+}
+
 /* ---------------- TOASTS ---------------- */
 function showToast(type, message) {
     const container = document.getElementById('toastContainer');

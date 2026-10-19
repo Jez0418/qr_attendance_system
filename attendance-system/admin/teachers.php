@@ -134,6 +134,8 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
+attachEmailValidation('email');
+
 function openAddModal() {
     document.getElementById('teacherForm').reset();
     document.getElementById('teacher_id').value = '';
