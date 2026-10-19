@@ -93,7 +93,7 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="modal-body">
                 <input type="hidden" name="teacher_id" id="teacher_id">
                 <div class="form-row">
-                    <div class="form-group"><label>Employee Number *</label><input type="text" name="employee_number" id="employee_number" class="form-control" placeholder="e.g. t2023001" required></div>
+                    <div class="form-group"><label>Employee Number *</label><input type="text" name="employee_number" id="employee_number" class="form-control" placeholder="e.g. EMP-000" required></div>
                     <div class="form-group"><label>Full Name *</label><input type="text" name="full_name" id="full_name" class="form-control" placeholder="e.g. Maria Santos" required></div>
                 </div>
                 <div class="form-row">

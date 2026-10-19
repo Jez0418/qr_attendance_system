@@ -118,7 +118,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="form-row">
                     <div class="form-group">
                         <label>Student Number *</label>
-                        <input type="text" name="student_number" id="student_number" class="form-control" placeholder="e.g. s2023001" required>
+                        <input type="text" name="student_number" id="student_number" class="form-control" placeholder="e.g. 2024-10000" required>
                     </div>
                     <div class="form-group">
                         <label>Full Name *</label>
