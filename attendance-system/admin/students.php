@@ -118,11 +118,11 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="form-row">
                     <div class="form-group">
                         <label>Student Number *</label>
-                        <input type="text" name="student_number" id="student_number" class="form-control" required>
+                        <input type="text" name="student_number" id="student_number" class="form-control" placeholder="e.g. s2023001" required>
                     </div>
                     <div class="form-group">
                         <label>Full Name *</label>
-                        <input type="text" name="full_name" id="full_name" class="form-control" required>
+                        <input type="text" name="full_name" id="full_name" class="form-control" placeholder="e.g. Juan Dela Cruz" required>
                     </div>
                 </div>
 
@@ -172,17 +172,17 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="form-row">
                     <div class="form-group">
                         <label>Email *</label>
-                        <input type="email" name="email" id="email" class="form-control" required>
+                        <input type="email" name="email" id="email" class="form-control" placeholder="e.g. juan.delacruz@email.com" required>
                     </div>
                     <div class="form-group">
                         <label>Contact Number</label>
-                        <input type="text" name="contact_number" id="contact_number" class="form-control">
+                        <input type="text" name="contact_number" id="contact_number" class="form-control" placeholder="e.g. 09171234567">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Username *</label>
-                        <input type="text" name="username" id="username" class="form-control" required>
+                        <input type="text" name="username" id="username" class="form-control" placeholder="e.g. jdelacruz" required>
                     </div>
                     <div class="form-group">
                         <label id="passwordLabel">Password *</label>
