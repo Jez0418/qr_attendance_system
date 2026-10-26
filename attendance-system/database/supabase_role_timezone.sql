@@ -9,3 +9,9 @@
 --
 -- Takes effect for NEW connections only. Undo: ALTER ROLE postgres RESET timezone;
 ALTER ROLE postgres SET timezone = 'Asia/Manila';
+
+-- End any connection that sits inside an open transaction for more than 60 s (it is rolled back).
+-- A client that vanished mid-transaction (network drop) would otherwise keep its row locks until
+-- the pooler noticed, blocking edits to those rows. The app's longest transaction (CSV import,
+-- 8 s budget) stays far below this. Applied 2026-10-26. Undo: ALTER ROLE postgres RESET idle_in_transaction_session_timeout;
+ALTER ROLE postgres SET idle_in_transaction_session_timeout = '60s';
