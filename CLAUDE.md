@@ -136,6 +136,14 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
 - The old MySQL files (`schema.sql`, `migration_v*.sql`) and the `database/*.php` helper scripts were deleted (they are in git history only); never recreate them: they do not work on Postgres and `reset_passwords_to_id.php` could reset every password.
 - Demo logins (seed data): admin / tcruz / jsantos / s2023001-s2023004, password `password`. Change in production.
 
+## Backups (Supabase Free has none)
+- `bash scripts/backup_db.sh` (repo root, not deployed): read-only `pg_dump -Fc` of schema `public` to `~/QR-Attendance-Backups`
+  (override `BACKUP_DIR`), keeps the newest 30 (`KEEP`), verifies the file with `pg_restore --list`. Uses DB_* from
+  `attendance-system/.env` but always port 5432 (pg_dump fails through the 6543 transaction pooler). Skips the DATA of `php_sessions`
+  and `password_resets`. Needs pg_dump 17 (`PG_BIN`, else `~/tools/pgsql/bin`). Restore steps are in the script header: into a NEW
+  project only, then rerun `database/supabase_role_timezone.sql` (role settings are not in the dump).
+- Dumps hold personal data (names, emails, password hashes): never commit them or put them in the repo.
+
 ## Load test (`attendance-system/tests/load/`, k6)
 - `bash tests/load/run.sh dry|full` against a STAGING copy only (own Supabase project + a Vercel preview branch whose DB_* env vars are
   scoped to that branch; the script refuses a BASE_URL without `git-loadtest`). Never load-test production.
