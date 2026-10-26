@@ -18,8 +18,11 @@
 #
 # RESTORE -- into a NEW, empty Supabase project, never over the live one:
 #   1. Create the project; get its session-pooler host/user and the DB password.
-#   2. PGPASSWORD='<new db password>' pg_restore --no-owner --no-privileges --clean --if-exists \
+#   2. PGPASSWORD='<new db password>' pg_restore --no-owner --no-privileges \
 #        -h <new pooler host> -p 5432 -U postgres.<new project ref> -d postgres <file>.dump
+#      Expect exactly ONE error, harmless: 'schema "public" already exists' ("errors ignored on restore: 1").
+#      Any other error: stop and look. (Trial restore 2026-10-26 into a fresh PostgreSQL 17.11: every table's
+#      row count, 65 indexes, 34 foreign keys, ID sequences and row-level security matched the live database.)
 #   3. Run database/supabase_role_timezone.sql on the new project (role settings are not in the dump).
 #   4. Point Vercel's DB_* env vars at the new project and redeploy.
 #   Check a file without restoring it: pg_restore --list <file>.dump
