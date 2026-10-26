@@ -180,7 +180,12 @@ document.addEventListener('DOMContentLoaded', () => {
     <?php endif; ?>
     if (SESSION_ID) {
         fetchLiveScans();
-        if (SESSION_OPEN) pollTimer = setInterval(fetchLiveScans, 4000);
+        // Poll every 10 s, and not while the tab is hidden: a page left open in the background
+        // would otherwise cost a serverless request every few seconds for the whole meeting.
+        if (SESSION_OPEN) {
+            pollTimer = setInterval(() => { if (!document.hidden) fetchLiveScans(); }, 10000);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden && pollTimer) fetchLiveScans(); });
+        }
     }
     // Reload a moment after the next start/end so attendance opens and closes on schedule.
     if (RELOAD_IN !== null && RELOAD_IN < 86400) setTimeout(() => location.reload(), (RELOAD_IN + 2) * 1000);
