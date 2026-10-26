@@ -136,6 +136,13 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
 - The old MySQL files (`schema.sql`, `migration_v*.sql`) and the `database/*.php` helper scripts were deleted (they are in git history only); never recreate them: they do not work on Postgres and `reset_passwords_to_id.php` could reset every password.
 - Demo logins (seed data): admin / tcruz / jsantos / s2023001-s2023004, password `password`. Change in production.
 
+## Load test (`attendance-system/tests/load/`, k6)
+- `bash tests/load/run.sh dry|full` against a STAGING copy only (own Supabase project + a Vercel preview branch whose DB_* env vars are
+  scoped to that branch; the script refuses a BASE_URL without `git-loadtest`). Never load-test production.
+- Needs .env keys `VERCEL_BYPASS_SECRET`, `LOADTEST_PASSWORD`, `STAGING_QR_SECRET_KEY` (removed after each test) and synthetic `lt0001..`
+  students. k6 clears cookies every iteration unless `noCookiesReset: true` (already set): without it every user is logged out after one pass.
+- 2026-10-26 result (Hobby + Free, port 6543): 300 concurrent students, 298/298 scans accepted, p95 372 ms, p99 480 ms, max 12 DB connections.
+
 ## Section format
 - ONE format for students and classes: year level + letter(s), e.g. `3A` (`build_section()` / `is_valid_section_letters()` in
   `includes/functions.php`). The program is never part of the section. `database/supabase_normalize_sections.sql` converts old
