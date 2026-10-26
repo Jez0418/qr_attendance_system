@@ -30,7 +30,7 @@ don't break the Vercel + Supabase connection. (No secrets belong in this file.)
   (the start URL) sends students to the scanner. Icons: `assets/img/app-icon-{180,192,512}.png`.
 
 ## Configuration (environment variables — set in Vercel, never commit)
-`DB_HOST`, `DB_PORT` (5432 session pooler / 6543 transaction pooler), `DB_NAME` (postgres),
+`DB_HOST`, `DB_PORT` (production uses 6543 = transaction pooler since 2026-10-26; 5432 = session pooler, fewer connections), `DB_NAME` (postgres),
 `DB_USER` (`postgres.<project-ref>`), `DB_PASS`, `DB_SSL=1`, `QR_SECRET_KEY` (long random string signing QR payloads;
 if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1` (local only: shows demo logins on the login page). See `attendance-system/.env.example`
 (placeholders only). `.env` is git-ignored. After changing env vars, redeploy.
@@ -39,6 +39,10 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
 - Full schema + seed: `attendance-system/database/supabase_schema.sql` (final state; v1-v5 merged).
 - ISAP/MCNP departments + programs: `attendance-system/database/supabase_departments_programs.sql`.
 - Excused status: `attendance-system/database/supabase_excused_status.sql` (allows `'Excused'` in the status CHECK).
+- Role time zone: `attendance-system/database/supabase_role_timezone.sql` (`ALTER ROLE postgres SET timezone = 'Asia/Manila'`). Required on
+  port 6543: the transaction pooler may run consecutive queries on different server connections, so the per-connection
+  `SET TIME ZONE` in `db_connect.php` is not reliable there. Do not write code that depends on other session state either
+  (session-level `SET`, `pg_advisory_lock` without `_xact`, LISTEN, temp tables, `lastInsertId()` outside a transaction).
 - Foreign-key indexes the pages filter by: `attendance-system/database/supabase_indexes.sql` (also in the schema file).
   A new query that filters or joins on an unindexed column of a growing table should add its index there too.
 - Recurring class schedules: `attendance-system/database/supabase_class_schedules.sql` (adds `class_schedules`,
