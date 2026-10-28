@@ -10,14 +10,18 @@
  * What it does, deliberately little:
  *   - pages always come from the network (attendance must be live, and pages carry CSRF tokens),
  *     with a cached "You're offline" page when the network is down;
- *   - files under assets/ are served from cache and refreshed in the background.
+ *   - files under assets/ are served from cache and refreshed in the background (pages request them with
+ *     a content-hash ?v=, so a deploy that changes a file changes its URL and misses the old cache).
  * CACHE changes whenever one of the cached files changes, which installs a new worker and clears
  * the old cache.
  */
 $files = ['assets/offline.html', 'assets/css/style.css', 'assets/js/app.js', 'assets/js/theme.js', 'assets/js/pwa.js',
           'assets/img/app-icon-192.png', 'assets/img/school-emblem-96.png', 'sw.php'];
+// Hash the CONTENTS, not filemtime(): Vercel gives every deployed file the same mtime, so an mtime stamp
+// never changed and old caches were never cleared. Pages also ask for assets with a content-hash ?v=
+// (includes/asset_url.php), so a changed file is a cache miss even before this worker updates.
 $stamp = '';
-foreach ($files as $f) $stamp .= $f . @filemtime(__DIR__ . '/' . $f);
+foreach ($files as $f) $stamp .= $f . @md5_file(__DIR__ . '/' . $f);
 $version = substr(md5($stamp), 0, 10);
 
 header('Content-Type: application/javascript; charset=utf-8');

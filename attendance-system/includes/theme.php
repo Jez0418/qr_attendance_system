@@ -10,10 +10,11 @@
  *   theme_switcher()   the sun/moon button with its Light / Dark / System menu.
  * ------------------------------------------------------------
  */
+require_once __DIR__ . '/asset_url.php';
+
 function theme_head_tags(): string {
-    $v = (int) @filemtime(__DIR__ . '/../assets/js/theme.js');
     return '<meta name="color-scheme" content="light dark">' . "\n"
-         . '<script src="' . BASE_URL . 'assets/js/theme.js?v=' . $v . '"></script>' . "\n";
+         . '<script src="' . e(asset_url('assets/js/theme.js')) . '"></script>' . "\n";
 }
 
 function theme_switcher(): string {
