@@ -265,7 +265,10 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
     <div class="card">
         <div class="card-header"><h3>Laboratory Usage Today</h3></div>
-        <div class="card-body"><div class="chart-box"><canvas id="labChart"></canvas></div></div>
+        <div class="card-body">
+            <div class="chart-box" id="labWrap"><canvas id="labChart" role="img" aria-label="Scans per laboratory today"></canvas></div>
+            <p class="text-muted text-center chart-empty" id="labEmpty" hidden>No scans in any laboratory yet today.</p>
+        </div>
     </div>
 </div>
 
@@ -449,6 +452,10 @@ function buildCharts() {
 if (statusData.every(n => n === 0)) {
     const box = document.getElementById('statusDist');
     box.hidden = true; box.nextElementSibling.hidden = false;
+}
+if (labData.counts.every(n => n === 0)) {
+    document.getElementById('labWrap').hidden = true;
+    document.getElementById('labEmpty').hidden = false;
 }
 buildCharts();
 window.addEventListener('themechange', buildCharts);

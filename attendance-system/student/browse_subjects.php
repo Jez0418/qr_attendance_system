@@ -84,7 +84,7 @@ require_once __DIR__ . '/../includes/header.php';
         <p class="text-muted" style="margin:0 0 12px;font-size:13px">
             Requests are reviewed by the subject's teacher, or by an administrator.
             <?php if ($isIrregular): ?>
-                <span class="badge badge-late" style="margin-left:6px">Irregular Student</span>
+                <span class="badge badge-upcoming" style="margin-left:6px">Irregular Student</span>
                 — you can see subjects from other year levels, sections, programs and institutions.
             <?php endif; ?>
         </p>
