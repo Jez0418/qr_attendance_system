@@ -828,45 +828,66 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 @media (prefers-reduced-motion:reduce){.lg-body *{transition:none!important}.lg-brand,.lg-card{animation:none!important}}
 
 /* ============================================================
-   LOGIN PAGE (login.php): a single sign-in card floating on the system's usual gradient backdrop.
+   LOGIN PAGE (login.php): the aerial campus photo (assets/img/login-bg.jpg, the "MCNP-ISAP QR Attendance
+   System" sign is part of it) in its own colours, a sign-in card in a frosted frame, and a dark glass footer.
    Reuses the form primitives from the ACCOUNT PAGES block above (.lg-field, .lg-input, .lg-eye,
-   .lg-submit, .lg-alert, .lg-link, .lg-sub, .lg-help, .lg-roles/.lg-role, .lg-demo/.lg-chips/.lg-chip).
+   .lg-submit, .lg-alert, .lg-link, .lg-sub, .lg-roles/.lg-role, .lg-demo/.lg-chips/.lg-chip); the
+   .login-page overrides below restyle them for this page only, so the account pages keep their look.
    ============================================================ */
 .login-page{position:relative;z-index:0;min-height:100vh;margin:0;display:flex;flex-direction:column;
     font-family:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-    background:var(--page-bg);color:var(--slate-900)}
-.login-page::before{content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;transition:opacity .3s ease;
-    background-image:linear-gradient(160deg,var(--indigo-900),var(--indigo-600)),url('../img/login-bg.jpg');
-    background-size:cover,cover;background-position:center,center;background-repeat:no-repeat,no-repeat;
-    background-blend-mode:color;opacity:.62}
-.login-page::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
-    background-image:var(--bg-grad);opacity:.32}
-:root[data-theme="dark"] .login-page::before{opacity:.32}
-:root[data-theme="dark"] .login-page::after{opacity:.8}
+    background:#0b1a33;color:var(--slate-900)}
+/* The photo, lightly shaded so white top-bar text reads on it; darker in the dark theme. */
+.login-page::before{content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background-image:linear-gradient(180deg,rgba(6,14,32,.38) 0%,rgba(6,14,32,.06) 22%,rgba(6,14,32,.06) 72%,rgba(6,14,32,.42) 100%),
+        url('../img/login-bg.jpg');
+    background-size:cover,cover;background-position:center,center;background-repeat:no-repeat,no-repeat}
+.login-page::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:rgba(6,12,28,0);transition:background-color .3s ease}
+:root[data-theme="dark"] .login-page::after{background:rgba(6,12,28,.5)}
 .login-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px clamp(16px,4vw,40px)}
 .login-topbar-brand{display:flex;align-items:center;gap:12px}
-.login-topbar-logo{display:block;width:40px;height:40px;border-radius:50%;object-fit:cover;background:#fff;box-shadow:0 0 0 2px #fff,0 4px 12px rgba(30,64,120,.18)}
-.login-topbar-text{display:flex;flex-direction:column;line-height:1.3}
-.login-topbar-text strong{font-size:16px;font-weight:800;letter-spacing:-.01em;color:var(--slate-900)}
-.login-topbar-text small{font-size:12px;color:var(--slate-600);max-width:34ch}
+.login-topbar-logo{display:block;width:40px;height:40px;border-radius:50%;object-fit:cover;background:#fff;box-shadow:0 0 0 2px #fff,0 4px 12px rgba(0,0,0,.25)}
+.login-topbar-text{display:flex;flex-direction:column;line-height:1.3;text-shadow:0 1px 3px rgba(0,0,0,.45)}
+.login-topbar-text strong{font-size:16px;font-weight:800;letter-spacing:-.01em;color:#fff}
+.login-topbar-text small{font-size:12px;color:rgba(255,255,255,.88);max-width:34ch}
 .login-topbar-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
-.login-topbar-actions .icon-btn{background:var(--surface);border:1px solid var(--slate-200);box-shadow:var(--shadow-sm)}
-.login-shell{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:8px clamp(16px,4vw,40px) 20px}
-.login-grid{width:100%;max-width:440px;background:var(--surface);border-radius:var(--radius-xl);
-    box-shadow:var(--shadow-lg);overflow:hidden;animation:lgIn .36s cubic-bezier(.23,1,.32,1) both}
-.login-panel{padding:32px clamp(26px,4vw,40px);display:flex;flex-direction:column;justify-content:center}
-.login-panel .lg-sub{margin-bottom:14px}
+.login-topbar-actions .icon-btn{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.6);color:var(--slate-800);
+    box-shadow:0 4px 14px rgba(0,0,0,.18);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+:root[data-theme="dark"] .login-topbar-actions .icon-btn{background:rgba(17,27,48,.7);border-color:rgba(255,255,255,.14)}
+.login-shell{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:4px clamp(16px,4vw,40px) 16px}
+/* Frosted frame around the card: the photo shows through, blurred, as an 8px rim (outer 24px, card 16px radius). */
+.login-grid{width:100%;max-width:440px;padding:8px;border-radius:var(--radius-xl);
+    background:rgba(255,255,255,.34);border:1px solid rgba(255,255,255,.6);
+    backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);
+    box-shadow:0 24px 60px rgba(4,12,30,.38);animation:lgIn .36s cubic-bezier(.23,1,.32,1) both}
+:root[data-theme="dark"] .login-grid{background:rgba(17,27,48,.45);border-color:rgba(255,255,255,.12)}
+.login-panel{background:var(--surface);border-radius:var(--radius-md);overflow:hidden;
+    padding:26px clamp(24px,4vw,34px) 0;display:flex;flex-direction:column;justify-content:center}
+.login-panel .lg-sub{margin-bottom:12px}
 .login-panel .lg-field{margin-bottom:12px}
-.login-panel .lg-help{margin-top:14px}
 .login-panel h1{margin:0 0 4px;font-size:30px;font-weight:800;letter-spacing:-.02em}
+/* Role switch: a white track with a deep-blue selected pill. */
+.login-page .lg-roles{background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 18px rgba(30,64,120,.12)}
+.login-page .lg-role.active{background:linear-gradient(180deg,var(--indigo-700),color-mix(in srgb,var(--indigo-700) 72%,var(--indigo-900)));
+    box-shadow:0 6px 14px rgba(21,88,204,.32)}
+.login-page .lg-input input{background:var(--indigo-50);border-color:color-mix(in srgb,var(--indigo-100) 70%,var(--slate-200))}
+.login-page .lg-input input:focus{background:var(--surface)}
+.login-page .lg-submit{background:linear-gradient(180deg,var(--indigo-500),var(--indigo-700));box-shadow:0 10px 22px rgba(29,107,243,.34)}
+.login-page .lg-submit:hover{background:linear-gradient(180deg,var(--indigo-600),var(--indigo-700))}
+/* Help & Support: a quiet band across the bottom of the card. */
+.login-help{margin:18px calc(-1 * clamp(24px,4vw,34px)) 0;padding:14px clamp(24px,4vw,34px) 16px;text-align:center;
+    background:var(--slate-50);border-top:1px solid var(--line);font-size:13px;line-height:1.5;color:var(--slate-600)}
+.login-help h2{margin:0 0 4px;font-size:14px;font-weight:800;letter-spacing:-.01em;color:var(--slate-900)}
+.login-help p{margin:0}
+.login-help p + p{margin-top:6px}
 .login-field-label{display:block;margin-bottom:6px;font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate-700)}
 .login-remember-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 14px}
 .login-check{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--slate-700);cursor:pointer;user-select:none}
 .login-check input{width:16px;height:16px;accent-color:var(--indigo-600);cursor:pointer}
-.login-note{display:flex;align-items:flex-start;justify-content:center;gap:7px;margin:12px 0 0;text-align:center;font-size:12.5px;line-height:1.5;color:var(--slate-500)}
-.login-note i{margin-top:2px;color:var(--slate-400)}
 .login-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
-    padding:12px clamp(16px,4vw,40px);border-top:1px solid var(--line);font-size:12.5px;color:var(--slate-500)}
+    padding:12px clamp(16px,4vw,40px);font-size:12.5px;color:rgba(255,255,255,.88);
+    background:rgba(8,16,36,.55);border-top:1px solid rgba(255,255,255,.14);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .login-footer-secure{display:flex;align-items:center;gap:7px}
 .lg-submit.is-loading{opacity:.75;cursor:default}
 .lg-submit.is-loading .lg-submit-label::after{content:'';display:inline-block;width:14px;height:14px;margin-left:8px;
@@ -876,9 +897,27 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
     .login-topbar-text small{display:none}
 }
 @media (max-width:480px){
-    .login-panel{padding:30px 20px}
-    .login-panel h1{font-size:22px}
+    .login-grid{padding:6px}
+    .login-panel{padding:26px 20px 0}
+    .login-help{margin-left:-20px;margin-right:-20px;padding-left:20px;padding-right:20px}
+    .login-panel h1{font-size:24px}
     .login-footer{justify-content:center;text-align:center}
+}
+/* Short laptop screens (768px and below): tighter rhythm so the card and the footer fit without scrolling. */
+@media (min-width:481px) and (max-height:800px){
+    .login-topbar{padding-top:12px;padding-bottom:8px}
+    .login-panel{padding-top:22px}
+    .login-panel h1{font-size:26px}
+    .login-panel .lg-field{margin-bottom:10px}
+    .login-page .lg-input input,.login-page .lg-submit{min-height:44px}
+    .login-page .lg-roles{margin-bottom:12px}
+    .login-page .lg-role{min-height:38px}
+    .login-remember-row{margin-bottom:12px}
+    .login-help{margin-top:14px;padding-top:12px;padding-bottom:12px}
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+    .login-grid{background:rgba(255,255,255,.7)}
+    :root[data-theme="dark"] .login-grid{background:rgba(17,27,48,.85)}
 }
 @media (prefers-reduced-motion:reduce){
     .login-grid{animation:none!important}
