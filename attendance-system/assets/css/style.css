@@ -828,27 +828,28 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 @media (prefers-reduced-motion:reduce){.lg-body *{transition:none!important}.lg-brand,.lg-card{animation:none!important}}
 
 /* ============================================================
-   LOGIN PAGE (login.php): a single sign-in card floating on the system's usual gradient backdrop.
+   LOGIN PAGE (login.php): a single sign-in card floating on the aerial campus photo (assets/img/login-bg.jpg,
+   the "MCNP-ISAP QR Attendance System" sign is part of it), shown in its own colours.
    Reuses the form primitives from the ACCOUNT PAGES block above (.lg-field, .lg-input, .lg-eye,
    .lg-submit, .lg-alert, .lg-link, .lg-sub, .lg-help, .lg-roles/.lg-role, .lg-demo/.lg-chips/.lg-chip).
    ============================================================ */
 .login-page{position:relative;z-index:0;min-height:100vh;margin:0;display:flex;flex-direction:column;
     font-family:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-    background:var(--page-bg);color:var(--slate-900)}
-.login-page::before{content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;transition:opacity .3s ease;
-    background-image:linear-gradient(160deg,var(--indigo-900),var(--indigo-600)),url('../img/login-bg.jpg');
-    background-size:cover,cover;background-position:center,center;background-repeat:no-repeat,no-repeat;
-    background-blend-mode:color;opacity:.62}
-.login-page::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
-    background-image:var(--bg-grad);opacity:.32}
-:root[data-theme="dark"] .login-page::before{opacity:.32}
-:root[data-theme="dark"] .login-page::after{opacity:.8}
+    background:#0b1a33;color:var(--slate-900)}
+/* The photo in natural colour, lightly shaded at the top and bottom so the white top-bar and footer text read on it;
+   the dark theme adds a darker shade over the whole photo. */
+.login-page::before{content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background-image:linear-gradient(180deg,rgba(6,14,32,.38) 0%,rgba(6,14,32,.06) 22%,rgba(6,14,32,.06) 72%,rgba(6,14,32,.42) 100%),
+        url('../img/login-bg.jpg');
+    background-size:cover,cover;background-position:center,center;background-repeat:no-repeat,no-repeat}
+.login-page::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:rgba(6,12,28,0);transition:background-color .3s ease}
+:root[data-theme="dark"] .login-page::after{background:rgba(6,12,28,.5)}
 .login-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px clamp(16px,4vw,40px)}
 .login-topbar-brand{display:flex;align-items:center;gap:12px}
-.login-topbar-logo{display:block;width:40px;height:40px;border-radius:50%;object-fit:cover;background:#fff;box-shadow:0 0 0 2px #fff,0 4px 12px rgba(30,64,120,.18)}
-.login-topbar-text{display:flex;flex-direction:column;line-height:1.3}
-.login-topbar-text strong{font-size:16px;font-weight:800;letter-spacing:-.01em;color:var(--slate-900)}
-.login-topbar-text small{font-size:12px;color:var(--slate-600);max-width:34ch}
+.login-topbar-logo{display:block;width:40px;height:40px;border-radius:50%;object-fit:cover;background:#fff;box-shadow:0 0 0 2px #fff,0 4px 12px rgba(0,0,0,.25)}
+.login-topbar-text{display:flex;flex-direction:column;line-height:1.3;text-shadow:0 1px 3px rgba(0,0,0,.45)}
+.login-topbar-text strong{font-size:16px;font-weight:800;letter-spacing:-.01em;color:#fff}
+.login-topbar-text small{font-size:12px;color:rgba(255,255,255,.88);max-width:34ch}
 .login-topbar-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .login-topbar-actions .icon-btn{background:var(--surface);border:1px solid var(--slate-200);box-shadow:var(--shadow-sm)}
 .login-shell{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:8px clamp(16px,4vw,40px) 20px}
@@ -866,7 +867,9 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .login-note{display:flex;align-items:flex-start;justify-content:center;gap:7px;margin:12px 0 0;text-align:center;font-size:12.5px;line-height:1.5;color:var(--slate-500)}
 .login-note i{margin-top:2px;color:var(--slate-400)}
 .login-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
-    padding:12px clamp(16px,4vw,40px);border-top:1px solid var(--line);font-size:12.5px;color:var(--slate-500)}
+    padding:12px clamp(16px,4vw,40px);font-size:12.5px;color:rgba(255,255,255,.88);
+    background:rgba(8,16,36,.55);border-top:1px solid rgba(255,255,255,.14);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .login-footer-secure{display:flex;align-items:center;gap:7px}
 .lg-submit.is-loading{opacity:.75;cursor:default}
 .lg-submit.is-loading .lg-submit-label::after{content:'';display:inline-block;width:14px;height:14px;margin-left:8px;
