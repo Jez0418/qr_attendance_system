@@ -212,7 +212,9 @@ if unset a key is derived from the DB credentials), optional `SHOW_DEMO_LOGINS=1
   `--canvas`, `--surface`, `--line`, the slate scale, status `--*-100` tints and `--*-fg` text colours). Use `var(--surface)` for card/modal/input
   backgrounds (never `#fff`) and the variables for text colours; `tests/theme_test.php` fails on a hard-coded white surface.
 - Layout/look: a soft blue backdrop with two floating white panels (fixed sidebar, then the main panel = top bar + `--canvas` area holding white cards).
-  Sidebar links carry `.nav-label` section headings (labels only, same links). Shape rule: panels 24px, cards 20px, inputs 12px, buttons/badges/chips are
+  Sidebar links carry `.nav-label` section headings (labels only, same links). On desktop the top-bar menu button collapses the
+  sidebar to a 76px icon rail (`html.sidebar-collapsed`, localStorage `sidebar`, set before paint by an inline script in `header.php`,
+  toggled in `app.js`); a new sidebar link must keep its label in a `<span>` (hidden visually when collapsed, used for the tooltip). Shape rule: panels 24px, cards 20px, inputs 12px, buttons/badges/chips are
   pills. Font: Plus Jakarta Sans (Google Fonts, already allowed by the CSP). Status colours: Present green, Late orange, Absent red.
   The top-bar subtitle comes from `$pageSubtitle` or the map in `includes/header.php`. Chart.js needs a sized `.chart-box` and `maintainAspectRatio:false`.
 - Chart.js: build charts in a function that starts with `const c = themeChartDefaults();` and rebuild on `window` `themechange` (see `admin/dashboard.php`).
