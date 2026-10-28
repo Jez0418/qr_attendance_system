@@ -45,7 +45,7 @@ auth_page_start('Choose a new password');
         <?php if (!$reset): ?>
             <div class="lg-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
                 <span>This reset link is invalid, has expired or was already used.</span></div>
-            <a class="lg-submit" style="display:block;text-align:center;text-decoration:none" href="<?php echo BASE_URL; ?>forgot_password.php">Request a new link</a>
+            <a class="lg-submit" href="<?php echo BASE_URL; ?>forgot_password.php">Request a new link</a>
         <?php else: ?>
             <p class="lg-sub">Account: <strong><?php echo e($reset['username']); ?></strong>. Use at least <?php echo PWRESET_MIN_PASSWORD; ?> characters.</p>
             <?php if ($error): ?><div class="lg-alert" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> <span><?php echo e($error); ?></span></div><?php endif; ?>

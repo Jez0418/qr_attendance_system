@@ -23,7 +23,10 @@ foreach (['includes/header.php', 'login.php', 'includes/auth_page.php'] as $f) {
     check("$f loads the theme script in <head>", strpos(file_get_contents("$root/$f"), 'theme_head_tags()') !== false);
 }
 check('header.php shows the theme switcher', strpos(file_get_contents("$root/includes/header.php"), 'theme_switcher()') !== false);
-check('login.php shows the theme switcher', strpos(file_get_contents("$root/login.php"), 'theme_switcher()') !== false);
+// login.php and the account pages print the shared public top bar (includes/auth_page.php), which holds the switcher.
+check('login.php shows the theme switcher (public top bar)', strpos(file_get_contents("$root/login.php"), 'public_topbar()') !== false);
+check('the public top bar shows the theme switcher', strpos(file_get_contents("$root/includes/auth_page.php"), 'theme_switcher()') !== false);
+check('the account pages use the public top bar', substr_count(file_get_contents("$root/includes/auth_page.php"), 'public_topbar()') >= 2);
 
 // Surfaces must use the --surface variable, not white. Allowed: the QR code canvas (a QR needs a white quiet zone),
 // the toggle knob and the round logos.

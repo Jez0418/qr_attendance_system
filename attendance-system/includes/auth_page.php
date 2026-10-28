@@ -1,9 +1,33 @@
 <?php
 /**
- * Shared frame for the public account pages (forgot_password.php, reset_password.php):
- * the same logo, card and styling as login.php.
+ * Shared frame for the public pages.
+ *   public_topbar() / public_footer()  the top bar (emblem, school name, theme switch) and footer, also used by login.php,
+ *                                      so every public page has the same chrome on the campus photo.
  *   auth_page_start('Title'); ...card content...; auth_page_end();
+ *                                      the account pages (forgot_password.php, reset_password.php): login.php's shell and
+ *                                      card style (.login-page / .login-grid / .login-panel) around their own form.
  */
+function public_topbar(): string {
+    $b = BASE_URL;
+    return '<header class="login-topbar">' . "\n"
+         . '    <a class="login-topbar-brand" href="' . $b . 'login.php">' . "\n"
+         . '        <img class="login-topbar-logo" src="' . $b . 'assets/img/school-emblem-96.png" width="40" height="40" alt="MCNP-ISAP emblem">' . "\n"
+         . '        <span class="login-topbar-text">' . "\n"
+         . '            <strong>MCNP-ISAP</strong>' . "\n"
+         . '            <small>Medical Colleges of Northern Philippines and International School of Asia and the Pacific</small>' . "\n"
+         . '        </span>' . "\n"
+         . '    </a>' . "\n"
+         . '    <div class="login-topbar-actions">' . theme_switcher() . '</div>' . "\n"
+         . '</header>' . "\n";
+}
+
+function public_footer(): string {
+    return '<footer class="login-footer">' . "\n"
+         . '    <span>&copy; ' . date('Y') . ' MCNP-ISAP. All rights reserved.</span>' . "\n"
+         . '    <span class="login-footer-secure"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Secure institutional access</span>' . "\n"
+         . '</footer>' . "\n";
+}
+
 function auth_page_start(string $title): void {
     require_once __DIR__ . '/theme.php';
     require_once __DIR__ . '/pwa.php';
@@ -24,29 +48,23 @@ function auth_page_start(string $title): void {
 <?php echo theme_head_tags(); ?>
 <?php echo pwa_head_tags(); ?>
 </head>
-<body class="lg-body">
-<div class="theme-float"><?php echo theme_switcher(); ?></div>
-<main class="lg-wrap">
-    <header class="lg-brand">
-        <img class="lg-logo" src="<?php echo BASE_URL; ?>assets/img/school-emblem-256.png" width="72" height="72" alt="MCNP and ISAP emblem">
-        <h1>MCNP-ISAP QR Attendance</h1>
-        <p>Medical Colleges of Northern Philippines and International School of Asia and the Pacific</p>
-    </header>
-    <section class="lg-card" aria-labelledby="lgTitle">
-        <h2 id="lgTitle" style="margin:0 0 6px;font-size:20px"><?php echo e($title); ?></h2>
+<body class="login-page">
+<?php echo public_topbar(); ?>
+<main class="login-shell">
+    <div class="login-grid">
+        <section class="login-panel" aria-labelledby="lgTitle">
+            <h1 id="lgTitle"><?php echo e($title); ?></h1>
 <?php
 }
 
 function auth_page_end(): void {
     ?>
-        <a class="lg-link lg-back" href="<?php echo BASE_URL; ?>login.php"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back to sign in</a>
-    </section>
-    <p class="lg-help">Need help? Contact the MCNP-ISAP IT Services or Laboratory Department.</p>
+            <a class="lg-link lg-back" href="<?php echo BASE_URL; ?>login.php"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back to sign in</a>
+            <p class="lg-help">Need help? Contact the MCNP-ISAP IT Services or Laboratory Department.</p>
+        </section>
+    </div>
 </main>
-<footer class="lg-photo-footer">
-    <span>&copy; 2026 MCNP&ndash;ISAP. All rights reserved.</span>
-    <span class="login-footer-secure"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Secure institutional access</span>
-</footer>
+<?php echo public_footer(); ?>
 </body>
 </html>
 <?php
