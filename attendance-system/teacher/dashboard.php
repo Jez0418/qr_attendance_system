@@ -80,8 +80,8 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="greeting-header">
     <div>
-        <h2>Welcome, <?php echo e($_SESSION['full_name']); ?><?php echo $dept ? ' [' . e($dept) . ']' : ''; ?></h2>
-        <div class="greeting-sub"><?php echo date('l, F j, Y'); ?></div>
+        <h2>Welcome, <?php echo e($_SESSION['full_name']); ?></h2>
+        <div class="greeting-sub"><?php echo $dept ? e($dept) . ' · ' : ''; ?><?php echo date('l, F j, Y'); ?></div>
     </div>
     <div class="greeting-avatar"><?php echo strtoupper(substr($_SESSION['full_name'], 0, 1)); ?></div>
 </div>
@@ -89,15 +89,15 @@ require_once __DIR__ . '/../includes/header.php';
 <?php if ($activeSession): ?>
 <div class="alert alert-success" style="margin-bottom:20px">
     <i class="fa-solid fa-circle-play"></i>
-    <span>You have an <strong>active QR session</strong> right now for <strong><?php echo e($activeSession['subject_name']); ?></strong> in <?php echo e($activeSession['lab_name']); ?>.</span>
-    <a href="session.php" class="btn btn-primary btn-sm" style="margin-left:auto">Manage Session</a>
+    <span>Attendance is open now for <strong><?php echo e($activeSession['subject_name']); ?></strong> in <?php echo e($activeSession['lab_name']); ?>.</span>
+    <a href="session.php" class="btn btn-primary btn-sm" style="margin-left:auto">View live check-ins</a>
 </div>
 <?php endif; ?>
 
 <div class="stat-grid">
     <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Assigned Classes</span><div class="stat-icon blue"><i class="fa-solid fa-book"></i></div></div><div class="stat-value"><?php echo $totalClasses; ?></div></div>
-    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Total Students</span><div class="stat-icon blue"><i class="fa-solid fa-user-graduate"></i></div></div><div class="stat-value"><?php echo $totalStudents; ?></div></div>
-    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Scans Today</span><div class="stat-icon blue"><i class="fa-solid fa-qrcode"></i></div></div><div class="stat-value"><?php echo $todayScans; ?></div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Students Enrolled</span><div class="stat-icon blue"><i class="fa-solid fa-user-graduate"></i></div></div><div class="stat-value"><?php echo $totalStudents; ?></div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Check-ins Today</span><div class="stat-icon blue"><i class="fa-solid fa-qrcode"></i></div></div><div class="stat-value"><?php echo $todayScans; ?></div></div>
     <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Late Today</span><div class="stat-icon amber"><i class="fa-solid fa-user-clock"></i></div></div><div class="stat-value warn"><?php echo $todayLate; ?></div></div>
 </div>
 
@@ -129,7 +129,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="card">
     <div class="card-header">
         <h3>My Assigned Classes</h3>
-        <a href="session.php" class="btn btn-primary btn-sm"><i class="fa-solid fa-qrcode"></i> Start Attendance Session</a>
+        <a href="session.php" class="btn btn-primary btn-sm"><i class="fa-solid fa-qrcode"></i> Today's attendance</a>
     </div>
     <div class="table-wrapper">
         <table class="data-table">

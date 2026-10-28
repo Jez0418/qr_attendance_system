@@ -62,7 +62,7 @@ require_once __DIR__ . '/../includes/header.php';
 <?php if ($overClasses): ?>
 <div class="alert alert-error" role="status">
     <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-    <span>Your attendance in <strong><?php echo e($codes($overClasses)); ?></strong> is past the allowed limit. Talk to your teacher about how to make it up.</span>
+    <span>In <strong><?php echo e($codes($overClasses)); ?></strong> you've reached the absence limit or fallen below the minimum attendance rate. Talk to your teacher about what happens next.</span>
 </div>
 <?php elseif ($warnClasses): ?>
 <div class="alert alert-warning" role="status">
@@ -74,7 +74,7 @@ require_once __DIR__ . '/../includes/header.php';
 <?php echo pwa_install_card(); ?>
 
 <div class="stat-grid">
-    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Attendance</span><div class="stat-icon blue"><i class="fa-solid fa-chart-simple"></i></div></div><div class="stat-value"><?php echo $overallRate === null ? '—' : $overallRate . '%'; ?></div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Attendance Rate</span><div class="stat-icon blue"><i class="fa-solid fa-chart-simple"></i></div></div><div class="stat-value"><?php echo $overallRate === null ? '—' : $overallRate . '%'; ?></div></div>
     <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Late</span><div class="stat-icon amber"><i class="fa-solid fa-clock"></i></div></div><div class="stat-value warn"><?php echo $counts['Late']; ?></div></div>
     <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Absent</span><div class="stat-icon red"><i class="fa-solid fa-user-xmark"></i></div></div><div class="stat-value<?php echo $counts['Absent'] ? ' bad' : ''; ?>"><?php echo $counts['Absent']; ?></div><?php if ($counts['Excused'] > 0): ?><small class="text-muted"><?php echo $counts['Excused']; ?> excused</small><?php endif; ?></div>
 </div>
@@ -83,11 +83,11 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="card">
     <div class="card-header">
         <h3>Attendance by Class</h3>
-        <span class="text-muted card-header-note"><?php echo count($standings); ?> enrolled</span>
+        <span class="text-muted card-header-note"><?php echo count($standings); ?> <?php echo count($standings) === 1 ? 'class' : 'classes'; ?></span>
     </div>
     <div class="card-body standing-body">
         <?php if (empty($standings)): ?>
-            <p class="text-muted text-center" style="padding:24px 0">You're not enrolled in any class yet. Find one in <a href="browse_subjects.php">Browse Subjects</a>.</p>
+            <p class="text-muted text-center" style="padding:24px 0">You're not enrolled in any class yet. <a href="browse_subjects.php">Request enrollment</a>, and your attendance shows here once a teacher approves it.</p>
         <?php else: ?>
         <ul class="standing-list">
             <?php foreach ($standings as $c): $st = $c['standing']; ?>
@@ -123,7 +123,7 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
     <div class="card-body" style="padding:8px 20px">
         <?php if (empty($recent)): ?>
-            <p class="text-muted text-center" style="padding:24px 0">No attendance records yet. Open <strong>Scan Attendance</strong> in the menu to get started!</p>
+            <p class="text-muted text-center" style="padding:24px 0">No attendance records yet. When your class starts, <a href="scanner.php">scan the lab's QR code</a> to check in.</p>
         <?php else: foreach ($recent as $r): ?>
             <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--slate-100)">
                 <div style="flex:1;min-width:0;overflow-wrap:anywhere">
