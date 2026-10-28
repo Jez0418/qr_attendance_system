@@ -95,10 +95,10 @@ require_once __DIR__ . '/../includes/header.php';
 <?php endif; ?>
 
 <div class="stat-grid">
-    <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-book"></i></div><div><div class="stat-value"><?php echo $totalClasses; ?></div><div class="stat-label">Assigned Classes</div></div></div>
-    <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-user-graduate"></i></div><div><div class="stat-value"><?php echo $totalStudents; ?></div><div class="stat-label">Total Students</div></div></div>
-    <div class="stat-card"><div class="stat-icon amber"><i class="fa-solid fa-qrcode"></i></div><div><div class="stat-value"><?php echo $todayScans; ?></div><div class="stat-label">Scans Today</div></div></div>
-    <div class="stat-card"><div class="stat-icon red"><i class="fa-solid fa-user-clock"></i></div><div><div class="stat-value"><?php echo $todayLate; ?></div><div class="stat-label">Late Today</div></div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Assigned Classes</span><div class="stat-icon blue"><i class="fa-solid fa-book"></i></div></div><div class="stat-value"><?php echo $totalClasses; ?></div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Total Students</span><div class="stat-icon blue"><i class="fa-solid fa-user-graduate"></i></div></div><div class="stat-value"><?php echo $totalStudents; ?></div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Scans Today</span><div class="stat-icon blue"><i class="fa-solid fa-qrcode"></i></div></div><div class="stat-value"><?php echo $todayScans; ?></div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Late Today</span><div class="stat-icon amber"><i class="fa-solid fa-user-clock"></i></div></div><div class="stat-value warn"><?php echo $todayLate; ?></div></div>
 </div>
 
 <?php if ($atRisk): ?>

@@ -120,21 +120,7 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 <?php endif; ?>
 
-<h3 style="margin:0 0 12px;font-size:14px;color:var(--slate-600)">Dashboard Cards</h3>
-<div class="stat-grid">
-    <div class="stat-card">
-        <div class="stat-card-top"><span class="stat-label">Total Students</span><div class="stat-icon blue"><i class="fa-solid fa-user-graduate"></i></div></div>
-        <div class="stat-value"><?php echo number_format($totalStudents); ?></div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-card-top"><span class="stat-label">Total Teachers</span><div class="stat-icon blue"><i class="fa-solid fa-chalkboard-user"></i></div></div>
-        <div class="stat-value"><?php echo number_format($totalTeachers); ?></div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-card-top"><span class="stat-label">Total Laboratories</span><div class="stat-icon blue"><i class="fa-solid fa-flask"></i></div></div>
-        <div class="stat-value"><?php echo number_format($totalLabs); ?></div>
-    </div>
-</div>
+<?php /* Today's attendance leads; the account/lab totals are reference figures and follow it. */ ?>
 <div class="stat-grid">
     <div class="stat-card">
         <div class="stat-card-top"><span class="stat-label">Students Present Today</span><div class="stat-icon green"><i class="fa-solid fa-user-check"></i></div></div>
@@ -147,6 +133,20 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="stat-card">
         <div class="stat-card-top"><span class="stat-label">Total Attendance Today</span><div class="stat-icon blue"><i class="fa-solid fa-list-check"></i></div></div>
         <div class="stat-value"><?php echo number_format($todayTotal); ?></div>
+    </div>
+</div>
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-card-top"><span class="stat-label">Total Students</span><div class="stat-icon blue"><i class="fa-solid fa-user-graduate"></i></div></div>
+        <div class="stat-value"><?php echo number_format($totalStudents); ?></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-top"><span class="stat-label">Total Teachers</span><div class="stat-icon blue"><i class="fa-solid fa-chalkboard-user"></i></div></div>
+        <div class="stat-value"><?php echo number_format($totalTeachers); ?></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-top"><span class="stat-label">Total Laboratories</span><div class="stat-icon blue"><i class="fa-solid fa-flask"></i></div></div>
+        <div class="stat-value"><?php echo number_format($totalLabs); ?></div>
     </div>
 </div>
 
@@ -170,7 +170,7 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="grid-2">
-    <div class="card">
+    <div class="card chart-fill">
         <div class="card-header"><h3>Attendance Graph</h3><span class="text-muted card-header-note">Last 7 days</span></div>
         <div class="card-body trend-card">
             <div class="trend-top">

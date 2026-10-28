@@ -84,15 +84,15 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <div class="stat-grid" style="margin-top:20px">
-    <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-list-check"></i></div><div><div class="stat-value"><?php echo $totalScans; ?></div><div class="stat-label">Total Records</div></div></div>
-    <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-check"></i></div><div><div class="stat-value"><?php echo $counts['Present']; ?></div><div class="stat-label">Present</div></div></div>
-    <div class="stat-card"><div class="stat-icon amber"><i class="fa-solid fa-clock"></i></div><div><div class="stat-value"><?php echo $counts['Late']; ?></div><div class="stat-label">Late</div></div></div>
-    <div class="stat-card"><div class="stat-icon red"><i class="fa-solid fa-xmark"></i></div><div><div class="stat-value"><?php echo $counts['Absent']; ?></div><div class="stat-label">Absent</div></div></div>
-    <div class="stat-card"><div class="stat-icon excused"><i class="fa-solid fa-file-medical"></i></div><div><div class="stat-value"><?php echo $counts['Excused']; ?></div><div class="stat-label">Excused</div></div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Total Records</span><div class="stat-icon blue"><i class="fa-solid fa-list-check"></i></div></div><div class="stat-value"><?php echo $totalScans; ?></div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Present</span><div class="stat-icon green"><i class="fa-solid fa-check"></i></div></div><div class="stat-value"><?php echo $counts['Present']; ?></div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Late</span><div class="stat-icon amber"><i class="fa-solid fa-clock"></i></div></div><div class="stat-value"><?php echo $counts['Late']; ?></div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Absent</span><div class="stat-icon red"><i class="fa-solid fa-xmark"></i></div></div><div class="stat-value"><?php echo $counts['Absent']; ?></div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-label">Excused</span><div class="stat-icon excused"><i class="fa-solid fa-file-medical"></i></div></div><div class="stat-value"><?php echo $counts['Excused']; ?></div></div>
 </div>
 
 <div class="grid-2">
-    <div class="card">
+    <div class="card chart-fill">
         <div class="card-header"><h3>Attendance by Subject</h3></div>
         <div class="card-body"><div class="chart-box"><canvas id="subjectChart"></canvas></div></div>
     </div>

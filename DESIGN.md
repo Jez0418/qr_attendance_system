@@ -170,7 +170,7 @@ Shadows are structural, not decorative: they are what makes the floating-panel l
 ## Shapes
 
 - **sm (12px):** inputs, form controls, small blocks, role tabs.
-- **md (16px):** alerts, toasts, QR display frame, lab-status wrapper.
+- **md (16px):** alerts, toasts, QR display frame, lab-status pills.
 - **lg (20px):** cards, stat cards, the mobile bottom nav bar.
 - **xl (24px):** the sidebar panel, the main content panel, modals.
 - **pill (999px):** every button, badge, chip, tab, and the day-picker's selectable day labels — anything the user directly acts on.
