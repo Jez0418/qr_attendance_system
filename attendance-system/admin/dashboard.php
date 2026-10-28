@@ -216,15 +216,15 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="card-header"><h3>Laboratory Status</h3></div>
     <div class="card-body">
         <div class="lab-legend">
-            <span><span class="dot dot-green"></span> Active (session running)</span>
-            <span><span class="dot dot-red"></span> Inactive</span>
+            <span><span class="dot dot-accent"></span> Active (session running)</span>
+            <span><span class="dot dot-muted"></span> Inactive</span>
         </div>
         <div class="lab-status-wrap">
             <?php foreach ($labStatus as $l): ?>
                 <div class="lab-status-pill">
                     <div class="lab-pill-name"><?php echo e($l['lab_name']); ?></div>
                     <span class="badge badge-<?php echo $l['is_live'] ? 'active' : 'inactive'; ?>">
-                        <span class="dot <?php echo $l['is_live'] ? 'dot-green' : 'dot-red'; ?>" style="width:6px;height:6px;border-radius:50%"></span>
+                        <span class="dot <?php echo $l['is_live'] ? 'dot-accent' : 'dot-muted'; ?>" style="width:6px;height:6px;border-radius:50%"></span>
                         <?php echo $l['is_live'] ? 'Active' : 'Inactive'; ?>
                     </span>
                 </div>
