@@ -575,7 +575,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .cal-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 16px}
 
 .cal-event{display:block;width:100%;text-align:left;font:inherit;cursor:pointer;background:var(--surface);border:1px solid var(--slate-200);
-    border-left:4px solid var(--indigo-500);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:8px;transition:box-shadow .15s}
+    border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:8px;transition:box-shadow .15s}
 .cal-event:hover,.cal-event:focus-visible{box-shadow:var(--shadow-md);outline:none}
 .cal-event.status-active{border-left-color:var(--green-600)}
 .cal-event.status-expired{border-left-color:var(--slate-300);opacity:.75}
@@ -611,7 +611,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .cal-cell-day{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 6px;
     border-radius:999px;font-size:12.5px;font-weight:700;color:var(--slate-700);margin-bottom:4px;white-space:nowrap}
 .cal-cell-day.has-month{letter-spacing:.01em}
-.cal-cell .cal-event{padding:3px 6px;margin-bottom:4px;font-size:12px;border-left-width:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-cell .cal-event{padding:3px 6px;margin-bottom:4px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal-cell .cal-event-time{display:inline;font-size:12px}
 .cal-more{font-size:12px;font-weight:600}
 
