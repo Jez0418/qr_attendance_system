@@ -141,7 +141,7 @@ $roleNotes = [
             </div>
             <?php endif; ?>
 
-            <p class="lg-help">Need help? Contact the MCNP&ndash;ISAP Registrar or Laboratory Department.</p>
+            <p class="lg-help">Need help? Contact the MCNP-ISAP IT Services or Laboratory Department.</p>
         </section>
     </div>
 </main>
