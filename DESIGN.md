@@ -193,7 +193,7 @@ No sharp corners exist anywhere in the system; every radius step is one of these
 ### Status Badges (signature component)
 - **Shape:** full pill, 4px/12px padding, 12.5px/700-weight text.
 - **Style:** a 100-level tint of the status color as background, the matching `-fg` (darker/more saturated) shade as text — never a solid fill like buttons get. This is what visually tells a badge apart from a button at a glance.
-- **Variants:** Present, Late, Absent, Excused, plus a neutral slate pair (Active/Inactive, Pending) for non-attendance state.
+- **Variants:** Present, Late, Absent, Excused for attendance. Non-attendance state never borrows those colours: Active / Approved / OK is the filled Gatekeeper Blue tint (`badge-active`), Upcoming the outlined blue pill (`badge-upcoming`), Inactive / Pending / Expired / Regular the neutral slate pair. A laboratory with a session running gets a blue dot, an idle one a slate dot.
 
 ### Cards / Containers
 - **Corner Style:** 20px radius (stat cards and regular cards share one scale).
