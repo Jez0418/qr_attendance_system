@@ -747,42 +747,13 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
     font-family:inherit;font-size:13.5px;font-weight:500;color:var(--slate-700);cursor:pointer;text-align:left}
 .row-menu-list button:hover,.row-menu-list button:focus-visible{background:var(--slate-100);outline:none}
 .row-menu-list button > i{width:16px;text-align:center;color:var(--slate-500)}
-.theme-float{position:fixed;top:16px;right:16px;z-index:50}
-.theme-float .icon-btn{background:var(--surface);border:1px solid var(--slate-200);box-shadow:var(--shadow-sm)}
 
 /* ============================================================
-   ACCOUNT PAGES (forgot_password.php, reset_password.php via includes/auth_page.php): centered card
-   on the blue backdrop. login.php has its own split-screen shell below but still shares the form
-   primitives here (.lg-field, .lg-input, .lg-eye, .lg-submit, .lg-alert, .lg-link, .lg-sub, .lg-help).
+   PUBLIC FORM PRIMITIVES (login.php and the account pages forgot_password.php / reset_password.php, which
+   share login's shell via includes/auth_page.php): .lg-field, .lg-input, .lg-eye, .lg-submit, .lg-alert,
+   .lg-link, .lg-sub, .lg-help. The page shell itself (photo, top bar, card, footer) is the LOGIN PAGE block below.
    Everything uses the theme tokens, so the dark palette needs no overrides here.
    ============================================================ */
-.lg-body{position:relative;z-index:0;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;
-    background:var(--page-bg);font-family:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--slate-900)}
-/* Same backdrop as login.php: the campus photo in natural colour, lightly shaded top and bottom, darker in dark theme. */
-.lg-body::before{content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;
-    background-image:linear-gradient(180deg,rgba(6,14,32,.38) 0%,rgba(6,14,32,.06) 22%,rgba(6,14,32,.06) 72%,rgba(6,14,32,.42) 100%),
-        url('../img/login-bg.jpg');
-    background-size:cover,cover;background-position:center,center;background-repeat:no-repeat,no-repeat}
-.lg-body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:rgba(6,12,28,0);transition:background-color .3s ease}
-:root[data-theme="dark"] .lg-body::after{background:rgba(6,12,28,.5)}
-.lg-wrap{position:relative;z-index:1;width:100%;max-width:420px;padding-bottom:64px}
-.lg-photo-footer{position:fixed;left:0;right:0;bottom:0;z-index:2;display:flex;align-items:center;justify-content:space-between;
-    gap:12px;flex-wrap:wrap;padding:12px clamp(16px,4vw,40px);
-    background:rgba(8,16,36,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-    border-top:1px solid rgba(255,255,255,.14);font-size:12.5px;color:rgba(255,255,255,.88)}
-.lg-photo-footer .login-footer-secure{display:flex;align-items:center;gap:7px}
-/* On the photo: the brand above the card and the help line below it are white. */
-.lg-body .lg-brand h1,.lg-wrap > .lg-help{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.65),0 0 14px rgba(0,0,0,.55)}
-.lg-body .lg-brand p{color:rgba(255,255,255,.92);text-shadow:0 1px 2px rgba(0,0,0,.65),0 0 14px rgba(0,0,0,.55)}
-.lg-wrap > .lg-help{color:rgba(255,255,255,.9)}
-.lg-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.lg-brand{text-align:center;margin-bottom:24px;animation:lgIn .32s cubic-bezier(.23,1,.32,1) both}
-.lg-logo{display:block;width:72px;height:72px;margin:0 auto 14px;border-radius:50%;object-fit:cover;
-    background:#fff;box-shadow:0 0 0 3px #fff,0 8px 22px rgba(30,64,120,.20)}
-.lg-brand h1{margin:0 0 4px;font-size:26px;font-weight:800;letter-spacing:-.02em}
-.lg-brand p{margin:0;font-size:14px;color:var(--slate-600)}
-.lg-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-xl);padding:28px;box-shadow:var(--shadow-panel);
-    animation:lgIn .36s cubic-bezier(.23,1,.32,1) .04s both}
 @keyframes lgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .lg-alert{display:flex;gap:10px;align-items:flex-start;margin-bottom:16px;padding:12px 14px;border-radius:var(--radius-md);
     background:var(--red-100);color:var(--error-text);font-size:14px;line-height:1.4}
@@ -824,8 +795,6 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .lg-link{font-size:12.5px;color:var(--link);text-decoration:none}.lg-link:hover{text-decoration:underline}
 .lg-sub{margin:0 0 18px;font-size:14px;line-height:1.5;color:var(--slate-600)}
 .lg-back{display:block;margin-top:18px;text-align:center;font-size:14px}
-@media (max-width:480px){.lg-card{padding:22px 18px}.lg-brand h1{font-size:23px}}
-@media (prefers-reduced-motion:reduce){.lg-body *{transition:none!important}.lg-brand,.lg-card{animation:none!important}}
 
 /* ============================================================
    LOGIN PAGE (login.php): a single sign-in card floating on the aerial campus photo (assets/img/login-bg.jpg,
@@ -996,7 +965,7 @@ img.greeting-avatar-photo{object-fit:cover;background:var(--slate-100);flex-shri
 :root[data-theme="dark"] .alert-info{color:#bfdbfe}
 :root[data-theme="dark"] .loading-overlay{background:rgba(10,19,40,.7)}
 :root[data-theme="dark"] .modal-backdrop{background:rgba(3,8,20,.65)}
-:root[data-theme="dark"] .sidebar-brand .brand-emblem,:root[data-theme="dark"] .lg-logo{box-shadow:0 0 0 2px var(--line)}
+:root[data-theme="dark"] .sidebar-brand .brand-emblem{box-shadow:0 0 0 2px var(--line)}
 
 /* ============================================================
    ANIMATED DROPDOWNS + LIVE FILTERS (assets/js/app.js)

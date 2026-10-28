@@ -10,6 +10,7 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/login_throttle.php';
 require_once __DIR__ . '/includes/theme.php';
 require_once __DIR__ . '/includes/pwa.php';
+require_once __DIR__ . '/includes/auth_page.php';   // public_topbar() / public_footer()
 
 // Already logged in? Send to dashboard.
 if (is_logged_in()) {
@@ -76,18 +77,7 @@ $roleNotes = [
 <?php echo pwa_head_tags(); ?>
 </head>
 <body class="login-page">
-<header class="login-topbar">
-    <a class="login-topbar-brand" href="<?php echo BASE_URL; ?>login.php">
-        <img class="login-topbar-logo" src="<?php echo BASE_URL; ?>assets/img/school-emblem-96.png" width="40" height="40" alt="MCNP&ndash;ISAP emblem">
-        <span class="login-topbar-text">
-            <strong>MCNP&ndash;ISAP</strong>
-            <small>Medical Colleges of Northern Philippines and International School of Asia and the Pacific</small>
-        </span>
-    </a>
-    <div class="login-topbar-actions">
-        <?php echo theme_switcher(); ?>
-    </div>
-</header>
+<?php echo public_topbar(); ?>
 
 <main class="login-shell">
     <div class="login-grid">
@@ -156,10 +146,7 @@ $roleNotes = [
     </div>
 </main>
 
-<footer class="login-footer">
-    <span>&copy; 2026 MCNP&ndash;ISAP. All rights reserved.</span>
-    <span class="login-footer-secure"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Secure institutional access</span>
-</footer>
+<?php echo public_footer(); ?>
 
 <script>
 const roleNotes = {
