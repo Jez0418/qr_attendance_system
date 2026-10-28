@@ -167,7 +167,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <tr data-student="<?php echo $s['student_id']; ?>" data-search="<?php echo e(strtolower($s['full_name'] . ' ' . $s['student_number'])); ?>">
                         <td><?php echo e($s['student_number']); ?></td>
                         <td><?php echo e($s['full_name']); ?></td>
-                        <td><?php echo e($s['program_name'] ?? '—'); ?><?php if ($s['student_type'] === 'irregular'): ?> <span class="badge badge-late" style="font-size:11.5px">Irregular</span><?php endif; ?></td>
+                        <td><?php echo e($s['program_name'] ?? '—'); ?><?php if ($s['student_type'] === 'irregular'): ?> <span class="badge badge-upcoming" style="font-size:11.5px">Irregular</span><?php endif; ?></td>
                         <td><button class="btn btn-icon btn-success btn-sm" onclick="enroll(<?php echo $s['student_id']; ?>)"><i class="fa-solid fa-user-plus"></i></button></td>
                     </tr>
                 <?php endforeach; endif; ?>

@@ -179,7 +179,8 @@ function buildCharts() {
                     { label:'Excused', data: subjectData.excused, backgroundColor: c.excused }
                 ]
             },
-            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16}}}, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}} }
+            options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16}}},
+                scales:{x:{stacked:true, beginAtZero:true, ticks:{precision:0}}, y:{stacked:true, ticks:{callback(v){ const l = this.getLabelForValue(v); return l.length > 28 ? l.slice(0, 27) + '…' : l; }}}} }
         }),
         new Chart(document.getElementById('shareChart'), {
             type: 'doughnut',

@@ -87,7 +87,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <td><?php echo e($s['full_name']); ?></td>
                         <td><?php echo e($s['institution_code'] ?? '—'); ?> / <?php echo e($s['program_code'] ?? '—'); ?></td>
                         <td>Yr <?php echo e($s['year_level']); ?> / <?php echo e($s['section'] ?? '—'); ?></td>
-                        <td><span class="badge <?php echo $s['student_type'] === 'irregular' ? 'badge-late' : 'badge-active'; ?>"><?php echo ucfirst($s['student_type'] ?? 'regular'); ?></span></td>
+                        <td><span class="badge <?php echo $s['student_type'] === 'irregular' ? 'badge-upcoming' : 'badge-pending'; ?>"><?php echo ucfirst($s['student_type'] ?? 'regular'); ?></span></td>
                         <td><?php echo e($s['email']); ?></td>
                         <td><span class="badge badge-<?php echo $s['status'] === 'active' ? 'active' : 'inactive'; ?>"><?php echo ucfirst($s['status']); ?></span></td>
                         <td>

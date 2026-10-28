@@ -102,7 +102,9 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
-<div class="grid-2" style="margin-top:20px">
+<?php // While attendance is closed the header card above already says so: no empty Check-in card repeating it. ?>
+<div class="<?php echo $sessionOpen ? 'grid-2' : ''; ?>" style="margin-top:20px">
+    <?php if ($sessionOpen): ?>
     <div class="card">
         <div class="card-header"><h3>Check-in</h3></div>
         <div class="card-body qr-display">
@@ -116,11 +118,10 @@ require_once __DIR__ . '/../includes/header.php';
                     <div>Late after: <?php echo date('g:i A', strtotime($session['scheduled_start']) + $graceMinutes * 60); ?> · Closes: <?php echo date('g:i A', strtotime($session['session_end'])); ?></div>
                     <div>Geofence radius: <?php echo (int) $session['allowed_radius_meters']; ?>m</div>
                 </div>
-            <?php else: ?>
-                <div class="empty-state"><i class="fa-solid fa-qrcode"></i><p><?php echo e(attendance_state_label($selected)); ?>.</p></div>
             <?php endif; ?>
         </div>
     </div>
+    <?php endif; ?>
 
     <div class="card">
         <div class="card-header"><h3>Session Summary</h3></div>
