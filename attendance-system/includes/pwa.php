@@ -15,9 +15,10 @@
  * its start_url is index.php?source=pwa, which sends a student straight to the scanner.
  * ------------------------------------------------------------
  */
+require_once __DIR__ . '/asset_url.php';
+
 function pwa_head_tags(): string {
     $b = BASE_URL;
-    $v = (int) @filemtime(__DIR__ . '/../assets/js/pwa.js');
     return '<link rel="manifest" href="' . $b . 'assets/manifest.json">' . "\n"
          . '<meta name="theme-color" content="#eef4ff" media="(prefers-color-scheme: light)">' . "\n"
          . '<meta name="theme-color" content="#0a1328" media="(prefers-color-scheme: dark)">' . "\n"
@@ -25,7 +26,7 @@ function pwa_head_tags(): string {
          . '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n"
          . '<meta name="mobile-web-app-capable" content="yes">' . "\n"
          . '<meta name="apple-mobile-web-app-title" content="Attendance">' . "\n"
-         . '<script src="' . $b . 'assets/js/pwa.js?v=' . $v . '" data-base="' . e($b) . '" defer></script>' . "\n";
+         . '<script src="' . e(asset_url('assets/js/pwa.js')) . '" data-base="' . e($b) . '" defer></script>' . "\n";
 }
 
 function pwa_install_card(): string {

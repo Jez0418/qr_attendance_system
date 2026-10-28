@@ -28,6 +28,9 @@ don't break the Vercel + Supabase connection. (No secrets belong in this file.)
   whole app on Vercel and locally; never caches pages, offline fallback `assets/offline.html`), head tags + install card in
   `includes/pwa.php`, logic in `assets/js/pwa.js`. A new full-page shell must call `pwa_head_tags()` too. `index.php?source=pwa`
   (the start URL) sends students to the scanner. Icons: `assets/img/app-icon-{180,192,512}.png`.
+  Link CSS/JS under `assets/` only through `asset_url('assets/...')` (`includes/asset_url.php`, content-hash `?v=`): the service worker
+  serves `assets/` cache-first and Vercel gives every file the same mtime, so a plain or `filemtime()` URL serves the OLD file after a
+  deploy. `sw.php` versions its cache by file contents for the same reason. Test: `php attendance-system/tests/asset_version_test.php`.
 
 ## Configuration (environment variables — set in Vercel, never commit)
 `DB_HOST`, `DB_PORT` (production uses 6543 = transaction pooler since 2026-10-26; 5432 = session pooler, fewer connections), `DB_NAME` (postgres),
