@@ -758,23 +758,23 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
    ============================================================ */
 .lg-body{position:relative;z-index:0;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;
     background:var(--page-bg);font-family:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--slate-900)}
-.lg-body::before{content:'';position:fixed;inset:0;z-index:-2;
-    background-image:linear-gradient(160deg,var(--indigo-900),var(--indigo-600)),url('../img/login-bg.jpg');
-    background-size:cover,cover;background-position:center,center;background-repeat:no-repeat,no-repeat;
-    background-blend-mode:color;opacity:.78;transition:opacity .3s ease;pointer-events:none;
-    -webkit-mask-image:linear-gradient(100deg,transparent 0%,transparent 12%,rgba(0,0,0,.45) 34%,#000 66%);
-    mask-image:linear-gradient(100deg,transparent 0%,transparent 12%,rgba(0,0,0,.45) 34%,#000 66%)}
-.lg-body::after{content:'';position:fixed;inset:0;z-index:-1;
-    background-image:var(--bg-grad);opacity:.42;pointer-events:none}
-:root[data-theme="dark"] .lg-body::before{opacity:.3}
-:root[data-theme="dark"] .lg-body::after{opacity:.82}
+/* Same backdrop as login.php: the campus photo in natural colour, lightly shaded top and bottom, darker in dark theme. */
+.lg-body::before{content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background-image:linear-gradient(180deg,rgba(6,14,32,.38) 0%,rgba(6,14,32,.06) 22%,rgba(6,14,32,.06) 72%,rgba(6,14,32,.42) 100%),
+        url('../img/login-bg.jpg');
+    background-size:cover,cover;background-position:center,center;background-repeat:no-repeat,no-repeat}
+.lg-body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:rgba(6,12,28,0);transition:background-color .3s ease}
+:root[data-theme="dark"] .lg-body::after{background:rgba(6,12,28,.5)}
 .lg-wrap{position:relative;z-index:1;width:100%;max-width:420px;padding-bottom:64px}
 .lg-photo-footer{position:fixed;left:0;right:0;bottom:0;z-index:2;display:flex;align-items:center;justify-content:space-between;
-    gap:12px;flex-wrap:wrap;padding:14px clamp(16px,4vw,40px);
-    background:rgba(255,255,255,.68);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-    border-top:1px solid rgba(255,255,255,.4);font-size:12.5px;color:var(--slate-700)}
+    gap:12px;flex-wrap:wrap;padding:12px clamp(16px,4vw,40px);
+    background:rgba(8,16,36,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border-top:1px solid rgba(255,255,255,.14);font-size:12.5px;color:rgba(255,255,255,.88)}
 .lg-photo-footer .login-footer-secure{display:flex;align-items:center;gap:7px}
-:root[data-theme="dark"] .lg-photo-footer{background:rgba(10,19,40,.6);border-top-color:rgba(255,255,255,.08);color:var(--slate-400)}
+/* On the photo: the brand above the card and the help line below it are white. */
+.lg-body .lg-brand h1,.lg-wrap > .lg-help{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.65),0 0 14px rgba(0,0,0,.55)}
+.lg-body .lg-brand p{color:rgba(255,255,255,.92);text-shadow:0 1px 2px rgba(0,0,0,.65),0 0 14px rgba(0,0,0,.55)}
+.lg-wrap > .lg-help{color:rgba(255,255,255,.9)}
 .lg-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .lg-brand{text-align:center;margin-bottom:24px;animation:lgIn .32s cubic-bezier(.23,1,.32,1) both}
 .lg-logo{display:block;width:72px;height:72px;margin:0 auto 14px;border-radius:50%;object-fit:cover;

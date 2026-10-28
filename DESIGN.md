@@ -104,7 +104,7 @@ A single confident blue accent against cool slate neutrals, with four status col
 ### Primary
 - **Gatekeeper Blue** (`#1d6bf3`): the only brand accent. Primary buttons, active sidebar nav item (solid fill, not just a tint), links, focus rings, toggle/checkbox "on" states, active pagination, date-chip and stat icon accents.
 - **Gatekeeper Blue Deep** (`#1558cc`): hover/pressed state for Gatekeeper Blue surfaces.
-- **Gatekeeper Blue Ink** (`#0f1b3c`): the darkest point of the accent ramp; used only in the forgot/reset-password pages' background-photo duotone (`linear-gradient(160deg, Gatekeeper Blue Ink, Gatekeeper Blue)` blended over the photo with `background-blend-mode: color`), never as a UI surface color. The login page shows the aerial campus photo in its own colours instead, lightly shaded top and bottom, with white top-bar text and a dark glass footer bar; its sign-in card is unchanged.
+- **Gatekeeper Blue Ink** (`#0f1b3c`): the darkest point of the accent ramp; not used as a UI surface color. The login, forgot-password and reset-password pages all show the aerial campus photo in its own colours, lightly shaded top and bottom (darker in the dark theme), with white text where it sits on the photo and a dark glass footer bar; their cards are unchanged.
 
 ### Neutral
 - **Slate Ink** (`#0e1a33`): primary text and headings (light theme).
