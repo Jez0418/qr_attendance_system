@@ -137,6 +137,8 @@ $roleNotes = [
                 <button type="submit" class="lg-submit" id="loginSubmit"><span class="lg-submit-label">Sign in</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
             </form>
 
+            <p class="login-note"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> <span id="loginNoteText"><?php echo e($roleNotes[$selectedRole]); ?></span></p>
+
             <?php // Demo credentials are hidden unless the SHOW_DEMO_LOGINS=1 environment variable is set (local testing only). ?>
             <?php if (getenv('SHOW_DEMO_LOGINS') === '1'): ?>
             <div class="lg-demo">
@@ -149,11 +151,7 @@ $roleNotes = [
             </div>
             <?php endif; ?>
 
-            <div class="login-help">
-                <h2>Help &amp; Support</h2>
-                <p id="loginNoteText"><?php echo e($roleNotes[$selectedRole]); ?></p>
-                <p>Need assistance? Contact the MCNP&ndash;ISAP Registrar or Laboratory Department.</p>
-            </div>
+            <p class="lg-help">Need help? Contact the MCNP&ndash;ISAP Registrar or Laboratory Department.</p>
         </section>
     </div>
 </main>
