@@ -82,6 +82,8 @@ $headerPhotoSrc = is_logged_in() ? current_photo_url($pdo) : '';
 <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css">
 <?php echo theme_head_tags(); ?>
 <?php echo pwa_head_tags(); ?>
+<script>/* Collapsed (icon-only) sidebar, desktop only: applied before first paint so the panel doesn't jump. app.js toggles it. */
+try { if (localStorage.getItem('sidebar') === 'collapsed') document.documentElement.classList.add('sidebar-collapsed'); } catch (e) {}</script>
 </head>
 <body class="<?php echo ($_SESSION['role'] ?? '') === 'student' ? 'has-bottom-nav' : ''; ?>">
 
@@ -102,7 +104,7 @@ $headerPhotoSrc = is_logged_in() ? current_photo_url($pdo) : '';
         <?php if (is_logged_in()): ?>
         <!-- ================= TOP BAR ================= -->
         <header class="topbar">
-            <button id="sidebarToggle" class="icon-btn" title="Toggle menu"><i class="fa-solid fa-bars"></i></button>
+            <button id="sidebarToggle" class="icon-btn" type="button" title="Toggle menu" aria-label="Toggle menu" aria-controls="sidebar"><i class="fa-solid fa-bars" aria-hidden="true"></i></button>
             <div class="topbar-title-block">
                 <h1 class="page-title"><?php echo e($pageTitle ?? ''); ?></h1>
                 <?php if ($pageSubtitleText !== ''): ?><span class="page-subtitle"><?php echo e($pageSubtitleText); ?></span><?php endif; ?>

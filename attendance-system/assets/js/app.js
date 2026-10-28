@@ -70,12 +70,39 @@ function showToast(type, message) {
     setTimeout(dismiss, 5000);
 }
 
-/* ---------------- SIDEBAR TOGGLE (mobile) ---------------- */
+/* ---------------- SIDEBAR TOGGLE ----------------
+ * Desktop (> 900px): the button collapses the sidebar to an icon rail and back; the choice is kept per browser
+ * (localStorage "sidebar", applied before paint by an inline script in header.php). Tablets/phones: it opens the
+ * slide-in menu. Collapsed links get a title so their name still shows on hover. */
 document.addEventListener('DOMContentLoaded', () => {
     const toggleBtn = document.getElementById('sidebarToggle');
     const sidebar = document.getElementById('sidebar');
+    const rootEl = document.documentElement;
+    const isDesktop = () => window.innerWidth > 900;
+    function syncSidebarState() {
+        if (!toggleBtn || !sidebar) return;
+        const collapsed = isDesktop() && rootEl.classList.contains('sidebar-collapsed');
+        const expanded = isDesktop() ? !collapsed : sidebar.classList.contains('open');
+        toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        const label = isDesktop() ? (collapsed ? 'Expand menu' : 'Collapse menu') : 'Toggle menu';
+        toggleBtn.title = label;
+        toggleBtn.setAttribute('aria-label', label);
+        sidebar.querySelectorAll('.sidebar-nav a, .sidebar-footer a').forEach(a => {
+            const text = a.querySelector('span:not(.nav-badge)');
+            if (collapsed && text) a.title = text.textContent.trim(); else a.removeAttribute('title');
+        });
+    }
     if (toggleBtn && sidebar) {
-        toggleBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
+        toggleBtn.addEventListener('click', () => {
+            if (isDesktop()) {
+                const collapsed = rootEl.classList.toggle('sidebar-collapsed');
+                try { localStorage.setItem('sidebar', collapsed ? 'collapsed' : 'expanded'); } catch (e) {}
+            } else {
+                sidebar.classList.toggle('open');
+            }
+            syncSidebarState();
+        });
+        syncSidebarState();
         document.addEventListener('click', (e) => {
             if (window.innerWidth <= 900 && sidebar.classList.contains('open')
                 && !sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
@@ -92,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         root.classList.add('is-resizing');
         if (sidebar && window.innerWidth > 900) sidebar.classList.remove('open');
         clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(() => root.classList.remove('is-resizing'), 200);
+        resizeTimer = setTimeout(() => { root.classList.remove('is-resizing'); syncSidebarState(); }, 200);
     });
 });
 

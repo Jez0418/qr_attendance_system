@@ -464,7 +464,30 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 }
 
 /* Mobile responsiveness */
-#sidebarToggle{display:none}   /* the menu only collapses on tablets and phones */
+/* The top-bar menu button shows at every width: on desktop it collapses the sidebar to an icon rail
+   (html.sidebar-collapsed, see app.js), on tablets and phones it opens the slide-in menu. */
+#sidebarToggle{flex-shrink:0}
+
+/* ---- Collapsed sidebar (desktop): a 76px icon rail. Labels are hidden visually but stay in the accessibility tree,
+   section headings become hairline dividers, a pending-count badge rides on its icon. ---- */
+@media(min-width:901px){
+    .sidebar{overflow:hidden;transition:width .2s ease,transform .2s ease}
+    html.sidebar-collapsed{--sidebar-w:76px}
+    html.sidebar-collapsed .sidebar-brand{justify-content:center;padding-left:0;padding-right:0}
+    html.sidebar-collapsed .sidebar-brand > span,
+    html.sidebar-collapsed .sidebar-nav a > span:not(.nav-badge),
+    html.sidebar-collapsed .sidebar-footer a > span{
+        position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+    html.sidebar-collapsed .sidebar-nav{padding-left:10px;padding-right:10px}
+    html.sidebar-collapsed .nav-label{height:1px;padding:0;margin:12px 8px;font-size:0;background:var(--line);overflow:hidden}
+    html.sidebar-collapsed .nav-label:first-child{display:none}
+    html.sidebar-collapsed .sidebar-nav a,
+    html.sidebar-collapsed .sidebar-footer a{justify-content:center;gap:0;padding:0;position:relative;width:44px;height:40px;margin:0 auto 2px}
+    html.sidebar-collapsed .sidebar-nav a i{width:auto;font-size:15px}
+    html.sidebar-collapsed .nav-badge{position:absolute;top:2px;right:6px;margin:0;min-width:16px;height:16px;font-size:10.5px;padding:0 4px;
+        box-shadow:0 0 0 2px var(--panel)}
+    html.sidebar-collapsed .sidebar-footer{margin:0 6px;padding-left:4px;padding-right:4px}
+}
 /* Short desktop screens (a 768px laptop): a tighter nav rhythm so the admin menu, System section included, fits without
    an inner scrollbar. Desktop only: the phone/tablet drawer keeps its full-size touch targets. */
 @media(min-width:901px) and (max-height:820px){
