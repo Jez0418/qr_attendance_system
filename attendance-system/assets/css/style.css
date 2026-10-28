@@ -394,14 +394,16 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .gap-8{gap:8px}
 
 /* ================= LABORATORY STATUS GRID ================= */
+/* The pills sit straight on the card (no tinted well in between) and the tracks stretch to fill the row. */
 .lab-status-wrap{
-    background:var(--slate-100);border-radius:var(--radius-md);padding:20px;
-    display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;
 }
 .lab-status-pill{
     background:var(--surface);border-radius:var(--radius-md);padding:14px 12px;text-align:center;
     border:1px solid var(--slate-200);
+    display:flex;flex-direction:column;   /* badges line up along the bottom whether the name takes one line or two */
 }
+.lab-status-pill .badge{margin-top:auto}
 .lab-status-pill .lab-pill-name{font-size:13px;font-weight:700;color:var(--slate-800);margin-bottom:8px}
 .lab-status-pill .badge{width:100%;justify-content:center}
 .lab-legend{display:flex;gap:18px;align-items:center;font-size:13px;color:var(--slate-600);margin-bottom:14px}
@@ -463,6 +465,14 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 
 /* Mobile responsiveness */
 #sidebarToggle{display:none}   /* the menu only collapses on tablets and phones */
+/* Short desktop screens (a 768px laptop): a tighter nav rhythm so the admin menu, System section included, fits without
+   an inner scrollbar. Desktop only: the phone/tablet drawer keeps its full-size touch targets. */
+@media(min-width:901px) and (max-height:820px){
+    .sidebar-brand{padding:16px 22px 10px}
+    .sidebar-nav a{padding:6px 14px;margin-bottom:1px}
+    .nav-label{padding:10px 14px 4px}
+    .sidebar-footer{padding:6px 14px 10px}
+}
 @media(max-width:900px){
     #sidebarToggle{display:flex}
     .sidebar{transform:translateX(calc(-100% - var(--gutter) * 2))}
@@ -650,11 +660,19 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .assignments-table td.nowrap{white-space:nowrap}
 .assignments-table td.col-subject{min-width:200px}
 .assignments-table tbody tr:hover td{background:var(--slate-100)}
-/* Ten columns: tighter cells and wrapping text so the whole row, Actions included, fits beside the sidebar.
+/* Nine columns: tighter cells and wrapping text so the whole row, Actions included, fits beside the sidebar.
    The Actions column is a normal column right after "Next class status" (it no longer floats at the edge). */
 .assignments-table th,.assignments-table td{padding-left:10px;padding-right:10px}
 .assignments-table td.nowrap{white-space:normal}
-.assignments-table td:nth-child(1),.assignments-table td:nth-child(8){white-space:nowrap}
+/* Headers may wrap ("Next class status" on two lines), program and section share one cohort column, and subject and
+   teacher wrap first, so the whole row fits beside the sidebar at 1536px. Schedule / next class keep room for "Fri, Oct 30 ·"
+   on one line instead of breaking after every word. */
+.assignments-table thead th{white-space:normal;vertical-align:bottom}
+.assignments-table td.col-subject{min-width:150px}
+.assignments-table td.col-teacher{min-width:90px}
+.assignments-table td.col-cohort{min-width:126px}
+.assignments-table td.col-when{min-width:118px}
+.assignments-table td:nth-child(7){white-space:nowrap}   /* Enrolled */
 .cell-sub{font-size:12px;color:var(--slate-600);margin-top:2px}
 
 /* ================= ASSIGNMENT MODAL (admin/assignments.php) ================= */
@@ -1215,6 +1233,15 @@ td:has(> .row-actions),td:has(> .btn-icon){white-space:nowrap}
 .trend-kpi.tone-red strong{color:var(--red-fg)}
 .chart-box.chart-box-tall{height:320px}
 
+/* A chart card beside a taller card in .grid-2 grows its chart to the shared row height instead of leaving an empty band.
+   The canvas is taken out of flow so its own size never feeds back into the row height (Chart.js resize loop). */
+.card.chart-fill{display:flex;flex-direction:column}
+.chart-fill > .card-body{flex:1;display:flex;flex-direction:column;min-height:0}
+.chart-fill .chart-box,.chart-fill .trend-chart{flex:1 1 auto;height:auto}
+.chart-fill .chart-box{min-height:300px}
+.chart-fill .trend-chart{min-height:230px}
+.chart-fill .chart-box > canvas,.chart-fill .trend-chart > canvas{position:absolute;inset:0}
+
 /* Attendance graph, minimalist: one headline figure, quiet facts, a single hairline chart (admin/dashboard.php) */
 .trend-card{padding-top:8px}
 .trend-top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 28px;margin-bottom:18px}
@@ -1286,5 +1313,6 @@ html.vt-theme::view-transition-new(root){animation:fadeOnly .18s ease-out both}
 
 /* ================= Responsive pass (last so it wins over the base rules above) ================= */
 @media(max-width:900px){.topbar{padding:10px 16px}.card-header,.card-body{padding-left:18px;padding-right:18px}.trend-hero strong{font-size:36px}}
-@media(max-width:600px){.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat-value{font-size:24px}.trend-facts{flex-wrap:wrap;row-gap:10px}.chart-box.chart-box-tall{height:260px}.modal{max-height:92vh}}
+@media(max-width:600px){.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .stat-grid > .stat-card:last-child:nth-child(odd){grid-column:1 / -1}   /* no orphan card beside an empty cell */.stat-value{font-size:24px}.trend-facts{flex-wrap:wrap;row-gap:10px}.chart-box.chart-box-tall{height:260px}.modal{max-height:92vh}}
 @media(max-width:380px){.stat-grid{grid-template-columns:1fr}}

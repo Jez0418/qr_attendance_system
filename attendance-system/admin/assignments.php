@@ -147,10 +147,10 @@ require_once __DIR__ . '/../includes/header.php';
         </form>
         <div class="table-wrapper">
             <table class="data-table assignments-table">
-                <thead><tr><th>Teacher</th><th>Subject</th><th>Program</th><th>Year/Section</th><th>Laboratory</th><th>Schedule</th><th>Next Class</th><th>Enrolled</th><th>Next class status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Teacher</th><th>Subject</th><th>Program / Section</th><th>Laboratory</th><th>Schedule</th><th>Next Class</th><th>Enrolled</th><th>Next class status</th><th>Actions</th></tr></thead>
                 <tbody>
                 <?php if (empty($assignments)): ?>
-                    <tr><td colspan="10" class="text-center text-muted"><?php echo $isFiltered ? 'No class assignments match these filters.' : 'No class assignments yet.'; ?></td></tr>
+                    <tr><td colspan="9" class="text-center text-muted"><?php echo $isFiltered ? 'No class assignments match these filters.' : 'No class assignments yet.'; ?></td></tr>
                 <?php else: foreach ($assignments as $a):
                     $id = (int) $a['teacher_subject_id'];
                     $sum = $summaries[$id];
@@ -161,13 +161,12 @@ require_once __DIR__ . '/../includes/header.php';
                     $a['rules'] = $rules;
                 ?>
                     <tr>
-                        <td class="nowrap"><?php echo e($a['teacher_name']); ?></td>
+                        <td class="col-teacher"><?php echo e($a['teacher_name']); ?></td>
                         <td class="col-subject"><?php echo e($a['subject_code'] . ' - ' . $a['subject_name']); ?></td>
-                        <td class="nowrap"><?php echo e($a['program_code'] ?? 'Any'); ?><div class="cell-sub"><?php echo e($a['institution_code'] ?? '—'); ?></div></td>
-                        <td class="nowrap"><?php echo $a['year_level'] ? 'Yr ' . e($a['year_level']) : 'Any'; ?> / <?php echo e($a['section']); ?></td>
+                        <td class="col-cohort"><?php echo e($a['program_code'] ?? 'Any'); ?> · <?php echo $a['year_level'] ? 'Yr ' . e($a['year_level']) : 'Any'; ?> / <?php echo e($a['section']); ?><div class="cell-sub"><?php echo e($a['institution_code'] ?? '—'); ?></div></td>
                         <td class="nowrap"><?php echo e($a['lab_name']); ?></td>
-                        <td class="nowrap"><?php echo $scheduleLabel !== '' ? e($scheduleLabel) : '<span class="text-muted">Not set</span>'; ?></td>
-                        <td class="nowrap">
+                        <td class="col-when"><?php echo $scheduleLabel !== '' ? e($scheduleLabel) : '<span class="text-muted">Not set</span>'; ?></td>
+                        <td class="col-when">
                             <?php echo e(assignment_next_text($next, $now)); ?>
                             <?php if ($next && $next['is_rescheduled']): ?>
                                 <div class="text-muted" style="font-size:12px">Rescheduled<?php echo $next['lab_id'] !== (int) $a['lab_id'] ? ' · ' . e($next['lab_name']) : ''; ?></div>
