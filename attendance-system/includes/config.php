@@ -46,7 +46,7 @@ send_security_headers((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
 // ---- Start session (needed for auth / role checks) ----
 // Serverless instances have no shared disk, so on Vercel sessions are
 // stored in the database (see includes/session_db.php).
-if (session_status() === PHP_SESSION_NONE) {
+if ((!defined('APP_SKIP_SESSION') || APP_SKIP_SESSION !== true) && session_status() === PHP_SESSION_NONE) {
     // Harden the login cookie: not readable by JavaScript (HttpOnly), HTTPS-only when served over
     // HTTPS (Secure), not sent on cross-site requests (SameSite=Lax), and no session IDs from URLs.
     $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')

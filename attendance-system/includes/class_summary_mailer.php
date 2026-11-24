@@ -312,7 +312,7 @@ function send_class_summary_email(PDO $pdo, int $sessionId): bool {
                t.full_name AS teacher_name,
                u.email AS teacher_email,
                sub.subject_code, sub.subject_name,
-               ts.section, ts.program, ts.year_level,
+               ts.section, ts.year_level,
                lab.lab_name
         FROM attendance_sessions s
         JOIN teacher_subjects ts ON ts.teacher_subject_id = s.teacher_subject_id

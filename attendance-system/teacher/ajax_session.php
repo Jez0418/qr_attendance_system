@@ -35,7 +35,10 @@ try {
         if (send_class_summary_email($pdo, $sessionId)) {
             echo json_encode(['success' => true, 'message' => 'Attendance summary email sent to your email address.']);
         } else {
-            echo json_encode(['success' => false, 'message' => 'Could not send summary email. Please check that your teacher account has a valid email address.']);
+            $message = mail_is_configured()
+                ? 'Could not send summary email. Check the teacher email address and Brevo delivery settings.'
+                : 'Email delivery is not configured. Set MAIL_API_KEY and MAIL_FROM in Vercel.';
+            echo json_encode(['success' => false, 'message' => $message]);
         }
         exit;
     }

@@ -231,6 +231,9 @@ CREATE TABLE attendance_records (
     location_accuracy DECIMAL(7,2) NULL,
     distance_from_location DECIMAL(8,2) NULL,
     device_id CHAR(32) NULL,  -- browser that scanned (see supabase_scan_device.sql)
+    marked_by_user_id INT NULL REFERENCES users(user_id) ON DELETE SET NULL,
+    marked_at TIMESTAMP NULL,
+    override_reason VARCHAR(255) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (session_id, student_id)
 );
