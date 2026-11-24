@@ -266,13 +266,17 @@ function set_setting(PDO $pdo, $key, $value) {
  * session_end has already passed.
  * ------------------------------------------------------------ */
 function auto_expire_sessions(PDO $pdo) {
-    $pdo->exec("
+    $affected = $pdo->exec("
         UPDATE attendance_sessions
         SET is_active = 0, deactivated_at = NOW()
         WHERE is_active = 1
           AND session_end IS NOT NULL
           AND NOW() > session_end
     ");
+    if ($affected > 0) {
+        require_once __DIR__ . '/absences.php';
+        mark_absent_for_ended_sessions($pdo);
+    }
 }
 
 /* ------------------------------------------------------------

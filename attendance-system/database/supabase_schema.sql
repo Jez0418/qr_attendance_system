@@ -248,6 +248,19 @@ CREATE TABLE notifications (
 );
 CREATE INDEX idx_notif_user_read ON notifications (user_id, is_read);
 
+-- End-of-class attendance summary email records (includes/class_summary_mailer.php)
+CREATE TABLE IF NOT EXISTS session_email_summaries (
+    session_id INT PRIMARY KEY REFERENCES attendance_sessions(session_id) ON DELETE CASCADE,
+    teacher_id INT NOT NULL REFERENCES teachers(teacher_id) ON DELETE CASCADE,
+    recipient_email VARCHAR(100) NOT NULL,
+    sent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    present_count INT NOT NULL DEFAULT 0,
+    late_count INT NOT NULL DEFAULT 0,
+    absent_count INT NOT NULL DEFAULT 0,
+    excused_count INT NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_ses_sum_teacher ON session_email_summaries (teacher_id, sent_at DESC);
+
 CREATE TABLE activity_logs (
     log_id SERIAL PRIMARY KEY,
     user_id INT NULL REFERENCES users(user_id) ON DELETE SET NULL,

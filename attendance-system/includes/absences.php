@@ -69,6 +69,9 @@ function mark_absent_for_ended_sessions(PDO $pdo): int {
         }
         // After the commit: a notification problem must never undo (or block) the absences themselves.
         notify_new_absences($pdo, $added);
+        // Send end-of-class attendance summary emails to teachers
+        require_once __DIR__ . '/class_summary_mailer.php';
+        send_pending_class_summary_emails($pdo);
         return count($added);
     } catch (Throwable $e) {
         error_log('mark_absent_for_ended_sessions: ' . $e->getMessage());

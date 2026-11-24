@@ -14,7 +14,7 @@ function public_topbar(): string {
          . '        <img class="login-topbar-logo" src="' . $b . 'assets/img/school-emblem-96.png" width="40" height="40" alt="iLABQ emblem">' . "\n"
          . '        <span class="login-topbar-text">' . "\n"
          . '            <strong>iLABQ</strong>' . "\n"
-         . '            <small>Medical Colleges of Northern Philippines and International School of Asia and the Pacific</small>' . "\n"
+         . '            <small>Interactive Laboratory QR Code-Based Attendance and Monitoring System</small>' . "\n"
          . '        </span>' . "\n"
          . '    </a>' . "\n"
          . '    <div class="login-topbar-actions">' . theme_switcher() . '</div>' . "\n"

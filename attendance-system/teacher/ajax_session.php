@@ -19,7 +19,7 @@ $action = $_POST['action'] ?? '';
 $sessionId = (int) ($_POST['session_id'] ?? 0);
 
 try {
-    if (!in_array($action, ['close', 'reopen'], true)) throw new Exception('Unknown action.');
+    if (!in_array($action, ['close', 'reopen', 'send_summary'], true)) throw new Exception('Unknown action.');
     if (!$sessionId) throw new Exception('Invalid session.');
 
     $own = $pdo->prepare('
@@ -29,6 +29,16 @@ try {
     ');
     $own->execute([$sessionId, $teacherId, $teacherId]);
     if (!$own->fetch()) throw new Exception('You do not have access to this session.');
+
+    if ($action === 'send_summary') {
+        require_once __DIR__ . '/../includes/class_summary_mailer.php';
+        if (send_class_summary_email($pdo, $sessionId)) {
+            echo json_encode(['success' => true, 'message' => 'Attendance summary email sent to your email address.']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Could not send summary email. Please check that your teacher account has a valid email address.']);
+        }
+        exit;
+    }
 
     if ($action === 'reopen') {
         reactivate_attendance_session_by_id($pdo, $sessionId);
