@@ -45,6 +45,9 @@ try {
 
         create_notification($pdo, $userId, 'Welcome!', "Your teacher account has been created. Username: $username");
         log_activity($pdo, $_SESSION['user_id'], "Added teacher: $fullName");
+        if (!supabase_auth_provision_profile($pdo, (int) $userId)) {
+            throw new Exception('The account could not be connected to secure sign-in. Please try again.');
+        }
         $pdo->commit();
         echo json_encode(['success' => true, 'message' => 'Teacher added successfully.']);
 
@@ -66,9 +69,10 @@ try {
         check_lengths(['Employee number' => [$empNo, 30], 'Full name' => [$fullName, 150], 'Department' => [$dept, 100],
                        'Contact number' => [$contact, 20], 'Email' => [$email, 100], 'Username' => [$username, 50]]);
 
-        $find = $pdo->prepare('SELECT user_id FROM teachers WHERE teacher_id = ?');
+        $find = $pdo->prepare('SELECT u.user_id, u.email, u.auth_user_id FROM teachers t JOIN users u ON u.user_id = t.user_id WHERE t.teacher_id = ?');
         $find->execute([$teacherId]);
-        $userId = $find->fetchColumn();
+        $account = $find->fetch(PDO::FETCH_ASSOC);
+        $userId = $account['user_id'] ?? null;
         if (!$userId) throw new Exception('Teacher not found.');
 
         $check = $pdo->prepare('SELECT COUNT(*) FROM users WHERE (username = ? OR email = ?) AND user_id != ?');
@@ -79,7 +83,11 @@ try {
         if ($numCheck->fetchColumn() > 0) throw new Exception('That employee number belongs to another teacher.');
 
         $pdo->beginTransaction();
-        if ($password !== '') {
+        if (supabase_auth_enabled() && !supabase_auth_sync_admin_changes($account, $email, $password)) {
+            throw new Exception('The account could not be updated in secure sign-in. Please try again.');
+        }
+        $linkedAuth = trim((string) ($account['auth_user_id'] ?? '')) !== '';
+        if ($password !== '' && !$linkedAuth) {
             $hash = password_hash($password, PASSWORD_BCRYPT);
             $upd = $pdo->prepare('UPDATE users SET username=?, email=?, status=?, password=? WHERE user_id=?');
             $upd->execute([$username, $email, $status, $hash, $userId]);

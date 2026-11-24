@@ -47,10 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             redirect($_SESSION['role'] . '/dashboard.php');
         }
-        login_record_failure($pdo, $username, $ip);
+        if ($result === 'unavailable') {
+            $errors[] = 'Sign-in is temporarily unavailable. Please try again in a few minutes.';
+        } else {
+            login_record_failure($pdo, $username, $ip);
+        }
         if ($result === 'wrong_role') {
             $errors[] = 'These credentials belong to a different account type. Please select the correct role above.';
-        } else {
+        } elseif ($result !== 'unavailable') {
             $errors[] = 'Invalid username or password.';
         }
     }

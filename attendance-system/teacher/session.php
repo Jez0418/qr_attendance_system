@@ -97,9 +97,6 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php elseif ($canReopen): ?>
                     <button class="btn btn-success btn-sm" id="reopenBtn" onclick="reopenAttendance()"><i class="fa-solid fa-play"></i> Reopen attendance</button>
                 <?php endif; ?>
-                <?php if ($session && !$sessionOpen): ?>
-                    <button class="btn btn-outline btn-sm" id="emailSummaryBtn" onclick="emailSummary()"><i class="fa-solid fa-envelope"></i> Email Summary</button>
-                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -211,20 +208,6 @@ async function reopenAttendance() {
     const res = await ajaxPost('ajax_session.php', { action: 'reopen', session_id: SESSION_ID });
     if (res.success) { showToast('success', res.message); setTimeout(() => location.reload(), 400); }
     else { showToast('error', res.message); btn.disabled = false; }
-}
-
-async function emailSummary() {
-    const btn = document.getElementById('emailSummaryBtn');
-    if (btn) btn.disabled = true;
-    showToast('info', 'Sending attendance summary email…');
-    const res = await ajaxPost('ajax_session.php', { action: 'send_summary', session_id: SESSION_ID });
-    if (res.success) {
-        showToast('success', res.message);
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check"></i> Email Sent'; }
-    } else {
-        showToast('error', res.message);
-        if (btn) btn.disabled = false;
-    }
 }
 
 function initials(name) {

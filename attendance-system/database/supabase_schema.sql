@@ -15,7 +15,8 @@ DROP TABLE IF EXISTS php_sessions, activity_logs, notifications, attendance_reco
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
+    password VARCHAR(255),
+    auth_user_id UUID UNIQUE REFERENCES auth.users(id) ON DELETE SET NULL,
     role VARCHAR(10) NOT NULL CHECK (role IN ('admin','teacher','student')),
     email VARCHAR(100) NOT NULL UNIQUE,
     status VARCHAR(10) NOT NULL DEFAULT 'active' CHECK (status IN ('active','inactive')),

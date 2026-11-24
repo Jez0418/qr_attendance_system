@@ -12,6 +12,7 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/supabase_auth.php';
 
 /** True if a user is currently logged in */
 function is_logged_in() {
@@ -23,6 +24,18 @@ function require_login() {
     if (!is_logged_in()) {
         set_flash('error', 'Please log in to continue.');
         redirect('login.php');
+    }
+    if (supabase_auth_enabled()) {
+        if (empty($_SESSION['auth_user_id']) || empty($_SESSION['supabase_refresh_token'])) {
+            do_logout($GLOBALS['pdo']);
+            set_flash('error', 'Your session expired. Please sign in again.');
+            redirect('login.php');
+        }
+        if ((int) ($_SESSION['supabase_expires_at'] ?? 0) <= time() + 90 && !supabase_auth_refresh_session()) {
+            do_logout($GLOBALS['pdo']);
+            set_flash('error', 'Your session expired. Please sign in again.');
+            redirect('login.php');
+        }
     }
     csrf_guard();   // every POST from a logged-in user must carry the CSRF token
     // Mark students absent for meetings that just ended (at most once a minute; see includes/absences.php).
@@ -64,10 +77,48 @@ function attempt_login(PDO $pdo, $username, $password, $expectedRole = null) {
     $stmt->execute([$username]);
     $user = $stmt->fetch();
 
-    if ($user && password_verify($password, $user['password'])) {
-        if ($expectedRole && $user['role'] !== $expectedRole) {
-            return 'wrong_role';
+    if (!$user) return 'invalid';
+
+    $authSession = null;
+    if (supabase_auth_enabled()) {
+        if (!supabase_auth_configured(true)) return 'unavailable';
+        $authId = trim((string) ($user['auth_user_id'] ?? ''));
+
+        // On the first valid sign-in, import the stored bcrypt hash into Supabase Auth.
+        // This keeps every existing username/password working without a forced reset.
+        if ($authId === '') {
+            if (empty($user['password']) || !password_verify((string) $password, (string) $user['password'])) return 'invalid';
+            $authId = supabase_auth_create_from_legacy($user) ?? '';
+            if ($authId === '') return 'unavailable';
+            $authSession = supabase_auth_sign_in((string) $user['email'], (string) $password);
+            if (!$authSession['ok'] || empty($authSession['data']['user']['id'])
+                || strtolower((string) $authSession['data']['user']['id']) !== strtolower($authId)) {
+                supabase_auth_admin_delete_user($authId);
+                return 'unavailable';
+            }
+            $link = $pdo->prepare('UPDATE users SET auth_user_id = ?, password = NULL WHERE user_id = ? AND auth_user_id IS NULL');
+            $link->execute([$authId, (int) $user['user_id']]);
+            if ($link->rowCount() !== 1) {
+                supabase_auth_admin_delete_user($authId);
+                return 'unavailable';
+            }
+        } else {
+            $authSession = supabase_auth_sign_in((string) $user['email'], (string) $password);
+            if (!$authSession['ok']) return $authSession['status'] >= 500 || $authSession['status'] === 0 ? 'unavailable' : 'invalid';
+            if (empty($authSession['data']['user']['id'])
+                || strtolower((string) $authSession['data']['user']['id']) !== strtolower($authId)) return 'invalid';
         }
+    } elseif (empty($user['password']) || !password_verify((string) $password, (string) $user['password'])) {
+        return 'invalid';
+    }
+
+    if ($expectedRole && $user['role'] !== $expectedRole) {
+        if ($authSession && !empty($authSession['data']['access_token'])) {
+            supabase_auth_request('POST', 'logout', null, $authSession['data']['access_token']);
+        }
+        return 'wrong_role';
+    }
+
         // Regenerate session ID on login to prevent session fixation
         session_regenerate_id(true);
         unset($_SESSION['csrf_token']);   // fresh CSRF token for the new login session
@@ -76,6 +127,12 @@ function attempt_login(PDO $pdo, $username, $password, $expectedRole = null) {
         $_SESSION['username'] = $user['username'];
         $_SESSION['role']     = $user['role'];
         $_SESSION['email']    = $user['email'];
+        if ($authSession) {
+            $_SESSION['auth_user_id'] = $authSession['data']['user']['id'];
+            $_SESSION['supabase_access_token'] = $authSession['data']['access_token'];
+            $_SESSION['supabase_refresh_token'] = $authSession['data']['refresh_token'];
+            $_SESSION['supabase_expires_at'] = time() + (int) ($authSession['data']['expires_in'] ?? 3600);
+        }
 
         // Fetch role-specific profile info (name, ids) for convenience
         if ($user['role'] === 'student') {
@@ -97,12 +154,11 @@ function attempt_login(PDO $pdo, $username, $password, $expectedRole = null) {
 
         log_activity($pdo, $user['user_id'], 'Logged in');
         return true;
-    }
-    return 'invalid';
 }
 
 /** Log the current user out */
 function do_logout(PDO $pdo) {
+    if (supabase_auth_enabled()) supabase_auth_sign_out_session();
     if (isset($_SESSION['user_id'])) {
         log_activity($pdo, $_SESSION['user_id'], 'Logged out');
     }

@@ -63,11 +63,11 @@ function admin_delete_target(PDO $pdo, string $kind, int $id): ?array {
         'class'   => 'SELECT ts.status, sub.subject_code AS label, ts.section AS extra, 0 AS user_id
                       FROM teacher_subjects ts JOIN subjects sub ON sub.subject_id = ts.subject_id
                       WHERE ts.teacher_subject_id = ?',
-        'teacher' => "SELECT u.status, t.full_name AS label, '' AS extra, t.user_id
+        'teacher' => "SELECT u.status, t.full_name AS label, '' AS extra, t.user_id, u.auth_user_id
                       FROM teachers t JOIN users u ON u.user_id = t.user_id WHERE t.teacher_id = ?",
         'subject' => "SELECT status, subject_name AS label, '' AS extra, 0 AS user_id FROM subjects WHERE subject_id = ?",
         'lab'     => "SELECT status, lab_name AS label, '' AS extra, 0 AS user_id FROM laboratories WHERE lab_id = ?",
-        'student' => "SELECT u.status, st.full_name AS label, '' AS extra, st.user_id
+        'student' => "SELECT u.status, st.full_name AS label, '' AS extra, st.user_id, u.auth_user_id
                       FROM students st JOIN users u ON u.user_id = st.user_id WHERE st.student_id = ?",
     };
     $stmt = $pdo->prepare($sql);
@@ -75,7 +75,7 @@ function admin_delete_target(PDO $pdo, string $kind, int $id): ?array {
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$row) return null;
     $name = $kind === 'class' ? $row['label'] . ' (' . $row['extra'] . ')' : (string) $row['label'];
-    return ['status' => (string) $row['status'], 'name' => $name, 'user_id' => (int) $row['user_id']];
+    return ['status' => (string) $row['status'], 'name' => $name, 'user_id' => (int) $row['user_id'], 'auth_user_id' => $row['auth_user_id'] ?? null];
 }
 
 /** What deleting the item would remove: classes (and how many are enabled), enrollments, sessions, attendance records. */
@@ -158,11 +158,21 @@ function admin_delete_preview(PDO $pdo, string $kind, int $id): array {
  * attendance record, session and class is left untouched. Call inside the caller's transaction.
  */
 function admin_archive_user(PDO $pdo, int $userId, int $studentId = 0): void {
-    $row = $pdo->prepare('SELECT username, email FROM users WHERE user_id = ?');
+    $row = $pdo->prepare('SELECT username, email, auth_user_id FROM users WHERE user_id = ?');
     $row->execute([$userId]);
     $u = $row->fetch(PDO::FETCH_ASSOC);
     if (!$u) return;
     $tag = 'deleted-' . $userId . '-';
+    if (supabase_auth_enabled() && !empty($u['auth_user_id'])) {
+        $disabledEmail = 'deleted-' . $userId . '@invalid.local';
+        if (!supabase_auth_admin_update_user((string) $u['auth_user_id'], [
+            'email' => $disabledEmail,
+            'email_confirm' => true,
+            'ban_duration' => '876000h',
+        ])) {
+            throw new Exception('The account could not be closed in secure sign-in. Please try again.');
+        }
+    }
     $pdo->prepare("UPDATE users SET deleted_at = NOW(), status = 'inactive', username = ?, email = ? WHERE user_id = ?")
         ->execute([substr($tag . $u['username'], 0, 50), substr($tag . $u['email'], 0, 100), $userId]);
     if ($studentId > 0) {

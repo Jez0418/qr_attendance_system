@@ -77,19 +77,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'passw
     if ($newPassword === '') {
         $errors[] = 'Please enter a new password.';
     } else {
-        $pwStmt = $pdo->prepare('SELECT password FROM users WHERE user_id = ?');
+        $pwStmt = $pdo->prepare('SELECT password, email, auth_user_id FROM users WHERE user_id = ?');
         $pwStmt->execute([$_SESSION['user_id']]);
-        $currentHash = $pwStmt->fetchColumn();
-        if (!password_verify($currentPassword, $currentHash)) {
+        $account = $pwStmt->fetch(PDO::FETCH_ASSOC);
+        $passwordValid = false;
+        if (supabase_auth_enabled() && !empty($account['auth_user_id'])) {
+            $verified = supabase_auth_sign_in((string) $account['email'], $currentPassword);
+            $passwordValid = $verified['ok']
+                && strtolower((string) ($verified['data']['user']['id'] ?? '')) === strtolower((string) $account['auth_user_id']);
+            if ($verified['ok'] && !empty($verified['data']['access_token'])) {
+                supabase_auth_request('POST', 'logout', null, $verified['data']['access_token']);
+            }
+        } else {
+            $passwordValid = !empty($account['password']) && password_verify($currentPassword, (string) $account['password']);
+        }
+        if (!$passwordValid) {
             $errors[] = 'Current password is incorrect.';
         } elseif ($newPassword !== $confirmPassword) {
             $errors[] = 'New password and confirmation do not match.';
         } elseif (strlen($newPassword) < 6) {
             $errors[] = 'New password must be at least 6 characters.';
         } else {
-            $hash = password_hash($newPassword, PASSWORD_BCRYPT);
-            $pdo->prepare('UPDATE users SET password = ? WHERE user_id = ?')->execute([$hash, $_SESSION['user_id']]);
-            $success = 'Password updated successfully.';
+            if (supabase_auth_enabled() && !empty($account['auth_user_id'])) {
+                $updated = supabase_auth_admin_update_user((string) $account['auth_user_id'], ['password' => $newPassword]);
+                if (!$updated) {
+                    $errors[] = 'Your password could not be changed right now. Please try again.';
+                } else {
+                    $pdo->prepare('UPDATE users SET password = NULL WHERE user_id = ?')->execute([$_SESSION['user_id']]);
+                    destroy_user_sessions($pdo, (int) $_SESSION['user_id']);
+                    $success = 'Password updated successfully. Please sign in again with your new password.';
+                    do_logout($pdo);
+                    set_flash('success', $success);
+                    redirect('login.php');
+                }
+            } else {
+                $hash = password_hash($newPassword, PASSWORD_BCRYPT);
+                $pdo->prepare('UPDATE users SET password = ? WHERE user_id = ?')->execute([$hash, $_SESSION['user_id']]);
+                $success = 'Password updated successfully.';
+            }
         }
     }
 }

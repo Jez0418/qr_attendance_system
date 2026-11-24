@@ -95,6 +95,10 @@ try {
         create_notification($pdo, $userId, 'Welcome!', "Your student account has been created. Username: $username");
         log_activity($pdo, $_SESSION['user_id'], "Added student: $fullName");
 
+        if (!supabase_auth_provision_profile($pdo, (int) $userId)) {
+            throw new Exception('The account could not be connected to secure sign-in. Please try again.');
+        }
+
         $pdo->commit();
         echo json_encode(['success' => true, 'message' => 'Student added successfully.']);
 
@@ -116,9 +120,10 @@ try {
                        'Contact number' => [$contact, 20], 'Username' => [$username, 50]]);
         [$institutionId, $departmentId, $programId, $yearLevel, $section, $studentType] = read_academic_fields($pdo);
 
-        $find = $pdo->prepare('SELECT user_id FROM students WHERE student_id = ?');
+        $find = $pdo->prepare('SELECT u.user_id, u.email, u.auth_user_id FROM students s JOIN users u ON u.user_id = s.user_id WHERE s.student_id = ?');
         $find->execute([$studentId]);
-        $userId = $find->fetchColumn();
+        $account = $find->fetch(PDO::FETCH_ASSOC);
+        $userId = $account['user_id'] ?? null;
         if (!$userId) throw new Exception('Student not found.');
 
         $check = $pdo->prepare('SELECT COUNT(*) FROM users WHERE (username = ? OR email = ?) AND user_id != ?');
@@ -130,7 +135,12 @@ try {
 
         $pdo->beginTransaction();
 
-        if ($password !== '') {
+        if (supabase_auth_enabled() && !supabase_auth_sync_admin_changes($account, $email, $password)) {
+            throw new Exception('The account could not be updated in secure sign-in. Please try again.');
+        }
+
+        $linkedAuth = trim((string) ($account['auth_user_id'] ?? '')) !== '';
+        if ($password !== '' && !$linkedAuth) {
             $hash = password_hash($password, PASSWORD_BCRYPT);
             $upd = $pdo->prepare('UPDATE users SET username=?, email=?, status=?, password=? WHERE user_id=?');
             $upd->execute([$username, $email, $status, $hash, $userId]);
