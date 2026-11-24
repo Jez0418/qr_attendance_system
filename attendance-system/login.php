@@ -83,7 +83,7 @@ $roleNotes = [
     <div class="login-grid">
         <section class="login-panel" aria-labelledby="lgTitle">
             <h1 id="lgTitle">Welcome back</h1>
-            <p class="lg-sub">Sign in to your MCNP&ndash;ISAP attendance account.</p>
+            <p class="lg-sub">Sign in to your iLABQ attendance account.</p>
 
             <?php if ($flash = get_flash()): ?>
                 <div class="lg-alert<?php echo $flash['type'] === 'success' ? ' ok' : ''; ?>" role="status"><i class="fa-solid fa-circle-<?php echo $flash['type'] === 'success' ? 'check' : 'exclamation'; ?>" aria-hidden="true"></i> <span><?php echo e($flash['message']); ?></span></div>

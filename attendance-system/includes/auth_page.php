@@ -11,9 +11,9 @@ function public_topbar(): string {
     $b = BASE_URL;
     return '<header class="login-topbar">' . "\n"
          . '    <a class="login-topbar-brand" href="' . $b . 'login.php">' . "\n"
-         . '        <img class="login-topbar-logo" src="' . $b . 'assets/img/school-emblem-96.png" width="40" height="40" alt="MCNP-ISAP emblem">' . "\n"
+         . '        <img class="login-topbar-logo" src="' . $b . 'assets/img/school-emblem-96.png" width="40" height="40" alt="iLABQ emblem">' . "\n"
          . '        <span class="login-topbar-text">' . "\n"
-         . '            <strong>MCNP-ISAP</strong>' . "\n"
+         . '            <strong>iLABQ</strong>' . "\n"
          . '            <small>Medical Colleges of Northern Philippines and International School of Asia and the Pacific</small>' . "\n"
          . '        </span>' . "\n"
          . '    </a>' . "\n"
@@ -23,7 +23,7 @@ function public_topbar(): string {
 
 function public_footer(): string {
     return '<footer class="login-footer">' . "\n"
-         . '    <span>&copy; ' . date('Y') . ' MCNP-ISAP. All rights reserved.</span>' . "\n"
+         . '    <span>&copy; ' . date('Y') . ' iLABQ. All rights reserved.</span>' . "\n"
          . '    <span class="login-footer-secure"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Secure institutional access</span>' . "\n"
          . '</footer>' . "\n";
 }

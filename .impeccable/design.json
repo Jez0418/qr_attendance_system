@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-10-16T10:53:19Z",
-  "title": "Design System: MCNP-ISAP QR Attendance",
+  "title": "Design System: iLABQ Attendance",
   "extensions": {
     "colorMeta": {
       "gatekeeper-blue": { "role": "primary", "displayName": "Gatekeeper Blue", "canonical": "#1d6bf3", "tonalRamp": ["#0f1b3c", "#1558cc", "#1d6bf3", "#4a8cf7", "#dce9ff", "#eef4ff"] },

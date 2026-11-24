@@ -1,6 +1,6 @@
 {
-  "name": "MCNP-ISAP QR Laboratory Attendance",
-  "short_name": "Attendance",
+  "name": "iLABQ Laboratory Attendance",
+  "short_name": "iLABQ",
   "description": "Scan the laboratory QR code to check in to class.",
   "id": "../index.php?source=pwa",
   "start_url": "../index.php?source=pwa",

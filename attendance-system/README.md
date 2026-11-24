@@ -1,4 +1,4 @@
-# MCNP-ISAP QR Laboratory Attendance System
+# iLABQ QR Laboratory Attendance System
 
 A web system for recording laboratory-class attendance at **Medical Colleges of Northern
 Philippines (MCNP)** and **International School of Asia and the Pacific (ISAP)**. A teacher or

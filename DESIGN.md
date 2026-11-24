@@ -1,5 +1,5 @@
 ---
-name: MCNP-ISAP QR Attendance
+name: iLABQ QR Attendance
 description: Floating-panel dashboard for GPS-verified laboratory attendance across two medical colleges
 colors:
   gatekeeper-blue: "#1d6bf3"
@@ -80,7 +80,7 @@ components:
     padding: "4px 12px"
 ---
 
-# Design System: MCNP-ISAP QR Attendance
+# Design System: iLABQ QR Attendance
 
 ## Overview
 

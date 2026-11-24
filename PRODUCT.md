@@ -39,7 +39,7 @@ A competing QR-attendance tool could copy the scan-a-code idea in a day. What it
 
 ## Brand Commitments
 
-- Name: "MCNP-ISAP QR Attendance" (short) / "MCNP-ISAP QR Laboratory Attendance System" (full), serving both MCNP and ISAP under one shared system.
+- Name: "iLABQ" (short) / "iLABQ QR Laboratory Attendance System" (full), serving both MCNP and ISAP under one shared system.
 - Existing school emblem asset (`assets/img/school-emblem-96.png` and related sizes) is the established mark; not open for replacement without the schools' sign-off.
 
 ## Evidence on Hand
