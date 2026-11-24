@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "plus jakarta sans",
+        "createdAt": "2026-10-28T15:51:14.955Z",
+        "reason": "DESIGN.md pins Plus Jakarta Sans as the single system typeface (Typography section, Don't: reach for a second typeface)"
+      }
+    ]
+  }
+}
